@@ -94,11 +94,16 @@ function getStats() {
     let stats = JSON.parse(localStorage.getItem('onika_stats'));
     if (!stats) {
         stats = {
-            episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, lastVisit: new Date().toDateString(), unlockedAchievements: []
+            episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, lastVisit: new Date().toDateString(), 
+            unlockedAchievements: [], 
+            favedAnime: [], 
+            watchedToday: [] 
         };
         localStorage.setItem('onika_stats', JSON.stringify(stats));
     }
     if (!stats.unlockedAchievements) stats.unlockedAchievements = [];
+    if (!stats.favedAnime) stats.favedAnime = [];
+    if (!stats.watchedToday) stats.watchedToday = [];
     return stats;
 }
 
@@ -147,10 +152,11 @@ function loadProfileData() {
         stats.daysStreak += 1;
         stats.lastVisit = today;
         stats.xp += 50;
+        stats.watchedToday = [];
         saveStats(stats);
     }
 
-    checkAchievements(stats); // Проверяем ачивки
+    checkAchievements(stats);
 
     const currentLevel = Math.floor(stats.xp / 100) + 1;
     const xpForNextLevel = currentLevel * 100;
@@ -181,13 +187,11 @@ function loadProfileData() {
     setElWidth('modal-xp-bar', progressPercent + '%');
     setElText('modal-ach-earned', stats.unlockedAchievements.length);
 
-    // Находим следующее невыполненное достижение
     const nextAch = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id));
     if (nextAch) setElText('next-ach-name', nextAch.name);
     else setElText('next-ach-name', 'Все выполнено!');
 }
 
-// Функция XP
 function addXP(amount) {
     let stats = getStats();
     const oldLevel = Math.floor(stats.xp / 100) + 1;
@@ -357,7 +361,7 @@ function initHeroSlider() {
                     <h1 class="hero-title">${anime.title}</h1>
                     <div class="hero-actions">
                         <button class="btn-primary" onclick="playAnime(${anime.id})">▶ Смотреть</button>
-                        <button class="btn-icon-heart" onclick="toggleFavorite(this)">🤍</button>
+                        <button class="btn-icon-heart" onclick="toggleFavorite(this, ${anime.id})">🤍</button>
                     </div>
                 </div>
             </div>`;
@@ -388,20 +392,41 @@ function addSwipeSupport(element) {
     }, { passive: true });
 }
 
-function toggleFavorite(btn) {
-    if (btn.classList.contains('faved')) { btn.classList.remove('faved'); btn.innerHTML = '🤍'; }
-    else { 
-        btn.classList.add('faved'); btn.innerHTML = '❤️'; 
+// ИСПРАВЛЕННЫЙ БАГ С ЛАЙКОМ
+function toggleFavorite(btn, animeId) {
+    let stats = getStats();
+    const isFaved = stats.favedAnime.includes(animeId);
+
+    if (isFaved) {
+        btn.classList.remove('faved'); 
+        btn.innerHTML = '🤍';
+        stats.favedAnime = stats.favedAnime.filter(id => id !== animeId);
+        saveStats(stats);
+    } else {
+        btn.classList.add('faved'); 
+        btn.innerHTML = '❤️';
+        stats.favedAnime.push(animeId);
+        saveStats(stats);
         addXP(10);
     }
 }
 
+// ИСПРАВЛЕННЫЙ БАГ С ПРОСМОТРОМ
 function playAnime(id) { 
-    addXP(20);
     let stats = getStats();
+    const today = new Date().toDateString();
+
+    if (stats.watchedToday.includes(id)) {
+        if (tg) tg.showAlert(`🎬 Плеер для ID: ${id}\n(Вы уже получали XP за этот эпизод сегодня)`);
+        return;
+    }
+
+    addXP(20);
     stats.episodesWatched += 1;
     stats.minutesWatched += 24;
+    stats.watchedToday.push(id);
     saveStats(stats);
+
     if (tg) tg.showAlert(`🎬 Плеер для ID: ${id}\n(+20 XP, +1 серия)`);
 }
 
