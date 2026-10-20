@@ -1,15 +1,3 @@
-// ==========================================
-// ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ (SUPABASE)
-// ==========================================
-// ВСТАВЬТЕ СВОИ ДАННЫЕ СЮДА:
-const SUPABASE_URL = 'https://wsaykqhojwfhpqzxptke.supabase.co/rest/v1/'; // Например: https://xyz.supabase.co
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzYXlrcWhvandmaHBxenhwdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MzAxMDgsImV4cCI6MjEwODEwNjEwOH0.6eHuhYt2CyVvIurt-TW3MgP4VE0kzv39vqVHwskodLk'; // Длинный ключ
-
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// ==========================================
-// ПЕРЕМЕННЫЕ ДЛЯ ПЛЕЕРА
-// ==========================================
 const tg = window.Telegram.WebApp;
 let MY_TG_ID = null;
 let MY_NAME = 'Гость';
@@ -24,22 +12,37 @@ if (tg) {
     }
 }
 
+// ==========================================
+// НАСТРОЙКА SUPABASE (ВСТАВЬТЕ СВОИ КЛЮЧИ)
+// ==========================================
+const SUPABASE_URL = 'https://wsaykqhojwfhpqzxptke.supabase.co/rest/v1/'; // Например: https://xyz.supabase.co
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzYXlrcWhvandmaHBxenhwdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MzAxMDgsImV4cCI6MjEwODEwNjEwOH0.6eHuhYt2CyVvIurt-TW3MgP4VE0kzv39vqVHwskodLk'; // Длинный ключ
+
+let supabase = null;
+try {
+    if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
+        // Подключаемся через CDN, если ключи введены
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+        script.onload = () => {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            console.log('✅ Supabase подключен');
+        };
+        document.head.appendChild(script);
+    } else {
+        console.warn('⚠️ Вы не ввели ключи Supabase. Друзья и облачный профиль работать не будут.');
+    }
+} catch(e) { console.error(e); }
+
+// ==========================================
+// ПЕРЕМЕННЫЕ ДЛЯ ПЛЕЕРА
+// ==========================================
 let currentAnimeForPlayer = null;
 let selectedVoice = '';
 let selectedPlayer = '';
 
-const VOICES = [
-    { id: 'anilibria', name: 'AniLibria', icon: '🎙️' },
-    { id: 'studioband', name: 'StudioBand', icon: '🎙️' },
-    { id: 'jamclub', name: 'JAM Club', icon: '🎙️' },
-    { id: 'original', name: 'Оригинал (Субтитры)', icon: '📝' }
-];
-
-const PLAYERS = [
-    { id: 'kodik', name: 'Kodik', icon: '▶️' },
-    { id: 'sibnet', name: 'Sibnet', icon: '🎬' },
-    { id: 'veoveo', name: 'Veoveo', icon: '🎥' }
-];
+const VOICES = [{ id: 'anilibria', name: 'AniLibria', icon: '🎙️' }, { id: 'studioband', name: 'StudioBand', icon: '🎙️' }, { id: 'jamclub', name: 'JAM Club', icon: '🎙️' }, { id: 'original', name: 'Оригинал (Субтитры)', icon: '📝' }];
+const PLAYERS = [{ id: 'kodik', name: 'Kodik', icon: '▶️' }, { id: 'sibnet', name: 'Sibnet', icon: '🎬' }, { id: 'veoveo', name: 'Veoveo', icon: '🎥' }];
 
 let catalogPage = 1;
 let isCatalogLoading = false;
@@ -48,23 +51,10 @@ let currentFilters = { search: '', genre: '', year: '', status: '', sort: 'POPUL
 let currentMyListFilter = 'all';
 let previousScreen = 'catalog'; 
 
-const GENRES = [
-    { id: 'Action', name: 'Экшен' }, { id: 'Romance', name: 'Романтика' },
-    { id: 'Comedy', name: 'Комедия' }, { id: 'Fantasy', name: 'Фэнтези' },
-    { id: 'Drama', name: 'Драма' }, { id: 'Adventure', name: 'Приключения' },
-    { id: 'Sci-Fi', name: 'Фантастика' }
-];
-const YEARS = [
-    { id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' },
-    { id: '2021', name: '2021' }, { id: '2020', name: '2020' }
-];
-const STATUSES = [
-    { id: 'RELEASING', name: 'Онгоинг' }, { id: 'FINISHED', name: 'Завершено' }, { id: 'NOT_YET_RELEASED', name: 'Анонс' }
-];
-const SORTS = [
-    { id: 'POPULARITY_DESC', name: 'По популярности' }, { id: 'TRENDING_DESC', name: 'В тренде' },
-    { id: 'START_DATE_DESC', name: 'Новинки' }, { id: 'SCORE_DESC', name: 'По рейтингу' }
-];
+const GENRES = [{ id: 'Action', name: 'Экшен' }, { id: 'Romance', name: 'Романтика' }, { id: 'Comedy', name: 'Комедия' }, { id: 'Fantasy', name: 'Фэнтези' }, { id: 'Drama', name: 'Драма' }, { id: 'Adventure', name: 'Приключения' }, { id: 'Sci-Fi', name: 'Фантастика' }];
+const YEARS = [{ id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' }, { id: '2021', name: '2021' }, { id: '2020', name: '2020' }];
+const STATUSES = [{ id: 'RELEASING', name: 'Онгоинг' }, { id: 'FINISHED', name: 'Завершено' }, { id: 'NOT_YET_RELEASED', name: 'Анонс' }];
+const SORTS = [{ id: 'POPULARITY_DESC', name: 'По популярности' }, { id: 'TRENDING_DESC', name: 'В тренде' }, { id: 'START_DATE_DESC', name: 'Новинки' }, { id: 'SCORE_DESC', name: 'По рейтингу' }];
 
 // ==========================================
 // НАВИГАЦИЯ
@@ -107,34 +97,19 @@ function goBackFromDetail() {
 // БАЗА ДАННЫХ: ПРОФИЛЬ
 // ==========================================
 async function syncProfileToDB() {
-    if (!MY_TG_ID) return;
-    
+    if (!MY_TG_ID || !supabase) return;
     let stats = getStats();
-    
     try {
-        const { data, error } = await supabase.from('users').upsert({
-            tg_id: MY_TG_ID,
-            name: MY_NAME,
-            xp: stats.xp,
-            episodes_watched: stats.episodesWatched,
-            minutes_watched: stats.minutesWatched,
-            days_streak: stats.daysStreak
+        await supabase.from('users').upsert({
+            tg_id: MY_TG_ID, name: MY_NAME, xp: stats.xp,
+            episodes_watched: stats.episodesWatched, minutes_watched: stats.minutesWatched, days_streak: stats.daysStreak
         }, { onConflict: 'tg_id' });
-        
-        if (error) console.error('Ошибка синхронизации:', error);
-        else console.log('✅ Профиль синхронизирован с БД');
-    } catch (e) {
-        console.error('Ошибка сети с БД:', e);
-    }
+    } catch (e) { console.error('Ошибка синхронизации:', e); }
 }
 
 function copyMyId() {
     if (!MY_TG_ID) return;
-    navigator.clipboard.writeText(MY_TG_ID).then(() => {
-        showToast('📋 ID скопирован!');
-    }).catch(() => {
-        showToast('Не удалось скопировать', 'error');
-    });
+    navigator.clipboard.writeText(MY_TG_ID).then(() => { showToast('📋 ID скопирован!'); }).catch(() => { showToast('Не удалось скопировать', 'error'); });
 }
 
 function loadProfileData() {
@@ -183,7 +158,6 @@ function loadProfileData() {
     if (nextAch) setElText('next-ach-name', nextAch.name); 
     else setElText('next-ach-name', 'Все выполнено!'); 
 
-    // Синхронизируем с базой
     syncProfileToDB();
 }
 
@@ -192,16 +166,17 @@ function loadProfileData() {
 // ==========================================
 async function loadFriends() {
     const listContainer = document.getElementById('friends-list-container');
-    if (!listContainer || !MY_TG_ID) return;
+    if (!listContainer) return;
+    
+    if (!MY_TG_ID || !supabase) {
+        listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка: База данных не подключена</div>';
+        return;
+    }
     
     listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">Загрузка друзей...</div>';
 
     try {
-        const { data: friendsData, error } = await supabase
-            .from('friends')
-            .select('friend_id')
-            .eq('user_id', MY_TG_ID);
-            
+        const { data: friendsData, error } = await supabase.from('friends').select('friend_id').eq('user_id', MY_TG_ID);
         if (error) throw error;
 
         if (friendsData.length === 0) {
@@ -210,31 +185,14 @@ async function loadFriends() {
         }
 
         const friendIds = friendsData.map(f => f.friend_id);
-        
-        const { data: usersData, error: usersError } = await supabase
-            .from('users')
-            .select('*')
-            .in('tg_id', friendIds);
-
+        const { data: usersData, error: usersError } = await supabase.from('users').select('*').in('tg_id', friendIds);
         if (usersError) throw usersError;
 
         let html = '';
         usersData.forEach(friend => {
-            html += `
-                <div class="friend-card" onclick="openFriendProfile(${friend.tg_id}, '${friend.name}')">
-                    <div class="friend-avatar">
-                        ${friend.name[0].toUpperCase()}
-                    </div>
-                    <div class="friend-info">
-                        <h3>${friend.name}</h3>
-                        <p>ID: ${friend.tg_id} • Ур. ${Math.floor(friend.xp / 100) + 1}</p>
-                    </div>
-                    <div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div>
-                </div>
-            `;
+            html += `<div class="friend-card" onclick="openFriendProfile(${friend.tg_id}, '${friend.name}')"><div class="friend-avatar">${friend.name[0].toUpperCase()}</div><div class="friend-info"><h3>${friend.name}</h3><p>ID: ${friend.tg_id} • Ур. ${Math.floor(friend.xp / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
         });
         listContainer.innerHTML = html;
-
     } catch (e) {
         console.error(e);
         listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка загрузки друзей</div>';
@@ -246,97 +204,37 @@ async function searchFriend() {
     const id = input.value.trim();
     const resultContainer = document.getElementById('search-result-container');
     
-    if (!id || !MY_TG_ID) {
-        resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Введите ID</div>';
-        return;
-    }
-
-    if (id === MY_TG_ID.toString()) {
-        resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Это ваш ID</div>';
-        return;
-    }
+    if (!id || !MY_TG_ID) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Введите ID</div>'; return; }
+    if (id === MY_TG_ID.toString()) { resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Это ваш ID</div>'; return; }
+    if (!supabase) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">База данных не подключена</div>'; return; }
 
     resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Поиск...</div>';
     
     try {
-        const { data: userData, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('tg_id', id)
-            .single();
+        const { data: userData, error } = await supabase.from('users').select('*').eq('tg_id', id).single();
+        if (error || !userData) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Пользователь не найден</div>'; return; }
 
-        if (error || !userData) {
-            resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Пользователь не найден (он должен зайти в бота хотя бы раз)</div>';
-            return;
-        }
+        const { data: friendCheck } = await supabase.from('friends').select('*').eq('user_id', MY_TG_ID).eq('friend_id', id);
+        if (friendCheck && friendCheck.length > 0) { resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Этот пользователь уже в друзьях</div>'; return; }
 
-        const { data: friendCheck } = await supabase
-            .from('friends')
-            .select('*')
-            .eq('user_id', MY_TG_ID)
-            .eq('friend_id', id);
-
-        if (friendCheck && friendCheck.length > 0) {
-            resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Этот пользователь уже в друзьях</div>';
-            return;
-        }
-
-        resultContainer.innerHTML = `
-            <div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;">
-                <div class="friend-avatar">${userData.name[0].toUpperCase()}</div>
-                <div class="friend-info">
-                    <h3>${userData.name}</h3>
-                    <p>ID: ${userData.tg_id} • Ур. ${Math.floor(userData.xp / 100) + 1}</p>
-                </div>
-                <button onclick="addFriend(${userData.tg_id})" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Добавить</button>
-            </div>
-        `;
-
-    } catch (e) {
-        console.error(e);
-        resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Ошибка поиска</div>';
-    }
+        resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${userData.name[0].toUpperCase()}</div><div class="friend-info"><h3>${userData.name}</h3><p>ID: ${userData.tg_id} • Ур. ${Math.floor(userData.xp / 100) + 1}</p></div><button onclick="addFriend(${userData.tg_id})" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Добавить</button></div>`;
+    } catch (e) { console.error(e); resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Ошибка поиска</div>'; }
 }
 
 async function addFriend(friendId) {
-    if (!MY_TG_ID) return;
-    
+    if (!MY_TG_ID || !supabase) return;
     try {
-        const { error } = await supabase.from('friends').insert({
-            user_id: MY_TG_ID,
-            friend_id: friendId
-        });
-
-        if (error) throw error;
-        
+        await supabase.from('friends').insert({ user_id: MY_TG_ID, friend_id: friendId });
         document.getElementById('search-result-container').innerHTML = '';
         document.getElementById('friend-search-input').value = '';
-        
         showToast('👥 Друг добавлен!');
         loadFriends();
-    } catch (e) {
-        console.error(e);
-        showToast('Ошибка добавления', 'error');
-    }
+    } catch (e) { console.error(e); showToast('Ошибка добавления', 'error'); }
 }
 
 function openFriendProfile(id, name) {
     switchTab('friend-profile');
-    const container = document.getElementById('friend-profile-content');
-    
-    container.innerHTML = `
-        <div class="user-card" style="margin-top: 20px;">
-            <div class="avatar-container">
-                <div class="avatar" style="background: linear-gradient(135deg, #5b5bff, #b44aff); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff;">
-                    ${name[0].toUpperCase()}
-                </div>
-            </div>
-            <div class="user-details">
-                <h2>${name}</h2>
-                <p class="user-slogan">ID: ${id}</p>
-            </div>
-        </div>
-    `;
+    document.getElementById('friend-profile-content').innerHTML = `<div class="user-card" style="margin-top: 20px;"><div class="avatar-container"><div class="avatar" style="background: linear-gradient(135deg, #5b5bff, #b44aff); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff;">${name[0].toUpperCase()}</div></div><div class="user-details"><h2>${name}</h2><p class="user-slogan">ID: ${id}</p></div></div>`;
 }
 
 // ==========================================
