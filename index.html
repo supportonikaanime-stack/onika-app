@@ -255,7 +255,6 @@
             <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;" id="genre-filters"></div>
 
             <div style="display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 10px;" id="dropdown-filters">
-                <!-- Убрали кнопку Тип -->
                 <button class="filter-btn" onclick="openFilterModal('year')">Год ⌄</button>
                 <button class="filter-btn" onclick="openFilterModal('status')">Статус ⌄</button>
                 <button class="filter-btn" onclick="openFilterModal('sort')">Сортировка ⌄</button>
@@ -290,6 +289,28 @@
     <div id="screen-detail" class="screen" style="padding: 20px;">
         <button onclick="goBackFromDetail()" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div id="detail-content"></div>
+    </div>
+
+    <!-- ЭКРАН: ВЫБОР ОЗВУЧКИ -->
+    <div id="screen-voice" class="screen" style="padding: 20px;">
+        <button onclick="switchTab('detail')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор озвучки</h1>
+        <div style="display: flex; flex-direction: column; gap: 12px;" id="voice-list"></div>
+    </div>
+
+    <!-- ЭКРАН: ВЫБОР ПЛЕЕРА -->
+    <div id="screen-player" class="screen" style="padding: 20px;">
+        <button onclick="switchTab('voice')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор плеера</h1>
+        <div style="display: flex; flex-direction: column; gap: 12px;" id="player-list"></div>
+    </div>
+
+    <!-- ЭКРАН: ВЫБОР СЕРИИ -->
+    <div id="screen-episodes" class="screen" style="padding: 20px;">
+        <button onclick="switchTab('player')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 10px;">Выбор серии</h1>
+        <p style="color: #888; font-size: 14px; margin-bottom: 20px;">Озвучка: <span id="selected-voice-text" style="color: #fff;"></span> • Плеер: <span id="selected-player-text" style="color: #fff;"></span></p>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;" id="episodes-list"></div>
     </div>
 
     <!-- ЭКРАН: ПРОФИЛЬ -->
@@ -383,7 +404,7 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА ВЫБОРА СПИСКА (для аниме) -->
+    <!-- МОДАЛКА ВЫБОРА СПИСКА -->
     <div class="modal-overlay" id="statusModal" onclick="closeModal('statusModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('statusModal')">✕</button>
@@ -408,6 +429,6 @@
         <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon">👤</span><span class="nav-text">Профиль</span></div>
     </nav>
 
-    <script src="app.js?v=17"></script>
+    <script src="app.js?v=18"></script>
 </body>
 </html>
