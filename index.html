@@ -14,32 +14,53 @@
     <!-- ================= ГЛАВНАЯ СТРАНИЦА ================= -->
     <div id="screen-home" class="screen active">
         
-        <!-- Кинематографичный Баннер -->
+        <!-- 1) Кинематографичный Баннер -->
         <section class="hero-section" id="heroSection">
             <div class="hero-slider" id="heroSlider">
                 <!-- Слайды генерируются в app.js -->
             </div>
-            <!-- Индикаторы (точки) -->
             <div class="hero-dots" id="heroDots"></div>
         </section>
 
-        <!-- Секция: Тренды -->
-        <section class="content-section">
+        <!-- 2) Продолжить просмотр -->
+        <section class="content-section" id="continue-section">
             <div class="section-header">
-                <h2>🔥 Сейчас в тренде</h2>
-                <a href="#">Все →</a>
+                <h2>▶ Продолжить просмотр</h2>
             </div>
-            <div class="horizontal-scroll" id="trending-list">
+            <div class="horizontal-scroll" id="continue-list">
                 <!-- Сюда JS вставит карточки -->
             </div>
         </section>
 
-        <!-- Секция: Каталог -->
+        <!-- 3) Популярное сейчас -->
         <section class="content-section">
             <div class="section-header">
-                <h2>📚 Каталог аниме</h2>
+                <h2>🔥 Популярное сейчас</h2>
+                <a href="#">Все →</a>
             </div>
-            <div class="grid-catalog" id="catalog-list">
+            <div class="horizontal-scroll" id="popular-list">
+                <!-- Сюда JS вставит карточки -->
+            </div>
+        </section>
+
+        <!-- 4) Кнопка Telegram-канала -->
+        <section class="tg-banner-section">
+            <a href="https://t.me/onikaanime" target="_blank" class="tg-banner">
+                <div class="tg-icon">✈️</div>
+                <div class="tg-text">
+                    <h3>Наш Telegram-канал</h3>
+                    <p>Новости, розыгрыши и анонсы</p>
+                </div>
+                <div class="tg-arrow">→</div>
+            </a>
+        </section>
+
+        <!-- 5) Рекомендации для вас -->
+        <section class="content-section">
+            <div class="section-header">
+                <h2>✨ Рекомендации для вас</h2>
+            </div>
+            <div class="grid-catalog" id="recommended-list">
                 <!-- Сюда JS вставит карточки -->
             </div>
         </section>
