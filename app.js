@@ -80,7 +80,6 @@ function switchTab(tabName, element) {
     }
     if (tabName === 'my') renderMyList();
     if (tabName === 'voice') renderVoiceSelection();
-    // Если возвращаемся на главную, можно обновлять ленты (по желанию)
 }
 
 function goBackFromDetail() {
@@ -246,7 +245,6 @@ function openAchievementsModal() { const stats = getStats(); const container = d
 // Баннер (Тренды)
 let heroData = []; let currentSlide = 0; let slideInterval;
 async function loadHeroData() { 
-    // Берем случайную страницу, чтобы баннер менялся
     const randomPage = Math.floor(Math.random() * 5) + 1;
     const query = `{ Page(page: ${randomPage}, perPage: 5) { media(type: ANIME, sort: TRENDING_DESC) { id title { romaji } averageScore coverImage { extraLarge } format startDate { year } } } }`; 
     const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query }) }); 
@@ -265,11 +263,9 @@ function stopSlideShow() { clearInterval(slideInterval); }
 function addSwipeSupport(element) { let touchStartX = 0; element.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; stopSlideShow(); }, { passive: true }); element.addEventListener('touchend', e => { const diff = touchStartX - e.changedTouches[0].screenX; if (diff > 50) nextSlide(); else if (diff < -50) { currentSlide = (currentSlide - 1 + heroData.length) % heroData.length; goToSlide(currentSlide); } startSlideShow(); }, { passive: true }); }
 function playAnime(id) { let stats = getStats(); if (stats.watchedToday.includes(id)) { if (tg) tg.showAlert(`🎬 Плеер для ID: ${id}\n(Вы уже получали XP за этот эпизод сегодня)`); return; } addXP(20); stats.episodesWatched += 1; stats.minutesWatched += 24; stats.watchedToday.push(id); saveStats(stats); if (tg) tg.showAlert(`🎬 Плеер для ID: ${id}\n(+20 XP, +1 серия)`); }
 
-function renderContinueWatching() { const container = document.getElementById('continue-list'); if (!container) return; const data = [{ id: 1, title: "Тетрадь смерти", img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1535-C1j7R4w7G6kF.jpg", ep: 5, total: 37 }, { id: 2, title: "Ван-Пис", img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-YBz8x3z7R4w7.jpg", ep: 150, total: 1000 }]; let html = ''; data.forEach(anime => { const percent = Math.round((anime.ep / anime.total) * 100); html += `<div class="continue-card" onclick="openAnimeDetail(${anime.id}, 'home')"><img class="continue-card-img" src="${anime.img}"><div class="continue-card-info"><div class="continue-card-title">${anime.title}</div><div><div class="continue-card-ep">Серия ${anime.ep} из ${anime.total}</div><div class="continue-progress-bar"><div class="continue-progress-fill" style="width: ${percent}%"></div></div></div></div></div>`; }); container.innerHTML = html; }
-
 // Популярное сейчас (Берем случайную страницу из топа)
 async function loadPopular() { 
-    const randomPage = Math.floor(Math.random() * 10) + 1; // Случайная страница от 1 до 10
+    const randomPage = Math.floor(Math.random() * 10) + 1;
     const query = `{ Page(page: ${randomPage}, perPage: 6) { media(type: ANIME, sort: POPULARITY_DESC) { id title { romaji } coverImage { large } } } }`; 
     const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query }) }); 
     const data = await response.json(); 
@@ -280,7 +276,7 @@ async function loadPopular() {
 
 // Рекомендации для вас (Тоже рандомим)
 async function loadRecommended() { 
-    const randomPage = Math.floor(Math.random() * 5) + 1; // Случайная страница от 1 до 5
+    const randomPage = Math.floor(Math.random() * 5) + 1;
     const query = `{ Page(page: ${randomPage}, perPage: 4) { media(type: ANIME, sort: SCORE_DESC) { id title { romaji } coverImage { large } } } }`; 
     const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query }) }); 
     const data = await response.json(); 
@@ -289,4 +285,12 @@ async function loadRecommended() {
     container.innerHTML = data.data.Page.media.map(anime => `<div class="card" onclick="openAnimeDetail(${anime.id}, 'home')"><img class="card-img" src="${anime.coverImage.large}" loading="lazy"><div class="card-title">${anime.title.romaji}</div></div>`).join(''); 
 }
 
-document.addEventListener('DOMContentLoaded', () => { loadHeroData(); renderContinueWatching(); loadPopular(); loadRecommended(); loadProfileData(); });
+// УДАЛЕНА renderContinueWatching
+
+document.addEventListener('DOMContentLoaded', () => { 
+    loadHeroData(); 
+    // renderContinueWatching(); // <-- УДАЛЕНО
+    loadPopular(); 
+    loadRecommended(); 
+    loadProfileData(); 
+});
