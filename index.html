@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aniqop Clone</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: #0f0f11; color: white; padding-bottom: 60px; /* Место под нижнее меню */ }
+        
+        /* Шапка */
+        .header { padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 24px; font-weight: bold; color: #5b5bff; }
+        .profile-icon { width: 30px; height: 30px; background: #333; border-radius: 50%; }
+
+        /* Баннер */
+        .hero { position: relative; height: 400px; background: url('https://image.tmdb.org/t/p/original/9QdB2b2p8rE0dJpD0jZk2w7p4rY.jpg') center/cover; }
+        .hero-gradient { position: absolute; bottom: 0; width: 100%; height: 50%; background: linear-gradient(to top, #0f0f11, transparent); }
+        .hero-content { position: absolute; bottom: 20px; left: 15px; right: 15px; }
+        .hero-title { font-size: 28px; font-weight: bold; margin-bottom: 10px; }
+        .hero-tags { color: #aaa; font-size: 14px; margin-bottom: 15px; }
+        .btn-watch { background: #5b5bff; color: white; border: none; width: 100%; padding: 15px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }
+
+        /* Нижнее меню */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #1a1a1e; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #333; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #777; font-size: 12px; text-decoration: none; }
+        .nav-item.active { color: #5b5bff; }
+        .nav-icon { font-size: 20px; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo">Aniqop TV</div>
+        <div class="profile-icon"></div>
+    </div>
+
+    <div class="hero">
+        <div class="hero-gradient"></div>
+        <div class="hero-content">
+            <div class="hero-title">Киберпанк: Бегущие по краю</div>
+            <div class="hero-tags">Жестокость • Фантастика • 89% для вас</div>
+            <button class="btn-watch" onclick="startWatch()">▶ Смотреть</button>
+        </div>
+    </div>
+
+    <!-- Нижняя навигация -->
+    <div class="bottom-nav">
+        <a href="#" class="nav-item active"><span class="nav-icon">🏠</span>Главная</a>
+        <a href="#" class="nav-item"><span class="nav-icon">🔍</span>Каталог</a>
+        <a href="#" class="nav-item"><span class="nav-icon">🔖</span>Моё</a>
+        <a href="#" class="nav-item"><span class="nav-icon">🎮</span>Игры</a>
+        <a href="#" class="nav-item"><span class="nav-icon">👤</span>Профиль</a>
+    </div>
+
+    <script>
+        // Инициализация Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Развернуть на весь экран
+        tg.setHeaderColor('#0f0f11'); // Цвет шапки
+
+        function startWatch() {
+            tg.showAlert("Функция плеера в разработке! 🎬");
+        }
+    </script>
+</body>
+</html>
