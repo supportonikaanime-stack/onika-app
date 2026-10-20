@@ -130,8 +130,8 @@
         /* МОДАЛЬНЫЕ ОКНА */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
         .modal-overlay.active { display: flex; animation: fade 0.3s ease; }
-        .modal-content { background: #14141f; border-radius: 24px; width: 100%; max-width: 400px; padding: 30px 20px; border: 1px solid rgba(255,255,255,0.1); position: relative; text-align: center; }
-        .modal-close { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; font-size: 16px; cursor: pointer; }
+        .modal-content { background: #14141f; border-radius: 24px; width: 100%; max-width: 400px; padding: 30px 20px; border: 1px solid rgba(255,255,255,0.1); position: relative; text-align: center; max-height: 80vh; overflow-y: auto; }
+        .modal-close { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; font-size: 16px; cursor: pointer; z-index: 10; }
         .modal-icon-large { font-size: 60px; margin-bottom: 15px; }
         .modal-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 5px; }
         .modal-subtitle { font-size: 14px; color: #888; margin-bottom: 20px; word-wrap: break-word; line-height: 1.4; }
@@ -139,6 +139,15 @@
         .modal-xp-fill { height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 5px; box-shadow: 0 0 10px #00f5ff; }
         .modal-xp-text { font-size: 12px; color: #aaa; text-align: right; margin-bottom: 20px; }
         .modal-desc { font-size: 14px; color: #ccc; line-height: 1.5; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; text-align: left; }
+        
+        /* Список достижений */
+        .ach-list-item { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); text-align: left; opacity: 0.5; }
+        .ach-list-item.completed { opacity: 1; border-color: rgba(255, 215, 0, 0.3); background: rgba(255, 215, 0, 0.05); }
+        .ach-list-icon { font-size: 24px; width: 40px; height: 40px; background: rgba(0,0,0,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .ach-list-item.completed .ach-list-icon { background: rgba(255, 215, 0, 0.2); }
+        .ach-list-info { flex: 1; }
+        .ach-list-info h4 { font-size: 14px; color: #fff; margin-bottom: 2px; }
+        .ach-list-info p { font-size: 11px; color: #aaa; }
 
         /* ВСПЛЫВАШКА НОВОГО УРОВНЯ */
         .level-up-popup { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #1a1a2e, #5b5bff); padding: 15px 30px; border-radius: 50px; display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 30px rgba(91, 91, 255, 0.5); z-index: 20000; transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); width: 90%; max-width: 350px; }
@@ -264,16 +273,16 @@
                         <h3>ДОСТИЖЕНИЯ</h3>
                         <p><span id="ach-points">0</span> очков</p>
                     </div>
-                    <div class="ach-total"><span id="ach-earned">0</span>/108</div>
+                    <div class="ach-total"><span id="ach-earned">0</span>/50</div>
                 </div>
                 <div class="ach-progress-wrap"><div class="ach-progress-bar" id="ach-bar" style="width: 0%;"></div></div>
                 <div class="ach-next">
                     <div class="ach-next-icon">🔥</div>
                     <div class="ach-next-info">
-                        <h4>Дальше: Втянулся</h4>
-                        <p>Стрик · ещё 2 дня</p>
+                        <h4>Дальше: <span id="next-ach-name">Первый шаг</span></h4>
+                        <p>Продолжайте смотреть</p>
                     </div>
-                    <div class="ach-reward">+60 🪙</div>
+                    <div class="ach-reward">+500 🪙</div>
                 </div>
             </div>
 
@@ -307,9 +316,10 @@
             <button class="modal-close" onclick="closeModal('achievementsModal')">✕</button>
             <div class="modal-icon-large">🏆</div>
             <div class="modal-title">Достижения</div>
-            <div class="modal-subtitle">Получено: <span id="modal-ach-earned">0</span> из 108</div>
-            <div class="modal-xp-bar"><div class="modal-xp-fill" id="modal-ach-bar" style="width: 0%; background: #ffd700;"></div></div>
-            <div class="modal-desc" style="margin-top: 20px;">🎯 <b>Текущая цель:</b><br>Втянулся (Стрик 3 дня)</div>
+            <div class="modal-subtitle">Получено: <span id="modal-ach-earned">0</span> из 50</div>
+            <div id="achievements-list-container" style="margin-top: 15px;">
+                <!-- Сюда вставится список всех 50 достижений -->
+            </div>
         </div>
     </div>
 
@@ -320,6 +330,6 @@
         <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon">👤</span><span class="nav-text">Профиль</span></div>
     </nav>
 
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=11"></script>
 </body>
 </html>
