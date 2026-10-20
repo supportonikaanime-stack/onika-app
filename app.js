@@ -82,6 +82,7 @@ function switchTab(tabName, element) {
 // ==========================================
 function initCatalogFilters() {
     const genreContainer = document.getElementById('genre-filters');
+    if (!genreContainer) return;
     let html = `<div class="genre-pill active" onclick="setGenreFilter('', this)"><div class="dot"></div>Все</div>`;
     GENRES.forEach(g => {
         html += `<div class="genre-pill" onclick="setGenreFilter('${g.id}', this)">${g.name}</div>`;
@@ -160,24 +161,44 @@ async function loadCatalog(reset = false) {
     }
 
     try {
-        let queryStr = `
-            query ($page: Int, $search: String, $genre: String, $type: MediaType, $year: Int, $status: MediaStatus, $sort: [MediaSort]) {
-                Page(page: $page, perPage: 12) {
-                    media(type: ANIME, search: $search, genre: $genre, format: $type, seasonYear: $year, status: $status, sort: $sort) {
-                        id title { romaji english } coverImage { large } averageScore format episodes
-                    }
+        // Формируем запрос динамически, чтобы не отправлять пустые строки (это ломает AniList)
+        let queryStr = `query ($page: Int, $sort: [MediaSort]`;
+        let variables = { page: catalogPage, sort: [filters.sort || 'POPULARITY_DESC'] };
+        let mediaParams = `type: ANIME, sort: $sort`;
+
+        if (filters.search) {
+            queryStr += `, $search: String`;
+            mediaParams += `, search: $search`;
+            variables.search = filters.search;
+        }
+        if (filters.genre) {
+            queryStr += `, $genre: String`;
+            mediaParams += `, genre: $genre`;
+            variables.genre = filters.genre;
+        }
+        if (filters.type) {
+            queryStr += `, $type: MediaType`;
+            mediaParams += `, format: $type`;
+            variables.type = filters.type;
+        }
+        if (filters.year) {
+            queryStr += `, $year: Int`;
+            mediaParams += `, seasonYear: $year`;
+            variables.year = parseInt(filters.year);
+        }
+        if (filters.status) {
+            queryStr += `, $status: MediaStatus`;
+            mediaParams += `, status: $status`;
+            variables.status = filters.status;
+        }
+
+        queryStr += `) {
+            Page(page: $page, perPage: 12) {
+                media(${mediaParams}) {
+                    id title { romaji english } coverImage { large } averageScore format episodes
                 }
             }
-        `;
-
-        // ФИКС: Отправляем только те переменные, которые реально выбраны
-        let variables = { page: catalogPage, sort: [filters.sort || 'POPULARITY_DESC'] };
-        
-        if (filters.search) variables.search = filters.search;
-        if (filters.genre) variables.genre = filters.genre;
-        if (filters.type) variables.type = filters.type;
-        if (filters.year) variables.year = parseInt(filters.year);
-        if (filters.status) variables.status = filters.status;
+        }`;
 
         const response = await fetch('https://graphql.anilist.co', {
             method: 'POST',
@@ -186,6 +207,10 @@ async function loadCatalog(reset = false) {
         });
         const data = await response.json();
         
+        if (data.errors) {
+            console.error("AniList Error:", data.errors);
+        }
+
         const media = data?.data?.Page?.media || [];
 
         if (reset) grid.innerHTML = '';
@@ -362,7 +387,7 @@ function toggleDescription() {
 }
 
 // ==========================================
-// ПРОФИЛЬ (БЕЗ ИЗМЕНЕНИЙ)
+// ПРОФИЛЬ
 // ==========================================
 const ACHIEVEMENTS = [
     { id: 1, name: "Первый шаг", desc: "Зарегистрироваться на сайте", icon: "🚀", check: (s) => true },
@@ -575,7 +600,7 @@ function openAchievementsModal() {
 }
 
 // ==========================================
-// ГЛАВНАЯ (КАРУСЕЛЬ И ЛЕНТЫ)
+// ГЛАВНАЯ
 // ==========================================
 let heroData = [];
 let currentSlide = 0;
