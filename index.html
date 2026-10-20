@@ -8,9 +8,9 @@
     <link rel="stylesheet" href="style/main.css">
     
     <style>
-        /* Стили для мобильного приложения OnikaAnime */
+        /* Базовые стили для мобильного приложения */
         body {
-            padding-bottom: 80px;
+            padding-bottom: 80px; /* Место под нижнее меню */
             background: #0a0a0f;
             color: #fff;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -18,14 +18,12 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        .app-container { padding: 0; }
-
         /* --- ШАПКА (Логотип) --- */
         .app-header {
             position: absolute; top: 0; left: 0; width: 100%;
             padding: 20px; z-index: 10;
             display: flex; justify-content: space-between; align-items: center;
-            background: linear-gradient(to bottom, rgba(10,10,15,0.8) 0%, transparent 100%);
+            background: linear-gradient(to bottom, rgba(10,10,15,0.9) 0%, transparent 100%);
         }
         .logo-text {
             font-size: 24px; font-weight: 800; letter-spacing: -0.5px;
@@ -35,10 +33,10 @@
         .header-icon {
             width: 36px; height: 36px; background: rgba(255,255,255,0.1);
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 18px;
+            font-size: 18px; cursor: pointer;
         }
 
-        /* --- ГЛАВНАЯ (Баннер) --- */
+        /* --- ГЛАВНАЯ (Hero Баннер) --- */
         .hero-banner {
             position: relative; height: 80vh;
             border-radius: 0 0 24px 24px;
@@ -61,14 +59,13 @@
             font-size: 28px; font-weight: 800; line-height: 1.1; margin-bottom: 10px;
             text-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
-        .hero-meta {
-            display: flex; gap: 8px; margin-bottom: 15px; font-size: 13px; flex-wrap: wrap;
-        }
+        .hero-meta { display: flex; gap: 8px; margin-bottom: 15px; font-size: 13px; flex-wrap: wrap; }
         .meta-badge {
             background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 8px;
             backdrop-filter: blur(10px); font-weight: 600;
         }
         .meta-badge.star { color: #ffd700; }
+        
         .hero-actions { display: flex; gap: 10px; margin-top: 20px; }
         .btn-watch {
             flex: 2; background: #5b5bff; color: #fff; border: none;
@@ -102,41 +99,27 @@
             display: grid; grid-template-columns: repeat(2, 1fr);
             gap: 15px; padding: 15px;
         }
-        .card {
-            background: #1a1a20; border-radius: 12px; overflow: hidden;
-            position: relative; cursor: pointer;
-        }
-        .card-img {
-            width: 100%; aspect-ratio: 2/3; object-fit: cover; background: #222;
-        }
-        .card-info { padding: 10px; }
-        .card-title {
-            font-size: 13px; font-weight: 600; white-space: nowrap;
-            overflow: hidden; text-overflow: ellipsis; margin: 0;
-        }
-        .card-sub { font-size: 11px; color: #888; margin-top: 4px; }
 
-        /* --- ПРОФИЛЬ --- */
-        .profile-header {
+        /* --- ПРОФИЛЬ (как на ваших скринах) --- */
+        .profile-card {
             display: flex; align-items: center; gap: 15px;
-            padding: 20px; background: #1a1a20;
-            border-radius: 20px; margin: 15px;
+            background: #1a1a20; padding: 20px; border-radius: 20px; margin: 15px;
         }
-        .avatar {
+        .profile-avatar {
             width: 70px; height: 70px; border-radius: 50%;
             background: linear-gradient(135deg, #5b5bff, #b44aff); 
             display: flex; align-items: center; justify-content: center;
             font-size: 28px; font-weight: bold; overflow: hidden;
         }
-        .avatar img { width: 100%; height: 100%; object-fit: cover; }
-
-        /* Скрываем старые элементы */
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Скрываем ненужные старые элементы */
         .header, .sidebar, .sidebar-overlay { display: none !important; }
     </style>
 </head>
 <body data-page="home">
 
-    <!-- Скрытые инпуты для работы JS -->
+    <!-- Скрытые инпуты для работы старого JS -->
     <input type="file" id="avatarFileInput" accept="image/*" style="display:none;" onchange="uploadAvatar(this)">
     <div id="sidebarOverlay" style="display:none;"></div>
     <div id="sidebar" style="display:none;"></div>
@@ -147,7 +130,6 @@
         <!-- ===== ГЛАВНАЯ ===== -->
         <div id="page-home">
             <section class="hero-banner" id="heroBanner">
-                <!-- Шапка внутри баннера -->
                 <header class="app-header">
                     <div class="logo-text">OnikaAnime</div>
                     <div class="header-icon" onclick="navigate('profile')">👤</div>
@@ -168,7 +150,7 @@
                 </div>
             </section>
 
-            <!-- Ленты -->
+            <!-- Ленты (Тренды) -->
             <section class="rail-section" style="padding: 20px 15px 0;">
                 <h2 style="font-size: 18px; margin-bottom: 10px; padding-left: 5px;">🔥 Сейчас в тренде</h2>
                 <div id="trendingTrack" style="display:flex; gap:10px; overflow-x:auto; padding-bottom:10px; scrollbar-width:none;"></div>
@@ -189,7 +171,7 @@
         <div id="page-detail" style="display:none; padding: 20px;">
             <span onclick="goBack()" style="color:#5b5bff; font-weight:bold; font-size:16px; display:inline-block; margin-bottom:20px;">← Назад</span>
             <div style="display:flex; gap:15px;">
-                <img id="detailPoster" style="width:120px; border-radius:12px; background:#222;">
+                <img id="detailPoster" style="width:120px; height: 180px; border-radius:12px; background:#222; object-fit: cover;">
                 <div>
                     <h1 id="detailTitle" style="font-size:22px; margin:0 0 10px 0; line-height:1.2;"></h1>
                     <div id="detailMeta" style="color:#aaa; font-size:13px; display:flex; gap:5px; flex-wrap:wrap;"></div>
@@ -201,10 +183,10 @@
 
         <!-- ===== ПРОФИЛЬ ===== -->
         <div id="page-profile" style="display:none;">
-            <div style="padding: 20px;">
-                <h1 style="font-size: 24px; margin-bottom: 20px;">Профиль</h1>
-                <div class="profile-header">
-                    <div class="avatar">
+            <div style="padding: 20px 0;">
+                <h1 style="font-size: 24px; margin: 0 15px 20px 15px;">Профиль</h1>
+                <div class="profile-card">
+                    <div class="profile-avatar" onclick="document.getElementById('avatarFileInput').click()">
                         <img id="avatarImg" style="display:none;">
                         <span id="avatarLetter">?</span>
                     </div>
@@ -245,8 +227,16 @@
         </a>
     </div>
 
-    <!-- Модалки (скопированы из вашего старого кода) -->
-    <div class="modal" id="loginModal"><div class="modal-box"><button onclick="closeLoginModal()">✕</button><input type="email" id="loginEmail" placeholder="Email"><input type="password" id="loginPass" placeholder="Пароль"><button onclick="login()">Войти</button></div></div>
+    <!-- Модалка логина -->
+    <div class="modal" id="loginModal">
+        <div class="modal-box">
+            <button onclick="closeLoginModal()" style="position:absolute;right:10px;top:10px;background:none;border:none;color:#fff;font-size:20px;">✕</button>
+            <h2 style="margin-bottom:20px;text-align:center;">Вход</h2>
+            <input type="email" id="loginEmail" placeholder="Email">
+            <input type="password" id="loginPass" placeholder="Пароль">
+            <button onclick="login()">🚀 Войти</button>
+        </div>
+    </div>
     
     <!-- СКРИПТЫ -->
     <script src="script/storage.js"></script>
@@ -262,7 +252,7 @@
         tg.setHeaderColor('#0a0a0f'); 
         tg.setBackgroundColor('#0a0a0f');
 
-        // Перехват навигации
+        // Перехват навигации для нижнего меню и кнопки "Назад"
         const oldNavigate = window.navigate;
         window.navigate = function(page) {
             oldNavigate(page);
