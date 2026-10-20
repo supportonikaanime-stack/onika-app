@@ -36,7 +36,7 @@
         .hero-actions { display: flex; gap: 12px; align-items: center; }
         .btn-primary { flex: 1; background: var(--primary); color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 8px 25px rgba(91,91,255,0.4); cursor: pointer; }
         .btn-primary:active { transform: scale(0.96); }
-        .btn-icon-heart { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 56px; height: 56px; border-radius: 14px; font-size: 22px; display: flex; justify-content: center; align-items: center; }
+        .btn-icon-heart { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 56px; height: 56px; border-radius: 14px; font-size: 22px; display: flex; justify-content: center; align-items: center; cursor: pointer;}
         .btn-icon-heart.faved { background: rgba(255,45,120,0.2); border-color: rgba(255,45,120,0.5); }
         
         .hero-dots { position: absolute; bottom: 20px; right: 20px; display: flex; gap: 6px; z-index: 10; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 20px; backdrop-filter: blur(5px); }
@@ -103,7 +103,11 @@
         /* Детальная */
         .detail-poster { width: 140px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .detail-title { font-size: 24px; font-weight: 800; margin-bottom: 10px; line-height: 1.2; }
-        .detail-desc { color: #ccc; font-size: 14px; line-height: 1.6; margin-top: 15px; }
+
+        /* ================= МОЁ (СПИСКИ) ================= */
+        .my-list-tabs { display: flex; gap: 10px; padding: 0 20px 15px; overflow-x: auto; scrollbar-width: none; }
+        .my-list-tab { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #888; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+        .my-list-tab.active { background: #5b5bff; color: #fff; border-color: #5b5bff; }
 
         /* ================= ПРОФИЛЬ ================= */
         .profile-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; padding-top: 30px; }
@@ -251,11 +255,10 @@
             <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;" id="genre-filters"></div>
 
             <div style="display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 10px;" id="dropdown-filters">
-                <button class="filter-btn" onclick="openFilterModal('type')">Тип ⌄</button>
+                <!-- Убрали кнопку Тип -->
                 <button class="filter-btn" onclick="openFilterModal('year')">Год ⌄</button>
                 <button class="filter-btn" onclick="openFilterModal('status')">Статус ⌄</button>
                 <button class="filter-btn" onclick="openFilterModal('sort')">Сортировка ⌄</button>
-                <!-- Кнопка принудительного обновления -->
                 <button class="filter-btn" onclick="forceReloadCatalog()" style="border-color: #ff2d78; color: #ff2d78;">🔄 Обновить</button>
             </div>
         </div>
@@ -267,9 +270,25 @@
         </div>
     </div>
 
+    <!-- ЭКРАН: МОЁ -->
+    <div id="screen-my" class="screen">
+        <header class="profile-header" style="padding-bottom: 10px;">
+            <h1>Моё</h1>
+        </header>
+        <div class="my-list-tabs" id="my-list-tabs">
+            <div class="my-list-tab active" onclick="filterMyList('all', this)">Все</div>
+            <div class="my-list-tab" onclick="filterMyList('watching', this)">Смотрю</div>
+            <div class="my-list-tab" onclick="filterMyList('planned', this)">В планах</div>
+            <div class="my-list-tab" onclick="filterMyList('completed', this)">Просмотрено</div>
+            <div class="my-list-tab" onclick="filterMyList('dropped', this)">Заброшено</div>
+            <div class="my-list-tab" onclick="filterMyList('favorite', this)">Любимое</div>
+        </div>
+        <div class="grid-catalog" id="my-grid" style="margin-top: 10px;"></div>
+    </div>
+
     <!-- ЭКРАН: ДЕТАЛЬНАЯ СТРАНИЦА -->
     <div id="screen-detail" class="screen" style="padding: 20px;">
-        <button onclick="switchTab('catalog')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <button onclick="goBackFromDetail()" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div id="detail-content"></div>
     </div>
 
@@ -278,7 +297,6 @@
         <header class="profile-header">
             <h1>Профиль</h1>
         </header>
-
         <div class="profile-container">
             <div class="user-card">
                 <div class="avatar-container" onclick="document.getElementById('avatar-upload').click()">
@@ -365,13 +383,31 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА ВЫБОРА СПИСКА (для аниме) -->
+    <div class="modal-overlay" id="statusModal" onclick="closeModal('statusModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeModal('statusModal')">✕</button>
+            <div class="modal-title">Добавить в список</div>
+            <div class="modal-subtitle" id="status-anime-title">Название аниме</div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="filter-option-btn" onclick="setAnimeStatus('watching')">👀 Смотрю</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('planned')">📅 В планах</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('completed')">✅ Просмотрено</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('dropped')">🚫 Заброшено</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('favorite')" style="color: #ff2d78;">❤️ Любимое</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('')" style="color: #888;">🗑️ Пусто (Удалить)</button>
+            </div>
+        </div>
+    </div>
+
     <!-- НИЖНЕЕ МЕНЮ -->
     <nav class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('home', this)"><span class="nav-icon">🏠</span><span class="nav-text">Главная</span></div>
         <div class="nav-item" onclick="switchTab('catalog', this)"><span class="nav-icon">🔍</span><span class="nav-text">Каталог</span></div>
+        <div class="nav-item" onclick="switchTab('my', this)"><span class="nav-icon">📚</span><span class="nav-text">Моё</span></div>
         <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon">👤</span><span class="nav-text">Профиль</span></div>
     </nav>
 
-    <script src="app.js?v=16"></script>
+    <script src="app.js?v=17"></script>
 </body>
 </html>
