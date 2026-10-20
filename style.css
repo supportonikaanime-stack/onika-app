@@ -473,3 +473,32 @@ body {
     object-fit: cover !important;
     background-color: #222;
 }
+
+/* ===== ФИКС ОТОБРАЖЕНИЯ ПОСТЕРОВ ===== */
+.hero-bg {
+    background-size: cover !important;
+    background-position: center !important;
+}
+
+.continue-card-img {
+    width: 80px !important;
+    min-width: 80px !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 12px 0 0 12px;
+}
+
+.card-img {
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: 2/3 !important;
+    object-fit: cover !important;
+    background-color: #222;
+    display: block;
+}
+
+.tg-banner, .tg-banner * {
+    text-decoration: none !important;
+    color: white !important;
+}
+.tg-banner p { color: rgba(255,255,255,0.6) !important; }
