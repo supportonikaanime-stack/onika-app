@@ -1,13 +1,29 @@
-const tg = window.Telegram.WebApp;
-if (tg) {
-    tg.expand();
-    tg.setHeaderColor('#0a0a0f');
-    tg.setBackgroundColor('#0a0a0f');
-}
+// ==========================================
+// ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ (SUPABASE)
+// ==========================================
+// ВСТАВЬТЕ СВОИ ДАННЫЕ СЮДА:
+const SUPABASE_URL = 'https://wsaykqhojwfhpqzxptke.supabase.co/rest/v1/'; // Например: https://xyz.supabase.co
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzYXlrcWhvandmaHBxenhwdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MzAxMDgsImV4cCI6MjEwODEwNjEwOH0.6eHuhYt2CyVvIurt-TW3MgP4VE0kzv39vqVHwskodLk'; // Длинный ключ
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==========================================
 // ПЕРЕМЕННЫЕ ДЛЯ ПЛЕЕРА
 // ==========================================
+const tg = window.Telegram.WebApp;
+let MY_TG_ID = null;
+let MY_NAME = 'Гость';
+
+if (tg) {
+    tg.expand();
+    tg.setHeaderColor('#0a0a0f');
+    tg.setBackgroundColor('#0a0a0f');
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        MY_TG_ID = tg.initDataUnsafe.user.id;
+        MY_NAME = tg.initDataUnsafe.user.first_name + (tg.initDataUnsafe.user.last_name ? ' ' + tg.initDataUnsafe.user.last_name : '');
+    }
+}
+
 let currentAnimeForPlayer = null;
 let selectedVoice = '';
 let selectedPlayer = '';
@@ -25,9 +41,6 @@ const PLAYERS = [
     { id: 'veoveo', name: 'Veoveo', icon: '🎥' }
 ];
 
-// ==========================================
-// СОСТОЯНИЕ КАТАЛОГА
-// ==========================================
 let catalogPage = 1;
 let isCatalogLoading = false;
 let hasMoreCatalog = true;
@@ -91,91 +104,220 @@ function goBackFromDetail() {
 }
 
 // ==========================================
-// СИСТЕМА ДРУЗЕЙ
+// БАЗА ДАННЫХ: ПРОФИЛЬ
 // ==========================================
-function getFriends() {
-    return JSON.parse(localStorage.getItem('onika_friends')) || [];
-}
-
-function saveFriends(friends) {
-    localStorage.setItem('onika_friends', JSON.stringify(friends));
-}
-
-function loadFriends() {
-    const listContainer = document.getElementById('friends-list-container');
-    if (!listContainer) return;
+async function syncProfileToDB() {
+    if (!MY_TG_ID) return;
     
-    const friends = getFriends();
+    let stats = getStats();
     
-    if (friends.length === 0) {
-        listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">У вас пока нет друзей</div>';
-        return;
+    try {
+        const { data, error } = await supabase.from('users').upsert({
+            tg_id: MY_TG_ID,
+            name: MY_NAME,
+            xp: stats.xp,
+            episodes_watched: stats.episodesWatched,
+            minutes_watched: stats.minutesWatched,
+            days_streak: stats.daysStreak
+        }, { onConflict: 'tg_id' });
+        
+        if (error) console.error('Ошибка синхронизации:', error);
+        else console.log('✅ Профиль синхронизирован с БД');
+    } catch (e) {
+        console.error('Ошибка сети с БД:', e);
     }
-    
-    let html = '';
-    friends.forEach(friend => {
-        html += `
-            <div class="friend-card" onclick="openFriendProfile('${friend.id}', '${friend.name}')">
-                <div class="friend-avatar">
-                    ${friend.photo ? `<img src="${friend.photo}">` : friend.name[0].toUpperCase()}
-                </div>
-                <div class="friend-info">
-                    <h3>${friend.name}</h3>
-                    <p>ID: ${friend.id}</p>
-                </div>
-                <div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div>
-            </div>
-        `;
-    });
-    listContainer.innerHTML = html;
 }
 
-function searchFriend() {
+function copyMyId() {
+    if (!MY_TG_ID) return;
+    navigator.clipboard.writeText(MY_TG_ID).then(() => {
+        showToast('📋 ID скопирован!');
+    }).catch(() => {
+        showToast('Не удалось скопировать', 'error');
+    });
+}
+
+function loadProfileData() {
+    const customAvatar = localStorage.getItem('onika_custom_avatar'); 
+    const avatarEl = document.getElementById('tg-avatar'); 
+    
+    if (avatarEl && MY_TG_ID) { 
+        if (customAvatar) avatarEl.innerHTML = `<img src="${customAvatar}">`; 
+        else if (tg.initDataUnsafe.user.photo_url) avatarEl.innerHTML = `<img src="${tg.initDataUnsafe.user.photo_url}">`; 
+        else avatarEl.innerHTML = `<span>${MY_NAME[0].toUpperCase()}</span>`; 
+    } 
+    
+    setElText('my-tg-id', MY_TG_ID || 'Нет ID');
+    setElText('tg-name', MY_NAME);
+
+    let stats = getStats(); 
+    const today = new Date().toDateString(); 
+    if (stats.lastVisit !== today) { 
+        stats.daysStreak += 1; stats.lastVisit = today; stats.xp += 50; stats.watchedToday = []; saveStats(stats); 
+    } 
+    checkAchievements(stats); 
+    const currentLevel = Math.floor(stats.xp / 100) + 1; 
+    const xpForNextLevel = currentLevel * 100; 
+    const xpCurrentLevel = stats.xp % 100; 
+    const progressPercent = (xpCurrentLevel / 100) * 100; 
+    let rankTitle = LEVEL_TITLES[Math.min(currentLevel - 1, 99)]; 
+    setElText('user-level', currentLevel); 
+    setElText('user-level-text', currentLevel); 
+    setElText('user-rank', rankTitle); 
+    setElText('user-xp-current', xpCurrentLevel); 
+    setElText('user-xp-next', xpForNextLevel); 
+    setElWidth('user-xp-bar', progressPercent + '%'); 
+    setElText('stat-episodes', stats.episodesWatched); 
+    setElHTML('stat-minutes', `${stats.minutesWatched} <span style="font-size: 14px; font-weight: normal;">мин</span>`); 
+    setElText('stat-days', stats.daysStreak); 
+    setElText('ach-points', stats.unlockedAchievements.length * 10); 
+    setElText('ach-earned', stats.unlockedAchievements.length); 
+    setElWidth('ach-bar', (stats.unlockedAchievements.length / 50) * 100 + '%'); 
+    setElText('modal-level-num', currentLevel); 
+    setElText('modal-rank', rankTitle); 
+    setElText('modal-xp-cur', xpCurrentLevel); 
+    setElText('modal-xp-next', xpForNextLevel); 
+    setElWidth('modal-xp-bar', progressPercent + '%'); 
+    setElText('modal-ach-earned', stats.unlockedAchievements.length); 
+    const nextAch = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id)); 
+    if (nextAch) setElText('next-ach-name', nextAch.name); 
+    else setElText('next-ach-name', 'Все выполнено!'); 
+
+    // Синхронизируем с базой
+    syncProfileToDB();
+}
+
+// ==========================================
+// БАЗА ДАННЫХ: ДРУЗЬЯ
+// ==========================================
+async function loadFriends() {
+    const listContainer = document.getElementById('friends-list-container');
+    if (!listContainer || !MY_TG_ID) return;
+    
+    listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">Загрузка друзей...</div>';
+
+    try {
+        const { data: friendsData, error } = await supabase
+            .from('friends')
+            .select('friend_id')
+            .eq('user_id', MY_TG_ID);
+            
+        if (error) throw error;
+
+        if (friendsData.length === 0) {
+            listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">У вас пока нет друзей</div>';
+            return;
+        }
+
+        const friendIds = friendsData.map(f => f.friend_id);
+        
+        const { data: usersData, error: usersError } = await supabase
+            .from('users')
+            .select('*')
+            .in('tg_id', friendIds);
+
+        if (usersError) throw usersError;
+
+        let html = '';
+        usersData.forEach(friend => {
+            html += `
+                <div class="friend-card" onclick="openFriendProfile(${friend.tg_id}, '${friend.name}')">
+                    <div class="friend-avatar">
+                        ${friend.name[0].toUpperCase()}
+                    </div>
+                    <div class="friend-info">
+                        <h3>${friend.name}</h3>
+                        <p>ID: ${friend.tg_id} • Ур. ${Math.floor(friend.xp / 100) + 1}</p>
+                    </div>
+                    <div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div>
+                </div>
+            `;
+        });
+        listContainer.innerHTML = html;
+
+    } catch (e) {
+        console.error(e);
+        listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка загрузки друзей</div>';
+    }
+}
+
+async function searchFriend() {
     const input = document.getElementById('friend-search-input');
     const id = input.value.trim();
     const resultContainer = document.getElementById('search-result-container');
     
-    if (!id) {
+    if (!id || !MY_TG_ID) {
         resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Введите ID</div>';
         return;
     }
-    
-    // Проверяем, не добавили ли уже
-    const friends = getFriends();
-    if (friends.some(f => f.id === id)) {
-        resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Этот пользователь уже в друзьях</div>';
+
+    if (id === MY_TG_ID.toString()) {
+        resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Это ваш ID</div>';
         return;
     }
 
-    // Так как у нас нет базы, мы "находим" пользователя с этим ID
-    // В реальности здесь был бы запрос к вашему серверу
-    const randomName = 'User_' + id;
-    const randomPhoto = `https://api.dicebear.com/7.x/bottts/svg?seed=${id}`;
+    resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Поиск...</div>';
+    
+    try {
+        const { data: userData, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('tg_id', id)
+            .single();
 
-    resultContainer.innerHTML = `
-        <div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;">
-            <div class="friend-avatar">${randomName[0]}</div>
-            <div class="friend-info">
-                <h3>${randomName}</h3>
-                <p>ID: ${id}</p>
+        if (error || !userData) {
+            resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Пользователь не найден (он должен зайти в бота хотя бы раз)</div>';
+            return;
+        }
+
+        const { data: friendCheck } = await supabase
+            .from('friends')
+            .select('*')
+            .eq('user_id', MY_TG_ID)
+            .eq('friend_id', id);
+
+        if (friendCheck && friendCheck.length > 0) {
+            resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Этот пользователь уже в друзьях</div>';
+            return;
+        }
+
+        resultContainer.innerHTML = `
+            <div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;">
+                <div class="friend-avatar">${userData.name[0].toUpperCase()}</div>
+                <div class="friend-info">
+                    <h3>${userData.name}</h3>
+                    <p>ID: ${userData.tg_id} • Ур. ${Math.floor(userData.xp / 100) + 1}</p>
+                </div>
+                <button onclick="addFriend(${userData.tg_id})" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Добавить</button>
             </div>
-            <button onclick="addFriend('${id}', '${randomName}', '${randomPhoto}')" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Добавить</button>
-        </div>
-    `;
+        `;
+
+    } catch (e) {
+        console.error(e);
+        resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Ошибка поиска</div>';
+    }
 }
 
-function addFriend(id, name, photo) {
-    const friends = getFriends();
-    if (friends.some(f => f.id === id)) return;
+async function addFriend(friendId) {
+    if (!MY_TG_ID) return;
     
-    friends.push({ id, name, photo });
-    saveFriends(friends);
-    
-    document.getElementById('search-result-container').innerHTML = '';
-    document.getElementById('friend-search-input').value = '';
-    
-    showToast('👥 Друг добавлен!');
-    loadFriends();
+    try {
+        const { error } = await supabase.from('friends').insert({
+            user_id: MY_TG_ID,
+            friend_id: friendId
+        });
+
+        if (error) throw error;
+        
+        document.getElementById('search-result-container').innerHTML = '';
+        document.getElementById('friend-search-input').value = '';
+        
+        showToast('👥 Друг добавлен!');
+        loadFriends();
+    } catch (e) {
+        console.error(e);
+        showToast('Ошибка добавления', 'error');
+    }
 }
 
 function openFriendProfile(id, name) {
@@ -194,19 +336,11 @@ function openFriendProfile(id, name) {
                 <p class="user-slogan">ID: ${id}</p>
             </div>
         </div>
-        
-        <div class="stats-card">
-            <div class="stat-item"><div class="stat-value">--</div><div class="stat-label">серий</div></div>
-            <div class="stat-divider"></div>
-            <div class="stat-item"><div class="stat-value">--</div><div class="stat-label">просмотра</div></div>
-            <div class="stat-divider"></div>
-            <div class="stat-item"><div class="stat-value">--</div><div class="stat-label">дней</div></div>
-        </div>
     `;
 }
 
 // ==========================================
-// ПЛЕЕР (3 ШАГА)
+// ОСТАЛЬНОЙ КОД (ПЛЕЕР, КАТАЛОГ, XP)
 // ==========================================
 function startWatching(anime) { currentAnimeForPlayer = anime; switchTab('voice'); }
 function renderVoiceSelection() { const container = document.getElementById('voice-list'); if (!container) return; let html = ''; VOICES.forEach(v => { html += `<div onclick="selectVoice('${v.id}', '${v.name}')" style="background: #14141f; border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 14px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.2s;"><div style="font-size: 24px;">${v.icon}</div><div style="font-size: 16px; font-weight: 600; color: #fff;">${v.name}</div></div>`; }); container.innerHTML = html; }
@@ -216,9 +350,6 @@ function selectPlayer(id, name) { selectedPlayer = name; switchTab('episodes'); 
 function renderEpisodesSelection() { document.getElementById('selected-voice-text').textContent = selectedVoice; document.getElementById('selected-player-text').textContent = selectedPlayer; const container = document.getElementById('episodes-list'); if (!container || !currentAnimeForPlayer) return; let totalEpisodes = currentAnimeForPlayer.episodes || 12; if (totalEpisodes > 50) totalEpisodes = 50; let html = ''; for (let i = 1; i <= totalEpisodes; i++) { html += `<div onclick="playEpisode(${i})" style="background: #1a1a20; border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; text-align: center; font-size: 16px; font-weight: bold; color: #fff; cursor: pointer; transition: 0.2s;">${i}</div>`; } container.innerHTML = html; }
 function playEpisode(epNum) { addXP(20); let stats = getStats(); stats.episodesWatched += 1; stats.minutesWatched += 24; saveStats(stats); if (tg) tg.showAlert(`🎬 Воспроизведение:\nАниме: ${currentAnimeForPlayer.title.romaji}\nОзвучка: ${selectedVoice}\nПлеер: ${selectedPlayer}\nСерия: ${epNum}\n\n(+20 XP, +1 серия)`); }
 
-// ==========================================
-// КАТАЛОГ
-// ==========================================
 function initCatalogFilters() { const genreContainer = document.getElementById('genre-filters'); if (!genreContainer) return; let html = `<div class="genre-pill active" onclick="setGenreFilter('', this)"><div class="dot"></div>Все</div>`; GENRES.forEach(g => { html += `<div class="genre-pill" onclick="setGenreFilter('${g.id}', this)">${g.name}</div>`; }); genreContainer.innerHTML = html; }
 function setGenreFilter(genreId, btn) { currentFilters.genre = genreId; document.querySelectorAll('#genre-filters .genre-pill').forEach(el => el.classList.remove('active')); btn.classList.add('active'); if (genreId === '') btn.innerHTML = '<div class="dot"></div>Все'; loadCatalog(true); }
 function searchAnime() { const query = document.getElementById('search-input').value.trim(); if (query === currentFilters.search) return; currentFilters.search = query; loadCatalog(true); }
@@ -252,9 +383,6 @@ async function loadCatalog(reset = false) {
 function loadMoreCatalog() { if (!hasMoreCatalog || isCatalogLoading) return; catalogPage++; loadCatalog(false); }
 function forceReloadCatalog() { document.getElementById('catalog-grid').innerHTML = ''; loadCatalog(true); }
 
-// ==========================================
-// МОИ СПИСКИ
-// ==========================================
 function filterMyList(type, btn) { currentMyListFilter = type; document.querySelectorAll('.my-list-tab').forEach(el => el.classList.remove('active')); btn.classList.add('active'); renderMyList(); }
 function renderMyList() {
     const grid = document.getElementById('my-grid'); if (!grid) return;
@@ -278,9 +406,6 @@ function renderMyList() {
 }
 function openQuickStatus(id, title, btnElement) { document.getElementById('status-anime-title').textContent = title; document.getElementById('statusModal').classList.add('active'); window._currentAnimeForStatus = id; window._currentBtnForStatus = btnElement; }
 
-// ==========================================
-// ДЕТАЛЬНАЯ СТРАНИЦА
-// ==========================================
 async function openAnimeDetail(id, fromScreen = 'catalog') {
     previousScreen = fromScreen;
     switchTab('detail');
@@ -323,9 +448,6 @@ function setAnimeStatus(status) {
     if (heartBtn) { if (status !== '') { heartBtn.style.background = 'rgba(255,45,120,0.2)'; heartBtn.style.borderColor = '#ff2d78'; heartBtn.style.color = '#ff2d78'; heartBtn.innerHTML = '❤️'; } else { heartBtn.style.background = 'rgba(255,255,255,0.1)'; heartBtn.style.borderColor = 'rgba(255,255,255,0.15)'; heartBtn.style.color = '#fff'; heartBtn.innerHTML = '🤍'; } }
 }
 
-// ==========================================
-// ОСТАЛЬНОЙ КОД
-// ==========================================
 async function openRandomAnime() { if (tg) tg.HapticFeedback.impactOccurred('medium'); showToast('🎲 Ищем случайное аниме...'); try { const randomPage = Math.floor(Math.random() * 50) + 1; const query = `query ($page: Int) { Page(page: $page, perPage: 1) { media(type: ANIME, sort: POPULARITY_DESC) { id } } }`; const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query, variables: { page: randomPage } }) }); const data = await response.json(); const media = data?.data?.Page?.media; if (media && media.length > 0) openAnimeDetail(media[0].id, 'catalog'); } catch (e) { showToast('Ошибка поиска', 'error'); } }
 function toggleDescription() { const descEl = document.getElementById('desc-text'); const btnEl = document.getElementById('desc-btn'); if (descEl.style.webkitLineClamp === '4' || descEl.style.webkitLineClamp === '') { descEl.style.webkitLineClamp = 'unset'; btnEl.innerHTML = 'Свернуть ▲'; } else { descEl.style.webkitLineClamp = '4'; btnEl.innerHTML = 'Читать полностью ▼'; } }
 
@@ -342,7 +464,6 @@ const LEVEL_TITLES = ["Первый эпизод", "Любопытный зри�
 function getStats() { let stats = JSON.parse(localStorage.getItem('onika_stats')); if (!stats) { stats = { episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [] }; localStorage.setItem('onika_stats', JSON.stringify(stats)); } if (!stats.unlockedAchievements) stats.unlockedAchievements = []; if (!stats.favedAnime) stats.favedAnime = []; if (!stats.watchedToday) stats.watchedToday = []; return stats; }
 function saveStats(stats) { localStorage.setItem('onika_stats', JSON.stringify(stats)); loadProfileData(); }
 function checkAchievements(stats) { let changed = false; ACHIEVEMENTS.forEach(ach => { if (!stats.unlockedAchievements.includes(ach.id)) { if (ach.check(stats)) { stats.unlockedAchievements.push(ach.id); changed = true; showToast(`🏆 Достижение: ${ach.name}!`); } } }); if (changed) saveStats(stats); }
-function loadProfileData() { const customAvatar = localStorage.getItem('onika_custom_avatar'); const avatarEl = document.getElementById('tg-avatar'); if (avatarEl) { if (customAvatar) avatarEl.innerHTML = `<img src="${customAvatar}">`; else if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) { const user = tg.initDataUnsafe.user; if (user.photo_url) avatarEl.innerHTML = `<img src="${user.photo_url}">`; else avatarEl.innerHTML = `<span>${user.first_name[0].toUpperCase()}</span>`; } } if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) { const user = tg.initDataUnsafe.user; const nameEl = document.getElementById('tg-name'); if (nameEl) nameEl.textContent = user.first_name + (user.last_name ? ' ' + user.last_name : ''); } let stats = getStats(); const today = new Date().toDateString(); if (stats.lastVisit !== today) { stats.daysStreak += 1; stats.lastVisit = today; stats.xp += 50; stats.watchedToday = []; saveStats(stats); } checkAchievements(stats); const currentLevel = Math.floor(stats.xp / 100) + 1; const xpForNextLevel = currentLevel * 100; const xpCurrentLevel = stats.xp % 100; const progressPercent = (xpCurrentLevel / 100) * 100; let rankTitle = LEVEL_TITLES[Math.min(currentLevel - 1, 99)]; setElText('user-level', currentLevel); setElText('user-level-text', currentLevel); setElText('user-rank', rankTitle); setElText('user-xp-current', xpCurrentLevel); setElText('user-xp-next', xpForNextLevel); setElWidth('user-xp-bar', progressPercent + '%'); setElText('stat-episodes', stats.episodesWatched); setElHTML('stat-minutes', `${stats.minutesWatched} <span style="font-size: 14px; font-weight: normal;">мин</span>`); setElText('stat-days', stats.daysStreak); setElText('ach-points', stats.unlockedAchievements.length * 10); setElText('ach-earned', stats.unlockedAchievements.length); setElWidth('ach-bar', (stats.unlockedAchievements.length / 50) * 100 + '%'); setElText('modal-level-num', currentLevel); setElText('modal-rank', rankTitle); setElText('modal-xp-cur', xpCurrentLevel); setElText('modal-xp-next', xpForNextLevel); setElWidth('modal-xp-bar', progressPercent + '%'); setElText('modal-ach-earned', stats.unlockedAchievements.length); const nextAch = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id)); if (nextAch) setElText('next-ach-name', nextAch.name); else setElText('next-ach-name', 'Все выполнено!'); }
 function addXP(amount) { let stats = getStats(); const oldLevel = Math.floor(stats.xp / 100) + 1; stats.xp += amount; saveStats(stats); checkAchievements(stats); const newLevel = Math.floor(stats.xp / 100) + 1; if (newLevel > oldLevel) { showLevelUpPopup(newLevel, LEVEL_TITLES[Math.min(newLevel - 1, 99)]); if (tg) tg.HapticFeedback.notificationOccurred('success'); } else { showToast(`+${amount} XP`); } }
 function showLevelUpPopup(level, rank) { const popup = document.getElementById('levelUpPopup'); document.getElementById('popup-level').textContent = level; document.getElementById('popup-rank').textContent = rank; popup.classList.add('show'); setTimeout(() => popup.classList.remove('show'), 4000); }
 function setElText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
@@ -355,9 +476,6 @@ function openLevelModal() { document.getElementById('levelModal').classList.add(
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 function openAchievementsModal() { const stats = getStats(); const container = document.getElementById('achievements-list-container'); let html = ''; ACHIEVEMENTS.forEach(ach => { const isDone = stats.unlockedAchievements.includes(ach.id); html += `<div class="ach-list-item ${isDone ? 'completed' : ''}"><div class="ach-list-icon">${ach.icon}</div><div class="ach-list-info"><h4>${ach.name}</h4><p>${ach.desc}</p></div>${isDone ? '<div style="color:#ffd700; font-weight:bold;">✓</div>' : ''}</div>`; }); container.innerHTML = html; document.getElementById('achievementsModal').classList.add('active'); }
 
-// ==========================================
-// ОБНОВЛЕННЫЕ ФУНКЦИИ ДЛЯ ГЛАВНОЙ
-// ==========================================
 let heroData = []; let currentSlide = 0; let slideInterval;
 async function loadHeroData() { const randomPage = Math.floor(Math.random() * 5) + 1; const query = `{ Page(page: ${randomPage}, perPage: 5) { media(type: ANIME, sort: TRENDING_DESC) { id title { romaji } averageScore coverImage { extraLarge } format startDate { year } } } }`; const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query }) }); const data = await response.json(); if (data && data.data.Page) { heroData = data.data.Page.media.map(a => ({ id: a.id, title: a.title.romaji, img: a.coverImage.extraLarge, score: a.averageScore ? (a.averageScore / 10).toFixed(1) : '?', type: a.format || 'TV', year: a.startDate?.year || '?' })); } initHeroSlider(); }
 function initHeroSlider() { const slider = document.getElementById('heroSlider'); const dotsContainer = document.getElementById('heroDots'); if (!slider || heroData.length === 0) return; let sliderHTML = '', dotsHTML = ''; const stats = getStats(); const favedList = (stats.favedAnime || []).map(a => a.id); heroData.forEach((anime, index) => { const isFaved = favedList.includes(anime.id); const heartClass = isFaved ? 'faved' : ''; const heartIcon = isFaved ? '❤️' : '🤍'; sliderHTML += `<div class="hero-slide ${index === 0 ? 'active' : ''}"><div class="hero-bg" style="background-image: url('${anime.img}')"></div><div class="hero-gradient"></div><div class="hero-content"><div class="hero-badges"><span class="badge star">⭐ ${anime.score}</span><span class="badge">${anime.type}</span><span class="badge">${anime.year}</span></div><h1 class="hero-title">${anime.title}</h1><div class="hero-actions"><button class="btn-primary" onclick="openAnimeDetail(${anime.id}, 'home')">▶ Смотреть</button><button class="btn-icon-heart ${heartClass}" onclick="openStatusModal(${anime.id}, '${anime.title.replace(/'/g, "\\'")}')">${heartIcon}</button></div></div></div>`; dotsHTML += `<div class="hero-dot ${index === 0 ? 'active' : ''}" onclick="goToSlide(${index})"></div>`; }); slider.innerHTML = sliderHTML; dotsContainer.innerHTML = dotsHTML; startSlideShow(); addSwipeSupport(slider); }
@@ -370,4 +488,9 @@ function playAnime(id) { let stats = getStats(); if (stats.watchedToday.includes
 async function loadPopular() { const randomPage = Math.floor(Math.random() * 10) + 1; const query = `{ Page(page: ${randomPage}, perPage: 6) { media(type: ANIME, sort: POPULARITY_DESC) { id title { romaji } coverImage { large } } } }`; const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query }) }); const data = await response.json(); const container = document.getElementById('popular-list'); if (!data || !data.data.Page) return; container.innerHTML = data.data.Page.media.map(anime => `<div class="card" onclick="openAnimeDetail(${anime.id}, 'home')"><img class="card-img" src="${anime.coverImage.large}" loading="lazy"><div class="card-title">${anime.title.romaji}</div></div>`).join(''); }
 async function loadRecommended() { const randomPage = Math.floor(Math.random() * 5) + 1; const query = `{ Page(page: ${randomPage}, perPage: 4) { media(type: ANIME, sort: SCORE_DESC) { id title { romaji } coverImage { large } } } }`; const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query }) }); const data = await response.json(); const container = document.getElementById('recommended-list'); if (!data || !data.data.Page) return; container.innerHTML = data.data.Page.media.map(anime => `<div class="card" onclick="openAnimeDetail(${anime.id}, 'home')"><img class="card-img" src="${anime.coverImage.large}" loading="lazy"><div class="card-title">${anime.title.romaji}</div></div>`).join(''); }
 
-document.addEventListener('DOMContentLoaded', () => { loadHeroData(); loadPopular(); loadRecommended(); loadProfileData(); });
+document.addEventListener('DOMContentLoaded', () => { 
+    loadHeroData(); 
+    loadPopular(); 
+    loadRecommended(); 
+    loadProfileData(); 
+});
