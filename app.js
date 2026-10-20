@@ -6,59 +6,24 @@ if (tg) {
 }
 
 // ==========================================
-// 50 ДОСТИЖЕНИЙ
+// СОСТОЯНИЕ КАТАЛОГА
+// ==========================================
+let catalogPage = 1;
+let catalogSort = 'POPULARITY_DESC';
+let catalogSearchQuery = '';
+let isCatalogLoading = false;
+let hasMoreCatalog = true;
+
+// ==========================================
+// СПИСОК ДОСТИЖЕНИЙ
 // ==========================================
 const ACHIEVEMENTS = [
     { id: 1, name: "Первый шаг", desc: "Зарегистрироваться на сайте", icon: "🚀", check: (s) => true },
     { id: 2, name: "Дебютный просмотр", desc: "Посмотреть первый эпизод", icon: "🎬", check: (s) => s.episodesWatched >= 1 },
     { id: 3, name: "Марафонец", desc: "Посмотреть 10 эпизодов за день", icon: "🏃", check: (s) => s.episodesWatched >= 10 },
     { id: 4, name: "Ночной страж", desc: "Посмотреть аниме после 3:00", icon: "🌙", check: () => { let h = new Date().getHours(); return h >= 3 && h < 6; } },
-    { id: 5, name: "Субтитр-мастер", desc: "50 тайтлов с субтитрами", icon: "📝", check: () => false },
-    { id: 6, name: "Дубляжный фанат", desc: "25 тайтлов в озвучке", icon: "🎙️", check: () => false },
-    { id: 7, name: "Первый отзыв", desc: "Написать первую рецензию", icon: "✍️", check: () => false },
-    { id: 8, name: "Критик", desc: "Написать 10 рецензий", icon: "📚", check: () => false },
-    { id: 9, name: "Мастер слова", desc: "100 лайков на рецензиях", icon: "👏", check: () => false },
-    { id: 10, name: "Коллекционер", desc: "50 тайтлов в 'Буду смотреть'", icon: "📁", check: () => false },
-    { id: 11, name: "Завершитель", desc: "Досмотреть 100 тайтлов", icon: "✅", check: () => false },
-    { id: 12, name: "Бросивший вызов", desc: "Дропнуть 10 тайтлов", icon: "🚫", check: () => false },
-    { id: 13, name: "Оценщик", desc: "Поставить 100 оценок", icon: "⭐", check: () => false },
-    { id: 14, name: "Перфекционист", desc: "Поставить 50 десяток", icon: "🔟", check: () => false },
-    { id: 15, name: "Щедрый критик", desc: "Поставить 50 низких оценок", icon: "📉", check: () => false },
-    { id: 16, name: "Сезонный охотник", desc: "5 онгоингов одного сезона", icon: "🏹", check: () => false },
-    { id: 17, name: "Онгоинг-воин", desc: "Дождаться финала 10 онгоингов", icon: "🛡️", check: () => false },
-    { id: 18, name: "Спойлер-детектор", desc: "Отметить 20 спойлеров", icon: "🕵️", check: () => false },
-    { id: 19, name: "Хранитель порядка", desc: "50 репутационных плюсов", icon: "⚖️", check: () => false },
-    { id: 20, name: "Душа компании", desc: "Оставить 100 комментариев", icon: "💬", check: () => false },
-    { id: 21, name: "Общительный отаку", desc: "100 ответов на комментарии", icon: "🗣️", check: () => false },
-    { id: 22, name: "Творец", desc: "Создать первый пост", icon: "🎨", check: () => false },
-    { id: 23, name: "Летописец", desc: "Опубликовать 10 постов", icon: "📜", check: () => false },
-    { id: 24, name: "Мем-лорд", desc: "Загрузить 10 мемов", icon: "😂", check: () => false },
-    { id: 25, name: "Художник", desc: "Загрузить первый фанарт", icon: "🖌️", check: () => false },
-    { id: 26, name: "Галерист", desc: "Загрузить 25 фанартов", icon: "🖼️", check: () => false },
-    { id: 27, name: "Косплеер", desc: "Загрузить фото косплея", icon: "📸", check: () => false },
-    { id: 28, name: "Первый друг", desc: "Добавить первого друга", icon: "🤝", check: () => false },
-    { id: 29, name: "Социальная бабочка", desc: "Иметь 50 друзей", icon: "🦋", check: () => false },
-    { id: 30, name: "Популярная личность", desc: "100 подписчиков", icon: "🌟", check: () => false },
-    { id: 31, name: "Ранняя пташка", desc: "Зайти до 7:00", icon: "🌅", check: () => { let h = new Date().getHours(); return h >= 5 && h < 7; } },
-    { id: 32, name: "Полуночник", desc: "Зайти после 2:00", icon: "🌌", check: () => { let h = new Date().getHours(); return h >= 0 && h < 3; } },
     { id: 33, name: "Ежедневный визит", desc: "Заходить 7 дней подряд", icon: "📅", check: (s) => s.daysStreak >= 7 },
-    { id: 34, name: "Преданный фанат", desc: "Заходить 30 дней подряд", icon: "🔥", check: (s) => s.daysStreak >= 30 },
-    { id: 35, name: "Верность сайту", desc: "Заходить 365 дней подряд", icon: "💎", check: (s) => s.daysStreak >= 365 },
-    { id: 36, name: "Первый уровень", desc: "Достичь 10 уровня", icon: "🎖️", check: (s) => Math.floor(s.xp / 100) + 1 >= 10 },
-    { id: 37, name: "Опытный пользователь", desc: "Достичь 50 уровня", icon: "🏅", check: (s) => Math.floor(s.xp / 100) + 1 >= 50 },
-    { id: 38, name: "Вершина Олимпа", desc: "Достичь 100 уровня", icon: "👑", check: (s) => Math.floor(s.xp / 100) + 1 >= 100 },
-    { id: 39, name: "Жанровый гурман", desc: "10 тайтлов в 5 жанрах", icon: "🍽️", check: () => false },
-    { id: 40, name: "Всеядный", desc: "Тайтлы во всех жанрах", icon: "🌍", check: () => false },
-    { id: 41, name: "Романтик", desc: "30 романтических тайтлов", icon: "💖", check: () => false },
-    { id: 42, name: "Экшн-мастер", desc: "30 экшн-тайтлов", icon: "⚔️", check: () => false },
-    { id: 43, name: "Комедиант", desc: "30 комедий", icon: "😆", check: () => false },
-    { id: 44, name: "Хоррор-смельчак", desc: "15 ужасов", icon: "👻", check: () => false },
-    { id: 45, name: "Слёзный ручей", desc: "10 драматических тайтлов", icon: "😭", check: () => false },
-    { id: 46, name: "Исэкай-путешественник", desc: "20 исэкаев", icon: "🌀", check: () => false },
-    { id: 47, name: "Меха-пилот", desc: "15 меха-тайтлов", icon: "🤖", check: () => false },
-    { id: 48, name: "Ретро-фанат", desc: "10 тайтлов старше 2000", icon: "📼", check: () => false },
-    { id: 49, name: "Новинкоман", desc: "10 тайтлов года выхода", icon: "🆕", check: () => false },
-    { id: 50, name: "Легенда сайта", desc: "Выполнить все достижения", icon: "🏆", check: () => false }
+    { id: 36, name: "Первый уровень", desc: "Достичь 10 уровня", icon: "🎖️", check: (s) => Math.floor(s.xp / 100) + 1 >= 10 }
 ];
 
 // ==========================================
@@ -87,22 +52,209 @@ const LEVEL_TITLES = [
     "Великий отаку-владыка", "Хранитель последнего эпизода", "Мастер пересмотров", "Дух аниме-сообщества", "Верховный хранитель сезонов"
 ];
 
-// Сброс старого кэша (один раз при обновлении)
-if (localStorage.getItem('onika_stats_v3') === null) {
-    localStorage.removeItem('onika_stats');
-    localStorage.setItem('onika_stats_v3', 'clean');
+// ==========================================
+// НАВИГАЦИЯ
+// ==========================================
+function switchTab(tabName, element) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    
+    const screen = document.getElementById(`screen-${tabName}`);
+    if (screen) screen.classList.add('active');
+
+    if (element) {
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        element.classList.add('active');
+    } else {
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        const navItems = document.querySelectorAll('.nav-item');
+        if (tabName === 'home') navItems[0]?.classList.add('active');
+        if (tabName === 'catalog') navItems[1]?.classList.add('active');
+        if (tabName === 'profile') navItems[2]?.classList.add('active');
+    }
+
+    if (tabName === 'profile') loadProfileData();
+    if (tabName === 'catalog') {
+        if (document.getElementById('catalog-grid').children.length === 0) {
+            loadCatalog(true);
+        }
+    }
 }
 
 // ==========================================
-// СИСТЕМА УРОВНЕЙ И СТАТИСТИКИ
+// КАТАЛОГ
+// ==========================================
+function setFilter(sort, btn) {
+    catalogSort = sort;
+    catalogPage = 1;
+    catalogSearchQuery = '';
+    document.getElementById('search-input').value = '';
+    
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    loadCatalog(true);
+}
+
+function searchAnime() {
+    const query = document.getElementById('search-input').value.trim();
+    if (query === catalogSearchQuery) return; 
+    
+    catalogSearchQuery = query;
+    catalogPage = 1;
+    loadCatalog(true);
+}
+
+async function loadCatalog(reset = false) {
+    if (isCatalogLoading) return;
+    isCatalogLoading = true;
+
+    const grid = document.getElementById('catalog-grid');
+    const loadMoreBtn = document.getElementById('load-more-btn');
+
+    if (reset) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
+        hasMoreCatalog = true;
+    }
+
+    try {
+        let query, variables;
+
+        if (catalogSearchQuery.length > 1) {
+            query = `
+                query ($page: Int, $search: String) {
+                    Page(page: $page, perPage: 12) {
+                        media(type: ANIME, search: $search, sort: POPULARITY_DESC) {
+                            id title { romaji english } coverImage { large } averageScore format episodes
+                        }
+                    }
+                }
+            `;
+            variables = { page: catalogPage, search: catalogSearchQuery };
+        } else {
+            query = `
+                query ($page: Int, $sort: [MediaSort]) {
+                    Page(page: $page, perPage: 12) {
+                        media(type: ANIME, sort: $sort) {
+                            id title { romaji english } coverImage { large } averageScore format episodes
+                        }
+                    }
+                }
+            `;
+            variables = { page: catalogPage, sort: [catalogSort] };
+        }
+
+        const response = await fetch('https://graphql.anilist.co', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ query, variables })
+        });
+        const data = await response.json();
+        
+        const media = data?.data?.Page?.media || [];
+
+        if (reset) grid.innerHTML = '';
+
+        if (media.length === 0) {
+            if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Ничего не найдено</div>';
+            hasMoreCatalog = false;
+            if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+            return;
+        }
+
+        media.forEach(anime => {
+            const title = anime.title.romaji || anime.title.english || 'Без названия';
+            const img = anime.coverImage.large;
+            const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : '?';
+
+            grid.innerHTML += `
+                <div class="catalog-card" onclick="openAnimeDetail(${anime.id})">
+                    <img class="catalog-card-img" src="${img}" loading="lazy">
+                    <div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div>
+                    <div class="catalog-card-title">${title}</div>
+                </div>
+            `;
+        });
+
+        if (media.length < 12) {
+            hasMoreCatalog = false;
+            if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+        } else {
+            if (loadMoreBtn) loadMoreBtn.style.display = 'inline-block';
+        }
+
+    } catch (e) {
+        console.error('Ошибка каталога:', e);
+        if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>';
+    } finally {
+        isCatalogLoading = false;
+    }
+}
+
+function loadMoreCatalog() {
+    if (!hasMoreCatalog || isCatalogLoading) return;
+    catalogPage++;
+    loadCatalog(false);
+}
+
+// ==========================================
+// ДЕТАЛЬНАЯ СТРАНИЦА
+// ==========================================
+async function openAnimeDetail(id) {
+    switchTab('detail');
+    const container = document.getElementById('detail-content');
+    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
+
+    try {
+        const query = `
+            query ($id: Int) {
+                Media(id: $id, type: ANIME) {
+                    id title { romaji english } coverImage { extraLarge } bannerImage
+                    description averageScore episodes status genres
+                }
+            }
+        `;
+        const response = await fetch('https://graphql.anilist.co', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ query, variables: { id } })
+        });
+        const data = await response.json();
+        const anime = data?.data?.Media;
+
+        if (!anime) throw new Error('Не найдено');
+
+        const title = anime.title.romaji || anime.title.english;
+        const desc = anime.description ? anime.description.replace(/<[^>]*>/g, '') : 'Описание отсутствует';
+        const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : '?';
+
+        container.innerHTML = `
+            <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+                <img class="detail-poster" src="${anime.coverImage.extraLarge}">
+                <div>
+                    <h1 class="detail-title">${title}</h1>
+                    <div style="color: #ffd700; font-weight: bold; margin-bottom: 10px;">⭐ ${score}</div>
+                    <div style="color: #888; font-size: 13px;">${anime.episodes || '?'} эп. • ${anime.status}</div>
+                    <button onclick="playAnime(${anime.id})" style="margin-top: 15px; background: #5b5bff; color: #fff; border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%;">▶ Смотреть</button>
+                </div>
+            </div>
+            <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 15px;">
+                ${anime.genres.map(g => `<span style="background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 8px; font-size: 12px;">${g}</span>`).join('')}
+            </div>
+            <p class="detail-desc">${desc}</p>
+        `;
+
+    } catch (e) {
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>';
+    }
+}
+
+// ==========================================
+// ПРОФИЛЬ (БЕЗ ИЗМЕНЕНИЙ)
 // ==========================================
 function getStats() {
     let stats = JSON.parse(localStorage.getItem('onika_stats'));
     if (!stats) {
-        stats = {
-            episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, lastVisit: new Date().toDateString(), 
-            unlockedAchievements: [], favedAnime: [], watchedToday: [] 
-        };
+        stats = { episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [] };
         localStorage.setItem('onika_stats', JSON.stringify(stats));
     }
     if (!stats.unlockedAchievements) stats.unlockedAchievements = [];
@@ -149,14 +301,9 @@ function loadProfileData() {
     }
 
     let stats = getStats();
-
     const today = new Date().toDateString();
     if (stats.lastVisit !== today) {
-        stats.daysStreak += 1;
-        stats.lastVisit = today;
-        stats.xp += 50;
-        stats.watchedToday = [];
-        saveStats(stats);
+        stats.daysStreak += 1; stats.lastVisit = today; stats.xp += 50; stats.watchedToday = []; saveStats(stats);
     }
 
     checkAchievements(stats);
@@ -165,7 +312,6 @@ function loadProfileData() {
     const xpForNextLevel = currentLevel * 100;
     const xpCurrentLevel = stats.xp % 100;
     const progressPercent = (xpCurrentLevel / 100) * 100;
-
     let rankTitle = LEVEL_TITLES[Math.min(currentLevel - 1, 99)];
 
     setElText('user-level', currentLevel);
@@ -174,15 +320,12 @@ function loadProfileData() {
     setElText('user-xp-current', xpCurrentLevel);
     setElText('user-xp-next', xpForNextLevel);
     setElWidth('user-xp-bar', progressPercent + '%');
-
     setElText('stat-episodes', stats.episodesWatched);
     setElHTML('stat-minutes', `${stats.minutesWatched} <span style="font-size: 14px; font-weight: normal;">мин</span>`);
     setElText('stat-days', stats.daysStreak);
-
     setElText('ach-points', stats.unlockedAchievements.length * 10);
     setElText('ach-earned', stats.unlockedAchievements.length);
     setElWidth('ach-bar', (stats.unlockedAchievements.length / 50) * 100 + '%');
-
     setElText('modal-level-num', currentLevel);
     setElText('modal-rank', rankTitle);
     setElText('modal-xp-cur', xpCurrentLevel);
@@ -201,7 +344,6 @@ function addXP(amount) {
     stats.xp += amount;
     saveStats(stats);
     checkAchievements(stats);
-    
     const newLevel = Math.floor(stats.xp / 100) + 1;
     if (newLevel > oldLevel) {
         showLevelUpPopup(newLevel, LEVEL_TITLES[Math.min(newLevel - 1, 99)]);
@@ -231,9 +373,6 @@ function showToast(msg) {
     setTimeout(() => toast.remove(), 2500);
 }
 
-// ==========================================
-// UI ФУНКЦИИ
-// ==========================================
 function uploadCustomAvatar(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -262,7 +401,6 @@ function switchProfileTab(tab) {
     const btnSettings = document.getElementById('tab-btn-settings');
     const contentProfile = document.getElementById('profile-content-tab');
     const contentSettings = document.getElementById('settings-content-tab');
-
     if (tab === 'profile') {
         if(btnProfile) btnProfile.classList.add('active');
         if(btnSettings) btnSettings.classList.remove('active');
@@ -277,6 +415,7 @@ function switchProfileTab(tab) {
 }
 
 function openLevelModal() { document.getElementById('levelModal').classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
 function openAchievementsModal() {
     const stats = getStats();
@@ -284,59 +423,28 @@ function openAchievementsModal() {
     let html = '';
     ACHIEVEMENTS.forEach(ach => {
         const isDone = stats.unlockedAchievements.includes(ach.id);
-        html += `
-            <div class="ach-list-item ${isDone ? 'completed' : ''}">
-                <div class="ach-list-icon">${ach.icon}</div>
-                <div class="ach-list-info">
-                    <h4>${ach.name}</h4>
-                    <p>${ach.desc}</p>
-                </div>
-                ${isDone ? '<div style="color:#ffd700; font-weight:bold;">✓</div>' : ''}
-            </div>
-        `;
+        html += `<div class="ach-list-item ${isDone ? 'completed' : ''}"><div class="ach-list-icon">${ach.icon}</div><div class="ach-list-info"><h4>${ach.name}</h4><p>${ach.desc}</p></div>${isDone ? '<div style="color:#ffd700; font-weight:bold;">✓</div>' : ''}</div>`;
     });
     container.innerHTML = html;
     document.getElementById('achievementsModal').classList.add('active');
 }
 
-function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-
-function switchTab(tabName, element) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    if (tabName === 'home') document.getElementById('screen-home').classList.add('active');
-    if (tabName === 'profile') {
-        document.getElementById('screen-profile').classList.add('active');
-        loadProfileData();
-    }
-    if (element) {
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        element.classList.add('active');
-    }
-}
-
 // ==========================================
-// API ANILIST
+// ГЛАВНАЯ (КАРУСЕЛЬ И ЛЕНТЫ)
 // ==========================================
-async function fetchAniList(query, variables = {}) {
-    try {
-        const response = await fetch('https://graphql.anilist.co', {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ query, variables })
-        });
-        const data = await response.json();
-        return data.data;
-    } catch (e) { return null; }
-}
-
 let heroData = [];
 let currentSlide = 0;
 let slideInterval;
 
 async function loadHeroData() {
     const query = `{ Page(page: 1, perPage: 5) { media(type: ANIME, sort: TRENDING_DESC) { id title { romaji } averageScore coverImage { extraLarge } format startDate { year } } } }`;
-    const data = await fetchAniList(query);
-    if (data && data.Page) {
-        heroData = data.Page.media.map(a => ({
+    const response = await fetch('https://graphql.anilist.co', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ query })
+    });
+    const data = await response.json();
+    if (data && data.data.Page) {
+        heroData = data.data.Page.media.map(a => ({
             id: a.id, title: a.title.romaji, img: a.coverImage.extraLarge,
             score: a.averageScore ? (a.averageScore / 10).toFixed(1) : '?',
             type: a.format || 'TV', year: a.startDate?.year || '?'
@@ -350,17 +458,13 @@ function initHeroSlider() {
     const dotsContainer = document.getElementById('heroDots');
     if (!slider || heroData.length === 0) return;
     let sliderHTML = '', dotsHTML = '';
-    
-    // Получаем список лайкнутых аниме
     const stats = getStats();
     const favedList = stats.favedAnime || [];
 
     heroData.forEach((anime, index) => {
-        // Проверяем, лайкнуто ли это аниме
         const isFaved = favedList.includes(anime.id);
         const heartClass = isFaved ? 'faved' : '';
         const heartIcon = isFaved ? '❤️' : '🤍';
-
         sliderHTML += `
             <div class="hero-slide ${index === 0 ? 'active' : ''}">
                 <div class="hero-bg" style="background-image: url('${anime.img}')"></div>
@@ -406,22 +510,17 @@ function addSwipeSupport(element) {
 }
 
 // ==========================================
-// ФУНКЦИЯ ЛАЙКА (ИСПРАВЛЕНА)
+// ЛАЙК И ПРОСМОТР
 // ==========================================
 function toggleFavorite(btn, animeId) {
     let stats = getStats();
     const isFaved = stats.favedAnime.includes(animeId);
-
     if (isFaved) {
-        // Если уже лайкнуто -> убираем лайк (XP не даем)
-        btn.classList.remove('faved'); 
-        btn.innerHTML = '🤍';
+        btn.classList.remove('faved'); btn.innerHTML = '🤍';
         stats.favedAnime = stats.favedAnime.filter(id => id !== animeId);
         saveStats(stats);
     } else {
-        // Если не лайкнуто -> ставим лайк и даем +10 XP
-        btn.classList.add('faved'); 
-        btn.innerHTML = '❤️';
+        btn.classList.add('faved'); btn.innerHTML = '❤️';
         stats.favedAnime.push(animeId);
         saveStats(stats);
         addXP(10);
@@ -430,22 +529,19 @@ function toggleFavorite(btn, animeId) {
 
 function playAnime(id) { 
     let stats = getStats();
-    const today = new Date().toDateString();
-
     if (stats.watchedToday.includes(id)) {
         if (tg) tg.showAlert(`🎬 Плеер для ID: ${id}\n(Вы уже получали XP за этот эпизод сегодня)`);
         return;
     }
-
     addXP(20);
-    stats.episodesWatched += 1;
-    stats.minutesWatched += 24;
-    stats.watchedToday.push(id);
+    stats.episodesWatched += 1; stats.minutesWatched += 24; stats.watchedToday.push(id);
     saveStats(stats);
-
     if (tg) tg.showAlert(`🎬 Плеер для ID: ${id}\n(+20 XP, +1 серия)`);
 }
 
+// ==========================================
+// ЗАГРУЗКА КОНТЕНТА ГЛАВНОЙ
+// ==========================================
 function renderContinueWatching() {
     const container = document.getElementById('continue-list');
     if (!container) return;
@@ -456,43 +552,27 @@ function renderContinueWatching() {
     let html = '';
     data.forEach(anime => {
         const percent = Math.round((anime.ep / anime.total) * 100);
-        html += `
-            <div class="continue-card" onclick="playAnime(${anime.id})">
-                <img class="continue-card-img" src="${anime.img}">
-                <div class="continue-card-info">
-                    <div class="continue-card-title">${anime.title}</div>
-                    <div>
-                        <div class="continue-card-ep">Серия ${anime.ep} из ${anime.total}</div>
-                        <div class="continue-progress-bar"><div class="continue-progress-fill" style="width: ${percent}%"></div></div>
-                    </div>
-                </div>
-            </div>`;
+        html += `<div class="continue-card" onclick="openAnimeDetail(${anime.id})"><img class="continue-card-img" src="${anime.img}"><div class="continue-card-info"><div class="continue-card-title">${anime.title}</div><div><div class="continue-card-ep">Серия ${anime.ep} из ${anime.total}</div><div class="continue-progress-bar"><div class="continue-progress-fill" style="width: ${percent}%"></div></div></div></div></div>`;
     });
     container.innerHTML = html;
 }
 
 async function loadPopular() {
     const query = `{ Page(page: 1, perPage: 6) { media(type: ANIME, sort: POPULARITY_DESC) { id title { romaji } coverImage { large } } } }`;
-    const data = await fetchAniList(query);
+    const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query }) });
+    const data = await response.json();
     const container = document.getElementById('popular-list');
-    if (!data || !data.Page) return;
-    container.innerHTML = data.Page.media.map(anime => `
-        <div class="card" onclick="playAnime(${anime.id})">
-            <img class="card-img" src="${anime.coverImage.large}" loading="lazy">
-            <div class="card-title">${anime.title.romaji}</div>
-        </div>`).join('');
+    if (!data || !data.data.Page) return;
+    container.innerHTML = data.data.Page.media.map(anime => `<div class="card" onclick="openAnimeDetail(${anime.id})"><img class="card-img" src="${anime.coverImage.large}" loading="lazy"><div class="card-title">${anime.title.romaji}</div></div>`).join('');
 }
 
 async function loadRecommended() {
     const query = `{ Page(page: 1, perPage: 4) { media(type: ANIME, sort: SCORE_DESC) { id title { romaji } coverImage { large } } } }`;
-    const data = await fetchAniList(query);
+    const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query }) });
+    const data = await response.json();
     const container = document.getElementById('recommended-list');
-    if (!data || !data.Page) return;
-    container.innerHTML = data.Page.media.map(anime => `
-        <div class="card" onclick="playAnime(${anime.id})">
-            <img class="card-img" src="${anime.coverImage.large}" loading="lazy">
-            <div class="card-title">${anime.title.romaji}</div>
-        </div>`).join('');
+    if (!data || !data.data.Page) return;
+    container.innerHTML = data.data.Page.media.map(anime => `<div class="card" onclick="openAnimeDetail(${anime.id})"><img class="card-img" src="${anime.coverImage.large}" loading="lazy"><div class="card-title">${anime.title.romaji}</div></div>`).join('');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
