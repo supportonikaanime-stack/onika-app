@@ -94,7 +94,6 @@ function setGenreFilter(genreId, btn) {
     document.querySelectorAll('#genre-filters .genre-pill').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
     if (genreId === '') btn.innerHTML = '<div class="dot"></div>Все';
-    else if (btn.innerHTML.indexOf('dot') === -1) {} // Оставляем как есть
     loadCatalog(true);
 }
 
@@ -133,7 +132,7 @@ function applyFilter(type, value) {
         const list = type === 'type' ? TYPES : type === 'year' ? YEARS : type === 'status' ? STATUSES : SORTS;
         optName = list.find(o => o.id === value).name;
     } else {
-        optName = type.charAt(0).toUpperCase() + type.slice(1);
+        optName = type === 'type' ? 'Тип' : type === 'year' ? 'Год' : type === 'status' ? 'Статус' : 'Сортировка';
     }
     
     btns[btnIndex].innerHTML = `${optName} ⌄`;
@@ -171,7 +170,9 @@ async function loadCatalog(reset = false) {
             }
         `;
 
-        let variables = { page: catalogPage, sort: [filters.sort] };
+        // ФИКС: Отправляем только те переменные, которые реально выбраны
+        let variables = { page: catalogPage, sort: [filters.sort || 'POPULARITY_DESC'] };
+        
         if (filters.search) variables.search = filters.search;
         if (filters.genre) variables.genre = filters.genre;
         if (filters.type) variables.type = filters.type;
