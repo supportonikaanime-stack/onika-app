@@ -5,27 +5,6 @@ if (tg) {
     tg.setBackgroundColor('#0a0a0f');
 }
 
-const PROXY_URL = 'https://corsproxy.io/?https://shikimori.one/api/graphql';
-
-// ==========================================
-// ФУНКЦИЯ ДЛЯ ОБХОДА БЛОКИРОВКИ КАРТИНОК
-// ==========================================
-function getPosterUrl(originalUrl) {
-    if (!originalUrl) return '';
-    // Если ссылка уже полная, берем только путь
-    let cleanUrl = originalUrl;
-    if (cleanUrl.startsWith('http')) {
-        cleanUrl = cleanUrl.replace('https://', '').replace('http://', '');
-    }
-    if (cleanUrl.startsWith('shikimori.one')) {
-        cleanUrl = cleanUrl.replace('shikimori.one', '');
-    }
-    if (!cleanUrl.startsWith('/')) cleanUrl = '/' + cleanUrl;
-    
-    // Пропускаем через прокси картинок
-    return `https://images.weserv.nl/?url=shikimori.one${cleanUrl}`;
-}
-
 function switchTab(tabName, element) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     if (tabName === 'home') document.getElementById('screen-home').classList.add('active');
@@ -35,22 +14,23 @@ function switchTab(tabName, element) {
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         element.classList.add('active');
     }
-    if (tg) tg.HapticFeedback.selectionChanged();
 }
 
-async function fetchShikimori(query) {
+// ==========================================
+// ЗАПРОСЫ К ANILIST API (БЕЗ БЛОКИРОВОК)
+// ==========================================
+async function fetchAniList(query, variables = {}) {
     try {
-        const response = await fetch(PROXY_URL, {
+        const response = await fetch('https://graphql.anilist.co', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ query })
+            body: JSON.stringify({ query, variables })
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw new Error('Network error');
         const data = await response.json();
-        if (data.errors) return null;
         return data.data;
     } catch (e) {
-        console.error('Ошибка сети:', e);
+        console.error('Ошибка AniList:', e);
         return null;
     }
 }
@@ -64,27 +44,35 @@ let slideInterval;
 let touchStartX = 0;
 
 async function loadHeroData() {
-    const query = `{
-        animes(page: 1, limit: 3, order: ranked) {
-            id name russian score kind airedOn { year } poster { originalUrl }
+    const query = `
+        query {
+            Page(page: 1, perPage: 5) {
+                media(type: ANIME, sort: TRENDING_DESC) {
+                    id
+                    title { romaji }
+                    averageScore
+                    coverImage { extraLarge }
+                    format
+                    startDate { year }
+                }
+            }
         }
-    }`;
+    `;
     
-    const data = await fetchShikimori(query);
+    const data = await fetchAniList(query);
     
-    if (!data || !data.animes) {
-        heroData = [
-            { id: 42310, title: "Киберпанк: Бегущие по краю", img: "https://shikimori.one/system/animes/original/42310.jpg", score: "8.9", type: "ТВ", year: "2022" }
-        ];
-    } else {
-        heroData = data.animes.map(a => ({
+    if (data && data.Page && data.Page.media) {
+        heroData = data.Page.media.map(a => ({
             id: a.id,
-            title: a.russian || a.name,
-            img: getPosterUrl(a.poster?.originalUrl), // <-- ПРОКСИ КАРТИНОК
-            score: a.score ? a.score.toFixed(1) : '?',
-            type: a.kind || 'ТВ',
-            year: a.airedOn?.year || '?'
+            title: a.title.romaji,
+            img: a.coverImage.extraLarge,
+            score: a.averageScore ? (a.averageScore / 10).toFixed(1) : '?',
+            type: a.format || 'TV',
+            year: a.startDate?.year || '?'
         }));
+    } else {
+        // Если AniList недоступен (маловероятно), показываем одну картинку
+        heroData = [{ id: 1, title: "Ошибка загрузки API", img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx16498-C6FPmWm59CyP.jpg", score: "8.5", type: "TV", year: "2023" }];
     }
     initHeroSlider();
 }
@@ -166,8 +154,8 @@ function renderContinueWatching() {
     const container = document.getElementById('continue-list');
     if (!container) return;
     const data = [
-        { id: 1, title: "Тетрадь смерти", img: getPosterUrl("https://shikimori.one/system/animes/original/1535.jpg"), ep: 5, total: 37 },
-        { id: 2, title: "Ван-Пис", img: getPosterUrl("https://shikimori.one/system/animes/original/21.jpg"), ep: 150, total: 1000 }
+        { id: 1, title: "Тетрадь смерти", img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1535-C1j7R4w7G6kF.jpg", ep: 5, total: 37 },
+        { id: 2, title: "Ван-Пис", img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-YBz8x3z7R4w7.jpg", ep: 150, total: 1000 }
     ];
     let html = '';
     data.forEach(anime => {
@@ -192,27 +180,31 @@ function renderContinueWatching() {
 // 3) ПОПУЛЯРНОЕ
 // ==========================================
 async function loadPopular() {
-    const query = `{
-        animes(page: 1, limit: 6, order: popularity) {
-            id name russian poster { originalUrl }
+    const query = `
+        query {
+            Page(page: 1, perPage: 6) {
+                media(type: ANIME, sort: POPULARITY_DESC) {
+                    id title { romaji } coverImage { large }
+                }
+            }
         }
-    }`;
+    `;
     
-    const data = await fetchShikimori(query);
+    const data = await fetchAniList(query);
     const container = document.getElementById('popular-list');
     if (!container) return;
 
-    if (!data || !data.animes) {
+    if (!data || !data.Page || !data.Page.media) {
         container.innerHTML = '<p style="color:#888; padding:0 20px;">Не удалось загрузить</p>';
         return;
     }
 
     let html = '';
-    data.animes.forEach(anime => {
+    data.Page.media.forEach(anime => {
         html += `
             <div class="card" onclick="openAnime(${anime.id})">
-                <img class="card-img" src="${getPosterUrl(anime.poster?.originalUrl)}" loading="lazy">
-                <div class="card-title">${anime.russian || anime.name}</div>
+                <img class="card-img" src="${anime.coverImage.large}" loading="lazy">
+                <div class="card-title">${anime.title.romaji}</div>
             </div>
         `;
     });
@@ -223,27 +215,31 @@ async function loadPopular() {
 // 5) РЕКОМЕНДАЦИИ
 // ==========================================
 async function loadRecommended() {
-    const query = `{
-        animes(page: 2, limit: 4, order: ranked) {
-            id name russian poster { originalUrl }
+    const query = `
+        query {
+            Page(page: 1, perPage: 4) {
+                media(type: ANIME, sort: SCORE_DESC) {
+                    id title { romaji } coverImage { large }
+                }
+            }
         }
-    }`;
+    `;
     
-    const data = await fetchShikimori(query);
+    const data = await fetchAniList(query);
     const container = document.getElementById('recommended-list');
     if (!container) return;
 
-    if (!data || !data.animes) {
+    if (!data || !data.Page || !data.Page.media) {
         container.innerHTML = '<p style="color:#888;">Не удалось загрузить</p>';
         return;
     }
 
     let html = '';
-    data.animes.forEach(anime => {
+    data.Page.media.forEach(anime => {
         html += `
             <div class="card" onclick="openAnime(${anime.id})">
-                <img class="card-img" src="${getPosterUrl(anime.poster?.originalUrl)}" loading="lazy">
-                <div class="card-title">${anime.russian || anime.name}</div>
+                <img class="card-img" src="${anime.coverImage.large}" loading="lazy">
+                <div class="card-title">${anime.title.romaji}</div>
             </div>
         `;
     });
