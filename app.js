@@ -5,13 +5,26 @@ if (tg) {
     tg.setBackgroundColor('#0a0a0f');
 }
 
-// ==========================================
-// ⚙️ НАСТРОЙКИ ПРОКСИ (Если не работает, поменяйте на второй)
-// ==========================================
-// Вариант 1 (основной)
 const PROXY_URL = 'https://corsproxy.io/?https://shikimori.one/api/graphql';
-// Вариант 2 (запасной, если первый выдаст ошибку)
-// const PROXY_URL = 'https://api.allorigins.win/raw?url=https://shikimori.one/api/graphql';
+
+// ==========================================
+// ФУНКЦИЯ ДЛЯ ОБХОДА БЛОКИРОВКИ КАРТИНОК
+// ==========================================
+function getPosterUrl(originalUrl) {
+    if (!originalUrl) return '';
+    // Если ссылка уже полная, берем только путь
+    let cleanUrl = originalUrl;
+    if (cleanUrl.startsWith('http')) {
+        cleanUrl = cleanUrl.replace('https://', '').replace('http://', '');
+    }
+    if (cleanUrl.startsWith('shikimori.one')) {
+        cleanUrl = cleanUrl.replace('shikimori.one', '');
+    }
+    if (!cleanUrl.startsWith('/')) cleanUrl = '/' + cleanUrl;
+    
+    // Пропускаем через прокси картинок
+    return `https://images.weserv.nl/?url=shikimori.one${cleanUrl}`;
+}
 
 function switchTab(tabName, element) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -25,36 +38,25 @@ function switchTab(tabName, element) {
     if (tg) tg.HapticFeedback.selectionChanged();
 }
 
-// ==========================================
-// ФУНКЦИЯ ЗАПРОСА К SHIKIMORI (ЧЕРЕЗ ПРОКСИ)
-// ==========================================
 async function fetchShikimori(query) {
     try {
         const response = await fetch(PROXY_URL, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify({ query })
         });
-        
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
         const data = await response.json();
-        if (data.errors) {
-            console.error('GraphQL Ошибка:', data.errors);
-            return null;
-        }
+        if (data.errors) return null;
         return data.data;
     } catch (e) {
-        console.error('Ошибка сети (Прокси):', e);
+        console.error('Ошибка сети:', e);
         return null;
     }
 }
 
 // ==========================================
-// 1) БАННЕР (Реальные данные)
+// 1) БАННЕР
 // ==========================================
 let heroData = [];
 let currentSlide = 0;
@@ -64,30 +66,21 @@ let touchStartX = 0;
 async function loadHeroData() {
     const query = `{
         animes(page: 1, limit: 3, order: ranked) {
-            id
-            name
-            russian
-            score
-            kind
-            airedOn { year }
-            poster { originalUrl }
+            id name russian score kind airedOn { year } poster { originalUrl }
         }
     }`;
     
     const data = await fetchShikimori(query);
     
-    // Если прокси не сработал, показываем заглушку
     if (!data || !data.animes) {
-        console.warn('API не ответил, показываем тестовые данные');
         heroData = [
-            { id: 42310, title: "Киберпанк: Бегущие по краю", img: "https://shikimori.one/system/animes/original/42310.jpg", score: "8.9", type: "ТВ", year: "2022" },
-            { id: 16498, title: "Атака Титанов", img: "https://shikimori.one/system/animes/original/16498.jpg", score: "8.6", type: "ТВ", year: "2013" }
+            { id: 42310, title: "Киберпанк: Бегущие по краю", img: "https://shikimori.one/system/animes/original/42310.jpg", score: "8.9", type: "ТВ", year: "2022" }
         ];
     } else {
         heroData = data.animes.map(a => ({
             id: a.id,
             title: a.russian || a.name,
-            img: a.poster?.originalUrl || '',
+            img: getPosterUrl(a.poster?.originalUrl), // <-- ПРОКСИ КАРТИНОК
             score: a.score ? a.score.toFixed(1) : '?',
             type: a.kind || 'ТВ',
             year: a.airedOn?.year || '?'
@@ -106,7 +99,7 @@ function initHeroSlider() {
     
     heroData.forEach((anime, index) => {
         sliderHTML += `
-            <div class="hero-slide ${index === 0 ? 'active' : ''}" data-id="${anime.id}">
+            <div class="hero-slide ${index === 0 ? 'active' : ''}">
                 <div class="hero-bg" style="background-image: url('${anime.img}')"></div>
                 <div class="hero-gradient"></div>
                 <div class="hero-content">
@@ -128,7 +121,6 @@ function initHeroSlider() {
     
     slider.innerHTML = sliderHTML;
     dotsContainer.innerHTML = dotsHTML;
-
     startSlideShow();
     addSwipeSupport(slider);
 }
@@ -168,14 +160,14 @@ function toggleFavorite(btn) {
 function playAnime(id) { if (tg) tg.showAlert(`🎬 Плеер для ID: ${id}`); }
 
 // ==========================================
-// 2) ПРОДОЛЖИТЬ ПРОСМОТР (Тест)
+// 2) ПРОДОЛЖИТЬ ПРОСМОТР
 // ==========================================
 function renderContinueWatching() {
     const container = document.getElementById('continue-list');
     if (!container) return;
     const data = [
-        { id: 1, title: "Тетрадь смерти", img: "https://shikimori.one/system/animes/original/1535.jpg", ep: 5, total: 37 },
-        { id: 2, title: "Ван-Пис", img: "https://shikimori.one/system/animes/original/21.jpg", ep: 150, total: 1000 }
+        { id: 1, title: "Тетрадь смерти", img: getPosterUrl("https://shikimori.one/system/animes/original/1535.jpg"), ep: 5, total: 37 },
+        { id: 2, title: "Ван-Пис", img: getPosterUrl("https://shikimori.one/system/animes/original/21.jpg"), ep: 150, total: 1000 }
     ];
     let html = '';
     data.forEach(anime => {
@@ -197,15 +189,12 @@ function renderContinueWatching() {
 }
 
 // ==========================================
-// 3) ПОПУЛЯРНОЕ (Реальные данные)
+// 3) ПОПУЛЯРНОЕ
 // ==========================================
 async function loadPopular() {
     const query = `{
         animes(page: 1, limit: 6, order: popularity) {
-            id
-            name
-            russian
-            poster { originalUrl }
+            id name russian poster { originalUrl }
         }
     }`;
     
@@ -222,7 +211,7 @@ async function loadPopular() {
     data.animes.forEach(anime => {
         html += `
             <div class="card" onclick="openAnime(${anime.id})">
-                <img class="card-img" src="${anime.poster?.originalUrl || ''}" loading="lazy">
+                <img class="card-img" src="${getPosterUrl(anime.poster?.originalUrl)}" loading="lazy">
                 <div class="card-title">${anime.russian || anime.name}</div>
             </div>
         `;
@@ -231,15 +220,12 @@ async function loadPopular() {
 }
 
 // ==========================================
-// 5) РЕКОМЕНДАЦИИ (Реальные данные)
+// 5) РЕКОМЕНДАЦИИ
 // ==========================================
 async function loadRecommended() {
     const query = `{
         animes(page: 2, limit: 4, order: ranked) {
-            id
-            name
-            russian
-            poster { originalUrl }
+            id name russian poster { originalUrl }
         }
     }`;
     
@@ -256,7 +242,7 @@ async function loadRecommended() {
     data.animes.forEach(anime => {
         html += `
             <div class="card" onclick="openAnime(${anime.id})">
-                <img class="card-img" src="${anime.poster?.originalUrl || ''}" loading="lazy">
+                <img class="card-img" src="${getPosterUrl(anime.poster?.originalUrl)}" loading="lazy">
                 <div class="card-title">${anime.russian || anime.name}</div>
             </div>
         `;
@@ -266,7 +252,6 @@ async function loadRecommended() {
 
 function openAnime(id) { if (tg) tg.showAlert(`Открываем аниме ID: ${id}`); }
 
-// Запуск
 document.addEventListener('DOMContentLoaded', () => {
     loadHeroData();
     renderContinueWatching();
