@@ -255,6 +255,8 @@
                 <button class="filter-btn" onclick="openFilterModal('year')">Год ⌄</button>
                 <button class="filter-btn" onclick="openFilterModal('status')">Статус ⌄</button>
                 <button class="filter-btn" onclick="openFilterModal('sort')">Сортировка ⌄</button>
+                <!-- Кнопка принудительного обновления -->
+                <button class="filter-btn" onclick="forceReloadCatalog()" style="border-color: #ff2d78; color: #ff2d78;">🔄 Обновить</button>
             </div>
         </div>
 
@@ -370,6 +372,6 @@
         <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon">👤</span><span class="nav-text">Профиль</span></div>
     </nav>
 
-    <script src="app.js?v=15"></script>
+    <script src="app.js?v=16"></script>
 </body>
 </html>
