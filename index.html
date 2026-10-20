@@ -2,67 +2,281 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aniqop Clone</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>OnikaAnime</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style/main.css">
+    
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        body { background-color: #0f0f11; color: white; padding-bottom: 60px; /* Место под нижнее меню */ }
-        
-        /* Шапка */
-        .header { padding: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-size: 24px; font-weight: bold; color: #5b5bff; }
-        .profile-icon { width: 30px; height: 30px; background: #333; border-radius: 50%; }
+        /* Стили для мобильного приложения OnikaAnime */
+        body {
+            padding-bottom: 80px;
+            background: #0a0a0f;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-        /* Баннер */
-        .hero { position: relative; height: 400px; background: url('https://image.tmdb.org/t/p/original/9QdB2b2p8rE0dJpD0jZk2w7p4rY.jpg') center/cover; }
-        .hero-gradient { position: absolute; bottom: 0; width: 100%; height: 50%; background: linear-gradient(to top, #0f0f11, transparent); }
-        .hero-content { position: absolute; bottom: 20px; left: 15px; right: 15px; }
-        .hero-title { font-size: 28px; font-weight: bold; margin-bottom: 10px; }
-        .hero-tags { color: #aaa; font-size: 14px; margin-bottom: 15px; }
-        .btn-watch { background: #5b5bff; color: white; border: none; width: 100%; padding: 15px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .app-container { padding: 0; }
 
-        /* Нижнее меню */
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #1a1a1e; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #333; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #777; font-size: 12px; text-decoration: none; }
+        /* --- ШАПКА (Логотип) --- */
+        .app-header {
+            position: absolute; top: 0; left: 0; width: 100%;
+            padding: 20px; z-index: 10;
+            display: flex; justify-content: space-between; align-items: center;
+            background: linear-gradient(to bottom, rgba(10,10,15,0.8) 0%, transparent 100%);
+        }
+        .logo-text {
+            font-size: 24px; font-weight: 800; letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #fff, #a29bfe);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .header-icon {
+            width: 36px; height: 36px; background: rgba(255,255,255,0.1);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+        }
+
+        /* --- ГЛАВНАЯ (Баннер) --- */
+        .hero-banner {
+            position: relative; height: 80vh;
+            border-radius: 0 0 24px 24px;
+            overflow: hidden; background: #111;
+        }
+        .hero-backdrop {
+            position: absolute; inset: 0;
+            background-size: cover; background-position: center;
+            transition: background-image 0.5s ease;
+        }
+        .hero-gradient {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, #0a0a0f 5%, rgba(10,10,15,0.4) 40%, transparent 100%);
+        }
+        .hero-content {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            padding: 20px; box-sizing: border-box;
+        }
+        .hero-title {
+            font-size: 28px; font-weight: 800; line-height: 1.1; margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        .hero-meta {
+            display: flex; gap: 8px; margin-bottom: 15px; font-size: 13px; flex-wrap: wrap;
+        }
+        .meta-badge {
+            background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 8px;
+            backdrop-filter: blur(10px); font-weight: 600;
+        }
+        .meta-badge.star { color: #ffd700; }
+        .hero-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-watch {
+            flex: 2; background: #5b5bff; color: #fff; border: none;
+            padding: 16px; border-radius: 14px; font-size: 16px; font-weight: bold;
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+            box-shadow: 0 4px 15px rgba(91, 91, 255, 0.4);
+        }
+        .btn-more {
+            flex: 1; background: rgba(255,255,255,0.1); color: #fff; border: none;
+            padding: 16px; border-radius: 14px; font-size: 16px; font-weight: bold;
+            backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: center;
+        }
+
+        /* --- НИЖНЕЕ МЕНЮ --- */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 70px;
+            background: rgba(15, 15, 20, 0.95); backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex; justify-content: space-around; align-items: center;
+            z-index: 9999; padding-bottom: env(safe-area-inset-bottom);
+        }
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center;
+            color: #777; font-size: 11px; text-decoration: none; transition: 0.2s;
+        }
         .nav-item.active { color: #5b5bff; }
-        .nav-icon { font-size: 20px; margin-bottom: 4px; }
+        .nav-icon { font-size: 22px; margin-bottom: 4px; }
+
+        /* --- КАТАЛОГ --- */
+        .catalog-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 15px; padding: 15px;
+        }
+        .card {
+            background: #1a1a20; border-radius: 12px; overflow: hidden;
+            position: relative; cursor: pointer;
+        }
+        .card-img {
+            width: 100%; aspect-ratio: 2/3; object-fit: cover; background: #222;
+        }
+        .card-info { padding: 10px; }
+        .card-title {
+            font-size: 13px; font-weight: 600; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis; margin: 0;
+        }
+        .card-sub { font-size: 11px; color: #888; margin-top: 4px; }
+
+        /* --- ПРОФИЛЬ --- */
+        .profile-header {
+            display: flex; align-items: center; gap: 15px;
+            padding: 20px; background: #1a1a20;
+            border-radius: 20px; margin: 15px;
+        }
+        .avatar {
+            width: 70px; height: 70px; border-radius: 50%;
+            background: linear-gradient(135deg, #5b5bff, #b44aff); 
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; font-weight: bold; overflow: hidden;
+        }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Скрываем старые элементы */
+        .header, .sidebar, .sidebar-overlay { display: none !important; }
     </style>
 </head>
-<body>
+<body data-page="home">
 
-    <div class="header">
-        <div class="logo">Aniqop TV</div>
-        <div class="profile-icon"></div>
-    </div>
+    <!-- Скрытые инпуты для работы JS -->
+    <input type="file" id="avatarFileInput" accept="image/*" style="display:none;" onchange="uploadAvatar(this)">
+    <div id="sidebarOverlay" style="display:none;"></div>
+    <div id="sidebar" style="display:none;"></div>
+    <div id="sidebarFooter" style="display:none;"></div>
+    <div id="sidebarNav" style="display:none;"></div>
 
-    <div class="hero">
-        <div class="hero-gradient"></div>
-        <div class="hero-content">
-            <div class="hero-title">Киберпанк: Бегущие по краю</div>
-            <div class="hero-tags">Жестокость • Фантастика • 89% для вас</div>
-            <button class="btn-watch" onclick="startWatch()">▶ Смотреть</button>
+    <div class="app-container">
+        <!-- ===== ГЛАВНАЯ ===== -->
+        <div id="page-home">
+            <section class="hero-banner" id="heroBanner">
+                <!-- Шапка внутри баннера -->
+                <header class="app-header">
+                    <div class="logo-text">OnikaAnime</div>
+                    <div class="header-icon" onclick="navigate('profile')">👤</div>
+                </header>
+
+                <div class="hero-backdrop" id="heroBackdrop"></div>
+                <div class="hero-gradient"></div>
+                <div class="hero-content">
+                    <div class="hero-meta" id="heroMeta"></div>
+                    <h1 class="hero-title" id="heroTitle">Загрузка...</h1>
+                    <p id="heroDesc" style="color:#aaa; font-size:14px; margin-bottom:15px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;"></p>
+                    <div class="hero-actions">
+                        <button class="btn-watch" id="heroWatchBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Смотреть
+                        </button>
+                        <button class="btn-more" id="heroMoreBtn">👁 Детали</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Ленты -->
+            <section class="rail-section" style="padding: 20px 15px 0;">
+                <h2 style="font-size: 18px; margin-bottom: 10px; padding-left: 5px;">🔥 Сейчас в тренде</h2>
+                <div id="trendingTrack" style="display:flex; gap:10px; overflow-x:auto; padding-bottom:10px; scrollbar-width:none;"></div>
+            </section>
+
+            <!-- Каталог -->
+            <section class="catalog-section" style="padding: 20px 15px;">
+                <h2 id="catalogTitle" style="font-size: 18px; margin-bottom: 15px; padding-left: 5px;">📚 Все аниме</h2>
+                <div style="background:#1a1a20; border-radius:12px; display:flex; align-items:center; padding:0 15px; margin-bottom:15px;">
+                    <span style="color:#777;">🔍</span>
+                    <input type="text" id="catalogSearchInput" placeholder="Поиск аниме..." oninput="applyCatalogFilters()" style="background:none; border:none; color:#fff; padding:15px; width:100%; outline:none; font-size:15px;">
+                </div>
+                <div class="catalog-grid" id="grid"></div>
+            </section>
         </div>
+
+        <!-- ===== ДЕТАЛЬНАЯ ===== -->
+        <div id="page-detail" style="display:none; padding: 20px;">
+            <span onclick="goBack()" style="color:#5b5bff; font-weight:bold; font-size:16px; display:inline-block; margin-bottom:20px;">← Назад</span>
+            <div style="display:flex; gap:15px;">
+                <img id="detailPoster" style="width:120px; border-radius:12px; background:#222;">
+                <div>
+                    <h1 id="detailTitle" style="font-size:22px; margin:0 0 10px 0; line-height:1.2;"></h1>
+                    <div id="detailMeta" style="color:#aaa; font-size:13px; display:flex; gap:5px; flex-wrap:wrap;"></div>
+                </div>
+            </div>
+            <p id="detailDesc" style="color:#aaa; margin-top:20px; line-height:1.6; font-size:14px;"></p>
+            <button class="btn-watch" style="width:100%; margin-top:20px;" onclick="watchOnVeoveo()">▶ Смотреть</button>
+        </div>
+
+        <!-- ===== ПРОФИЛЬ ===== -->
+        <div id="page-profile" style="display:none;">
+            <div style="padding: 20px;">
+                <h1 style="font-size: 24px; margin-bottom: 20px;">Профиль</h1>
+                <div class="profile-header">
+                    <div class="avatar">
+                        <img id="avatarImg" style="display:none;">
+                        <span id="avatarLetter">?</span>
+                    </div>
+                    <div>
+                        <h2 id="profileName" style="margin:0; font-size:20px;">--</h2>
+                        <div id="profileEmail" style="color:#777; font-size:12px; margin-top:5px;">--</div>
+                        <div id="profileLevelBadge" style="color:#5b5bff; font-weight:bold; margin-top:5px;">Lv.1</div>
+                    </div>
+                </div>
+                <!-- Заглушки для JS -->
+                <div style="display:none;">
+                    <span id="statFav"></span><span id="statComments"></span><span id="statAchievements"></span><span id="statTime"></span>
+                    <div id="profileBio"></div><div id="profileJoinDate"></div><div id="profileStatus"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Заглушки страниц -->
+        <div id="page-favorites" style="display:none;"></div>
+        <div id="page-achievements" style="display:none;"></div>
+        <div id="page-mycomments" style="display:none;"></div>
+        <div id="page-settings" style="display:none;"></div>
     </div>
 
-    <!-- Нижняя навигация -->
+    <!-- НИЖНЕЕ МЕНЮ -->
     <div class="bottom-nav">
-        <a href="#" class="nav-item active"><span class="nav-icon">🏠</span>Главная</a>
-        <a href="#" class="nav-item"><span class="nav-icon">🔍</span>Каталог</a>
-        <a href="#" class="nav-item"><span class="nav-icon">🔖</span>Моё</a>
-        <a href="#" class="nav-item"><span class="nav-icon">🎮</span>Игры</a>
-        <a href="#" class="nav-item"><span class="nav-icon">👤</span>Профиль</a>
+        <a href="#" class="nav-item active" onclick="navigate('home'); return false;">
+            <span class="nav-icon">🏠</span>Главная
+        </a>
+        <a href="#" class="nav-item" onclick="document.getElementById('catalogTitle').scrollIntoView({behavior:'smooth'}); return false;">
+            <span class="nav-icon">🔍</span>Каталог
+        </a>
+        <a href="#" class="nav-item" onclick="navigate('favorites'); return false;">
+            <span class="nav-icon">🔖</span>Моё
+        </a>
+        <a href="#" class="nav-item" onclick="navigate('profile'); return false;">
+            <span class="nav-icon">👤</span>Профиль
+        </a>
     </div>
+
+    <!-- Модалки (скопированы из вашего старого кода) -->
+    <div class="modal" id="loginModal"><div class="modal-box"><button onclick="closeLoginModal()">✕</button><input type="email" id="loginEmail" placeholder="Email"><input type="password" id="loginPass" placeholder="Пароль"><button onclick="login()">Войти</button></div></div>
+    
+    <!-- СКРИПТЫ -->
+    <script src="script/storage.js"></script>
+    <script src="script/api.js"></script>
+    <script src="script/utils.js"></script>
+    <script src="script/auth.js"></script>
+    <script src="script/main.js"></script>
 
     <script>
-        // Инициализация Telegram WebApp
+        // Инициализация Телеграма
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Развернуть на весь экран
-        tg.setHeaderColor('#0f0f11'); // Цвет шапки
+        tg.expand(); 
+        tg.setHeaderColor('#0a0a0f'); 
+        tg.setBackgroundColor('#0a0a0f');
 
-        function startWatch() {
-            tg.showAlert("Функция плеера в разработке! 🎬");
-        }
+        // Перехват навигации
+        const oldNavigate = window.navigate;
+        window.navigate = function(page) {
+            oldNavigate(page);
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            const items = document.querySelectorAll('.nav-item');
+            if (page === 'home') items[0].classList.add('active');
+            if (page === 'favorites') items[2].classList.add('active');
+            if (page === 'profile') items[3].classList.add('active');
+            
+            if (page === 'home') tg.BackButton.hide();
+            else tg.BackButton.show();
+        };
+        
+        tg.BackButton.onClick(() => goBack());
     </script>
 </body>
 </html>
