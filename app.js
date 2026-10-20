@@ -6,6 +6,62 @@ if (tg) {
 }
 
 // ==========================================
+// СПИСОК ДОСТИЖЕНИЙ
+// ==========================================
+const ACHIEVEMENTS = [
+    { id: 1, name: "Первый шаг", desc: "Зарегистрироваться на сайте", icon: "🚀", check: (s) => true },
+    { id: 2, name: "Дебютный просмотр", desc: "Посмотреть первый эпизод", icon: "🎬", check: (s) => s.episodesWatched >= 1 },
+    { id: 3, name: "Марафонец", desc: "Посмотреть 10 эпизодов за день", icon: "🏃", check: (s) => s.episodesWatched >= 10 },
+    { id: 4, name: "Ночной страж", desc: "Посмотреть аниме после 3:00", icon: "🌙", check: () => { let h = new Date().getHours(); return h >= 3 && h < 6; } },
+    { id: 5, name: "Субтитр-мастер", desc: "50 тайтлов с субтитрами", icon: "📝", check: () => false },
+    { id: 6, name: "Дубляжный фанат", desc: "25 тайтлов в озвучке", icon: "🎙️", check: () => false },
+    { id: 7, name: "Первый отзыв", desc: "Написать первую рецензию", icon: "✍️", check: () => false },
+    { id: 8, name: "Критик", desc: "Написать 10 рецензий", icon: "📚", check: () => false },
+    { id: 9, name: "Мастер слова", desc: "100 лайков на рецензиях", icon: "👏", check: () => false },
+    { id: 10, name: "Коллекционер", desc: "50 тайтлов в 'Буду смотреть'", icon: "📁", check: () => false },
+    { id: 11, name: "Завершитель", desc: "Досмотреть 100 тайтлов", icon: "✅", check: () => false },
+    { id: 12, name: "Бросивший вызов", desc: "Дропнуть 10 тайтлов", icon: "🚫", check: () => false },
+    { id: 13, name: "Оценщик", desc: "Поставить 100 оценок", icon: "⭐", check: () => false },
+    { id: 14, name: "Перфекционист", desc: "Поставить 50 десяток", icon: "🔟", check: () => false },
+    { id: 15, name: "Щедрый критик", desc: "Поставить 50 низких оценок", icon: "📉", check: () => false },
+    { id: 16, name: "Сезонный охотник", desc: "5 онгоингов одного сезона", icon: "🏹", check: () => false },
+    { id: 17, name: "Онгоинг-воин", desc: "Дождаться финала 10 онгоингов", icon: "🛡️", check: () => false },
+    { id: 18, name: "Спойлер-детектор", desc: "Отметить 20 спойлеров", icon: "🕵️", check: () => false },
+    { id: 19, name: "Хранитель порядка", desc: "50 репутационных плюсов", icon: "⚖️", check: () => false },
+    { id: 20, name: "Душа компании", desc: "Оставить 100 комментариев", icon: "💬", check: () => false },
+    { id: 21, name: "Общительный отаку", desc: "100 ответов на комментарии", icon: "🗣️", check: () => false },
+    { id: 22, name: "Творец", desc: "Создать первый пост", icon: "🎨", check: () => false },
+    { id: 23, name: "Летописец", desc: "Опубликовать 10 постов", icon: "📜", check: () => false },
+    { id: 24, name: "Мем-лорд", desc: "Загрузить 10 мемов", icon: "😂", check: () => false },
+    { id: 25, name: "Художник", desc: "Загрузить первый фанарт", icon: "🖌️", check: () => false },
+    { id: 26, name: "Галерист", desc: "Загрузить 25 фанартов", icon: "🖼️", check: () => false },
+    { id: 27, name: "Косплеер", desc: "Загрузить фото косплея", icon: "📸", check: () => false },
+    { id: 28, name: "Первый друг", desc: "Добавить первого друга", icon: "🤝", check: () => false },
+    { id: 29, name: "Социальная бабочка", desc: "Иметь 50 друзей", icon: "🦋", check: () => false },
+    { id: 30, name: "Популярная личность", desc: "100 подписчиков", icon: "🌟", check: () => false },
+    { id: 31, name: "Ранняя пташка", desc: "Зайти до 7:00", icon: "🌅", check: () => { let h = new Date().getHours(); return h >= 5 && h < 7; } },
+    { id: 32, name: "Полуночник", desc: "Зайти после 2:00", icon: "🌌", check: () => { let h = new Date().getHours(); return h >= 0 && h < 3; } },
+    { id: 33, name: "Ежедневный визит", desc: "Заходить 7 дней подряд", icon: "📅", check: (s) => s.daysStreak >= 7 },
+    { id: 34, name: "Преданный фанат", desc: "Заходить 30 дней подряд", icon: "🔥", check: (s) => s.daysStreak >= 30 },
+    { id: 35, name: "Верность сайту", desc: "Заходить 365 дней подряд", icon: "💎", check: (s) => s.daysStreak >= 365 },
+    { id: 36, name: "Первый уровень", desc: "Достичь 10 уровня", icon: "🎖️", check: (s) => Math.floor(s.xp / 100) + 1 >= 10 },
+    { id: 37, name: "Опытный пользователь", desc: "Достичь 50 уровня", icon: "🏅", check: (s) => Math.floor(s.xp / 100) + 1 >= 50 },
+    { id: 38, name: "Вершина Олимпа", desc: "Достичь 100 уровня", icon: "👑", check: (s) => Math.floor(s.xp / 100) + 1 >= 100 },
+    { id: 39, name: "Жанровый гурман", desc: "10 тайтлов в 5 жанрах", icon: "🍽️", check: () => false },
+    { id: 40, name: "Всеядный", desc: "Тайтлы во всех жанрах", icon: "🌍", check: () => false },
+    { id: 41, name: "Романтик", desc: "30 романтических тайтлов", icon: "💖", check: () => false },
+    { id: 42, name: "Экшн-мастер", desc: "30 экшн-тайтлов", icon: "⚔️", check: () => false },
+    { id: 43, name: "Комедиант", desc: "30 комедий", icon: "😆", check: () => false },
+    { id: 44, name: "Хоррор-смельчак", desc: "15 ужасов", icon: "👻", check: () => false },
+    { id: 45, name: "Слёзный ручей", desc: "10 драматических тайтлов", icon: "😭", check: () => false },
+    { id: 46, name: "Исэкай-путешественник", desc: "20 исэкаев", icon: "🌀", check: () => false },
+    { id: 47, name: "Меха-пилот", desc: "15 меха-тайтлов", icon: "🤖", check: () => false },
+    { id: 48, name: "Ретро-фанат", desc: "10 тайтлов старше 2000", icon: "📼", check: () => false },
+    { id: 49, name: "Новинкоман", desc: "10 тайтлов года выхода", icon: "🆕", check: () => false },
+    { id: 50, name: "Легенда сайта", desc: "Выполнить все достижения", icon: "🏆", check: () => false }
+];
+
+// ==========================================
 // 100 УРОВНЕЙ (ЗВАНИЙ)
 // ==========================================
 const LEVEL_TITLES = [
@@ -38,14 +94,11 @@ function getStats() {
     let stats = JSON.parse(localStorage.getItem('onika_stats'));
     if (!stats) {
         stats = {
-            episodesWatched: 0,
-            minutesWatched: 0,
-            daysStreak: 1,
-            xp: 0,
-            lastVisit: new Date().toDateString()
+            episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, lastVisit: new Date().toDateString(), unlockedAchievements: []
         };
         localStorage.setItem('onika_stats', JSON.stringify(stats));
     }
+    if (!stats.unlockedAchievements) stats.unlockedAchievements = [];
     return stats;
 }
 
@@ -54,53 +107,58 @@ function saveStats(stats) {
     loadProfileData();
 }
 
+function checkAchievements(stats) {
+    let changed = false;
+    ACHIEVEMENTS.forEach(ach => {
+        if (!stats.unlockedAchievements.includes(ach.id)) {
+            if (ach.check(stats)) {
+                stats.unlockedAchievements.push(ach.id);
+                changed = true;
+                showToast(`🏆 Достижение: ${ach.name}!`);
+            }
+        }
+    });
+    if (changed) saveStats(stats);
+}
+
 function loadProfileData() {
-    // Аватарка
     const customAvatar = localStorage.getItem('onika_custom_avatar');
     const avatarEl = document.getElementById('tg-avatar');
     if (avatarEl) {
-        if (customAvatar) {
-            avatarEl.innerHTML = `<img src="${customAvatar}">`;
-        } else if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        if (customAvatar) avatarEl.innerHTML = `<img src="${customAvatar}">`;
+        else if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
             const user = tg.initDataUnsafe.user;
             if (user.photo_url) avatarEl.innerHTML = `<img src="${user.photo_url}">`;
             else avatarEl.innerHTML = `<span>${user.first_name[0].toUpperCase()}</span>`;
         }
     }
 
-    // Имя
     if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
         const user = tg.initDataUnsafe.user;
         const nameEl = document.getElementById('tg-name');
         if (nameEl) nameEl.textContent = user.first_name + (user.last_name ? ' ' + user.last_name : '');
     }
 
-    // Данные
     let stats = getStats();
 
-    // Ежедневный вход (Стрик и +50 XP)
+    // Ежедневный вход
     const today = new Date().toDateString();
     if (stats.lastVisit !== today) {
         stats.daysStreak += 1;
         stats.lastVisit = today;
         stats.xp += 50;
         saveStats(stats);
-        showToast("📅 Ежедневный вход! +50 XP");
     }
 
-    // Расчет уровня
+    checkAchievements(stats); // Проверяем ачивки
+
     const currentLevel = Math.floor(stats.xp / 100) + 1;
     const xpForNextLevel = currentLevel * 100;
     const xpCurrentLevel = stats.xp % 100;
     const progressPercent = (xpCurrentLevel / 100) * 100;
 
-    // Получаем звание из списка
-    let rankTitle = "Первый эпизод";
-    if (currentLevel > 0) {
-        rankTitle = LEVEL_TITLES[Math.min(currentLevel - 1, 99)];
-    }
+    let rankTitle = LEVEL_TITLES[Math.min(currentLevel - 1, 99)];
 
-    // Обновляем экран
     setElText('user-level', currentLevel);
     setElText('user-level-text', currentLevel);
     setElText('user-rank', rankTitle);
@@ -112,36 +170,34 @@ function loadProfileData() {
     setElHTML('stat-minutes', `${stats.minutesWatched} <span style="font-size: 14px; font-weight: normal;">мин</span>`);
     setElText('stat-days', stats.daysStreak);
 
-    setElText('ach-points', stats.xp);
-    const earnedAch = Math.floor(stats.xp / 20);
-    setElText('ach-earned', earnedAch);
-    setElWidth('ach-bar', (earnedAch / 108) * 100 + '%');
+    setElText('ach-points', stats.unlockedAchievements.length * 10);
+    setElText('ach-earned', stats.unlockedAchievements.length);
+    setElWidth('ach-bar', (stats.unlockedAchievements.length / 50) * 100 + '%');
 
-    // Модалки
     setElText('modal-level-num', currentLevel);
     setElText('modal-rank', rankTitle);
     setElText('modal-xp-cur', xpCurrentLevel);
     setElText('modal-xp-next', xpForNextLevel);
     setElWidth('modal-xp-bar', progressPercent + '%');
-    setElText('modal-ach-earned', earnedAch);
-    setElWidth('modal-ach-bar', (earnedAch / 108) * 100 + '%');
+    setElText('modal-ach-earned', stats.unlockedAchievements.length);
+
+    // Находим следующее невыполненное достижение
+    const nextAch = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id));
+    if (nextAch) setElText('next-ach-name', nextAch.name);
+    else setElText('next-ach-name', 'Все выполнено!');
 }
 
-// ==========================================
-// ФАРМ XP И ПРОВЕРКА УРОВНЯ
-// ==========================================
+// Функция XP
 function addXP(amount) {
     let stats = getStats();
     const oldLevel = Math.floor(stats.xp / 100) + 1;
-    
     stats.xp += amount;
     saveStats(stats);
+    checkAchievements(stats);
     
     const newLevel = Math.floor(stats.xp / 100) + 1;
-    
     if (newLevel > oldLevel) {
-        let newRank = LEVEL_TITLES[Math.min(newLevel - 1, 99)];
-        showLevelUpPopup(newLevel, newRank);
+        showLevelUpPopup(newLevel, LEVEL_TITLES[Math.min(newLevel - 1, 99)]);
         if (tg) tg.HapticFeedback.notificationOccurred('success');
     } else {
         showToast(`+${amount} XP`);
@@ -153,13 +209,9 @@ function showLevelUpPopup(level, rank) {
     document.getElementById('popup-level').textContent = level;
     document.getElementById('popup-rank').textContent = rank;
     popup.classList.add('show');
-    
-    setTimeout(() => {
-        popup.classList.remove('show');
-    }, 4000);
+    setTimeout(() => popup.classList.remove('show'), 4000);
 }
 
-// Вспомогательные функции
 function setElText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
 function setElHTML(id, html) { const el = document.getElementById(id); if (el) el.innerHTML = html; }
 function setElWidth(id, width) { const el = document.getElementById(id); if (el) el.style.width = width; }
@@ -167,7 +219,7 @@ function setElWidth(id, width) { const el = document.getElementById(id); if (el)
 function showToast(msg) {
     const toast = document.createElement('div');
     toast.textContent = msg;
-    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#5b5bff;color:#fff;padding:10px 20px;border-radius:20px;font-weight:bold;z-index:99999;box-shadow:0 4px 15px rgba(0,0,0,0.5);animation:fade 0.3s ease;';
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#5b5bff;color:#fff;padding:10px 20px;border-radius:20px;font-weight:bold;z-index:99999;box-shadow:0 4px 15px rgba(0,0,0,0.5);animation:fade 0.3s ease;text-align:center;';
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2500);
 }
@@ -218,7 +270,28 @@ function switchProfileTab(tab) {
 }
 
 function openLevelModal() { document.getElementById('levelModal').classList.add('active'); }
-function openAchievementsModal() { document.getElementById('achievementsModal').classList.add('active'); }
+
+function openAchievementsModal() {
+    const stats = getStats();
+    const container = document.getElementById('achievements-list-container');
+    let html = '';
+    ACHIEVEMENTS.forEach(ach => {
+        const isDone = stats.unlockedAchievements.includes(ach.id);
+        html += `
+            <div class="ach-list-item ${isDone ? 'completed' : ''}">
+                <div class="ach-list-icon">${ach.icon}</div>
+                <div class="ach-list-info">
+                    <h4>${ach.name}</h4>
+                    <p>${ach.desc}</p>
+                </div>
+                ${isDone ? '<div style="color:#ffd700; font-weight:bold;">✓</div>' : ''}
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+    document.getElementById('achievementsModal').classList.add('active');
+}
+
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
 function switchTab(tabName, element) {
@@ -329,7 +402,6 @@ function playAnime(id) {
     stats.episodesWatched += 1;
     stats.minutesWatched += 24;
     saveStats(stats);
-    
     if (tg) tg.showAlert(`🎬 Плеер для ID: ${id}\n(+20 XP, +1 серия)`);
 }
 
