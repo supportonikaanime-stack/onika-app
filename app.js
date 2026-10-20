@@ -4,12 +4,10 @@
 const SUPABASE_URL = 'https://wsaykqhojwfhpqzxptke.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzYXlrcWhvandmaHBxenhwdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MzAxMDgsImV4cCI6MjEwODEwNjEwOH0.6eHuhYt2CyVvIurt-TW3MgP4VE0kzv39vqVHwskodLk';
 
-// Инициализируем клиент СРАЗУ
 let supabaseClient = null;
 try {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    console.log('✅ Supabase инициализирован');
-} catch(e) { console.error('Ошибка инициализации Supabase:', e); }
+} catch(e) { console.error('Ошибка Supabase:', e); }
 
 const tg = window.Telegram.WebApp;
 let MY_TG_ID = null;
@@ -26,7 +24,7 @@ if (tg) {
 }
 
 // ==========================================
-// 2. ПЕРЕМЕННЫЕ ДЛЯ ПЛЕЕРА
+// 2. ПЕРЕМЕННЫЕ ПЛЕЕРА
 // ==========================================
 let currentAnimeForPlayer = null;
 let selectedVoice = '';
@@ -85,24 +83,16 @@ function goBackFromDetail() {
 }
 
 // ==========================================
-// 4. ПРОФИЛЬ И БАЗА ДАННЫХ
+// 4. ПРОФИЛЬ
 // ==========================================
 async function syncProfileToDB() {
     if (!MY_TG_ID || !supabaseClient) return;
     let stats = getStats();
     try {
-        // Отправляем данные в базу
-        const { error } = await supabaseClient.from('users').upsert({
-            tg_id: MY_TG_ID, 
-            name: MY_NAME, 
-            xp: stats.xp,
-            episodes_watched: stats.episodesWatched, 
-            minutes_watched: stats.minutesWatched, 
-            days_streak: stats.daysStreak
+        await supabaseClient.from('users').upsert({
+            tg_id: MY_TG_ID, name: MY_NAME, xp: stats.xp,
+            episodes_watched: stats.episodesWatched, minutes_watched: stats.minutesWatched, days_streak: stats.daysStreak
         }, { onConflict: 'tg_id' });
-        
-        if (error) console.error('Ошибка синхронизации:', error);
-        else console.log('📡 Профиль сохранен в БД');
     } catch (e) { console.error('Ошибка синхронизации:', e); }
 }
 
@@ -157,46 +147,76 @@ function loadProfileData() {
     if (nextAch) setElText('next-ach-name', nextAch.name); 
     else setElText('next-ach-name', 'Все выполнено!'); 
 
-    // Синхронизация
     syncProfileToDB();
 }
 
 // ==========================================
-// 5. ДРУЗЬЯ (ЧЕРЕЗ БАЗУ)
+// 5. ДРУЗЬЯ И ЗАЯВКИ
 // ==========================================
 async function loadFriends() {
     const listContainer = document.getElementById('friends-list-container');
-    if (!listContainer) return;
+    if (!listContainer || !supabaseClient || !MY_TG_ID) return;
     
-    if (!supabaseClient) {
-        listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка: База данных не подключена</div>';
-        return;
-    }
-    if (!MY_TG_ID) {
-        listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка: Telegram ID не найден</div>';
-        return;
-    }
-    
-    listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">Загрузка друзей...</div>';
+    listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">Загрузка...</div>';
 
     try {
-        const { data: friendsData, error } = await supabaseClient.from('friends').select('friend_id').eq('user_id', MY_TG_ID);
-        if (error) throw error;
+        // 1. Входящие заявки (мне)
+        const { data: incoming, error: inErr } = await supabaseClient
+            .from('friends')
+            .select('user_id')
+            .eq('friend_id', MY_TG_ID)
+            .eq('status', 'pending');
+            
+        if (inErr) throw inErr;
 
-        if (friendsData.length === 0) {
-            listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">У вас пока нет друзей. Найдите друга по ID выше!</div>';
-            return;
-        }
-
-        const friendIds = friendsData.map(f => f.friend_id);
-        const { data: usersData, error: usersError } = await supabaseClient.from('users').select('*').in('tg_id', friendIds);
-        if (usersError) throw usersError;
+        // 2. Принятые друзья
+        const { data: accepted, error: accErr } = await supabaseClient
+            .from('friends')
+            .select('friend_id')
+            .eq('user_id', MY_TG_ID)
+            .eq('status', 'accepted');
+            
+        if (accErr) throw accErr;
 
         let html = '';
-        usersData.forEach(friend => {
-            html += `<div class="friend-card" onclick="openFriendProfile(${friend.tg_id}, '${friend.name}')"><div class="friend-avatar">${friend.name[0].toUpperCase()}</div><div class="friend-info"><h3>${friend.name}</h3><p>ID: ${friend.tg_id} • Ур. ${Math.floor(friend.xp / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
-        });
+
+        if (incoming && incoming.length > 0) {
+            const inIds = incoming.map(f => f.user_id);
+            const { data: inUsers } = await supabaseClient.from('users').select('*').in('tg_id', inIds);
+            
+            if (inUsers && inUsers.length > 0) {
+                html += '<h3 style="padding: 0 20px 10px; font-size: 16px; color: #ffd700;">🔔 Заявки в друзья</h3>';
+                inUsers.forEach(u => {
+                    html += `
+                    <div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);">
+                        <div class="friend-avatar">${u.name[0].toUpperCase()}</div>
+                        <div class="friend-info"><h3>${u.name}</h3><p>ID: ${u.tg_id}</p></div>
+                        <div style="display: flex; gap: 5px; margin-left: auto;">
+                            <button onclick="acceptFriend(${u.tg_id})" style="background: #2ecc71; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✓</button>
+                            <button onclick="rejectFriend(${u.tg_id})" style="background: #e74c3c; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✕</button>
+                        </div>
+                    </div>`;
+                });
+            }
+        }
+
+        html += '<h3 style="padding: 10px 20px 10px; font-size: 16px; color: #fff;">Мои друзья</h3>';
+        
+        if (!accepted || accepted.length === 0) {
+            html += '<div style="padding: 0 20px; color: #888; font-size: 14px;">Пока никого нет</div>';
+        } else {
+            const accIds = accepted.map(f => f.friend_id);
+            const { data: accUsers } = await supabaseClient.from('users').select('*').in('tg_id', accIds);
+            
+            if (accUsers && accUsers.length > 0) {
+                accUsers.forEach(friend => {
+                    html += `<div class="friend-card" onclick="openFriendProfile(${friend.tg_id}, '${friend.name}')"><div class="friend-avatar">${friend.name[0].toUpperCase()}</div><div class="friend-info"><h3>${friend.name}</h3><p>ID: ${friend.tg_id} • Ур. ${Math.floor(friend.xp / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
+                });
+            }
+        }
+
         listContainer.innerHTML = html;
+
     } catch (e) {
         console.error(e);
         listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка загрузки друзей</div>';
@@ -216,29 +236,94 @@ async function searchFriend() {
     
     try {
         const { data: userData, error } = await supabaseClient.from('users').select('*').eq('tg_id', id).single();
-        if (error || !userData) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Пользователь не найден (он должен хотя бы раз зайти в бота)</div>'; return; }
+        if (error || !userData) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Пользователь не найден</div>'; return; }
 
         const { data: friendCheck } = await supabaseClient.from('friends').select('*').eq('user_id', MY_TG_ID).eq('friend_id', id);
-        if (friendCheck && friendCheck.length > 0) { resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Этот пользователь уже в друзьях</div>'; return; }
+        if (friendCheck && friendCheck.length > 0) { resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Заявка уже отправлена или вы друзья</div>'; return; }
 
-        resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${userData.name[0].toUpperCase()}</div><div class="friend-info"><h3>${userData.name}</h3><p>ID: ${userData.tg_id} • Ур. ${Math.floor(userData.xp / 100) + 1}</p></div><button onclick="addFriend(${userData.tg_id})" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Добавить</button></div>`;
+        resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${userData.name[0].toUpperCase()}</div><div class="friend-info"><h3>${userData.name}</h3><p>ID: ${userData.tg_id}</p></div><button onclick="sendFriendRequest(${userData.tg_id})" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Заявка</button></div>`;
     } catch (e) { console.error(e); resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Ошибка поиска</div>'; }
 }
 
-async function addFriend(friendId) {
+async function sendFriendRequest(friendId) {
     if (!MY_TG_ID || !supabaseClient) return;
     try {
-        await supabaseClient.from('friends').insert({ user_id: MY_TG_ID, friend_id: friendId });
+        await supabaseClient.from('friends').insert({ user_id: MY_TG_ID, friend_id: friendId, status: 'pending' });
         document.getElementById('search-result-container').innerHTML = '';
         document.getElementById('friend-search-input').value = '';
-        showToast('👥 Друг добавлен!');
+        showToast('📩 Заявка отправлена!');
         loadFriends();
-    } catch (e) { console.error(e); showToast('Ошибка добавления', 'error'); }
+    } catch (e) { console.error(e); showToast('Ошибка отправки', 'error'); }
 }
 
-function openFriendProfile(id, name) {
+async function acceptFriend(userId) {
+    if (!MY_TG_ID || !supabaseClient) return;
+    try {
+        await supabaseClient.from('friends').update({ status: 'accepted' }).eq('user_id', userId).eq('friend_id', MY_TG_ID);
+        showToast('🤝 Заявка принята!');
+        loadFriends();
+        // Создаем взаимную запись
+        await supabaseClient.from('friends').insert({ user_id: MY_TG_ID, friend_id: userId, status: 'accepted' });
+    } catch (e) { console.error(e); showToast('Ошибка', 'error'); }
+}
+
+async function rejectFriend(userId) {
+    if (!MY_TG_ID || !supabaseClient) return;
+    try {
+        await supabaseClient.from('friends').delete().eq('user_id', userId).eq('friend_id', MY_TG_ID);
+        showToast('Заявка отклонена');
+        loadFriends();
+    } catch (e) { console.error(e); }
+}
+
+// ПРОФИЛЬ ДРУГА (С ИНФОРМАЦИЕЙ)
+async function openFriendProfile(id, name) {
     switchTab('friend-profile');
-    document.getElementById('friend-profile-content').innerHTML = `<div class="user-card" style="margin-top: 20px;"><div class="avatar-container"><div class="avatar" style="background: linear-gradient(135deg, #5b5bff, #b44aff); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff;">${name[0].toUpperCase()}</div></div><div class="user-details"><h2>${name}</h2><p class="user-slogan">ID: ${id}</p></div></div>`;
+    const container = document.getElementById('friend-profile-content');
+    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
+
+    try {
+        const { data: friend, error } = await supabaseClient.from('users').select('*').eq('tg_id', id).single();
+        if (error || !friend) throw new Error('Не найден');
+
+        const lvl = Math.floor(friend.xp / 100) + 1;
+        const rank = LEVEL_TITLES[Math.min(lvl - 1, 99)];
+
+        container.innerHTML = `
+            <div class="user-card">
+                <div class="avatar-container">
+                    <div class="avatar" style="background: linear-gradient(135deg, #5b5bff, #b44aff); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff;">
+                        ${friend.name[0].toUpperCase()}
+                    </div>
+                </div>
+                <div class="user-details">
+                    <h2>${friend.name}</h2>
+                    <div style="background: rgba(91,91,255,0.1); border: 1px solid rgba(91,91,255,0.3); border-radius: 12px; padding: 6px 15px; display: inline-block; margin: 5px 0 15px;">
+                        <span style="color: #888; font-size: 12px;">ID:</span> <span style="color: #fff; font-weight: bold;">${friend.tg_id}</span>
+                    </div>
+                    
+                    <div class="level-row">
+                        <div class="level-badge"><span>${lvl}</span></div>
+                        <div class="level-info">
+                            <div class="level-title">УРОВЕНЬ ${lvl} <span class="rank">${rank}</span></div>
+                            <div class="xp-bar-container"><div class="xp-bar-fill" style="width: ${friend.xp % 100}%;"></div></div>
+                            <div class="xp-text">${friend.xp % 100} / ${lvl * 100} XP</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-card">
+                <div class="stat-item"><div class="stat-value">${friend.episodes_watched || 0}</div><div class="stat-label">серий</div></div>
+                <div class="stat-divider"></div>
+                <div class="stat-item"><div class="stat-value">${friend.minutes_watched || 0} <span style="font-size: 14px; font-weight: normal;">мин</span></div><div class="stat-label">просмотра</div></div>
+                <div class="stat-divider"></div>
+                <div class="stat-item"><div class="stat-value">${friend.days_streak || 1}</div><div class="stat-label">дней подряд</div></div>
+            </div>
+        `;
+    } catch (e) {
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки профиля</div>';
+    }
 }
 
 // ==========================================
