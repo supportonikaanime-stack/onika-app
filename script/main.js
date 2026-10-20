@@ -17,37 +17,21 @@ let isLoading = false;
 let isAllLoaded = false;
 let searchTimeout = null;
 
-// Coverflow
+// Coverflow (заглушки для совместимости)
 let coverflowItems = [];
 let coverflowIndex = 0;
-let _isLoadingRecommendations = false;
-let _coverflowAutoTimer = null;
-let _coverflowPauseUntil = 0;
-const COVERFLOW_LIMIT = 10;
-const COVERFLOW_AUTOPLAY_MS = 5000;
 
 const CATALOG_LIMIT = 12;
 
 // ===== ДОСТИЖЕНИЯ =====
-const RARITY_ORDER = { legendary: 4, epic: 3, rare: 2, common: 1 };
-const RARITY_LABELS = {
-    common: '⚪ Обычное', rare: '🔵 Редкое', epic: '🟣 Эпическое', legendary: '🟡 Легендарное'
-};
-
 const ACHIEVEMENTS_LIST = [
     { id: 'ep100', name: '🎬 Зритель 1 уровня', desc: 'Посмотреть 100 серий', icon: '🎬', title: 'Зритель', rarity: 'common', target: 100, metric: 'episodes' },
     { id: 'cm100', name: '💬 Комментатор 1 уровня', desc: 'Оставить 100 комментариев', icon: '💬', title: 'Говорун', rarity: 'common', target: 100, metric: 'comments' },
-    { id: 'fv100', name: '❤️ Коллекционер 1 уровня', desc: 'Добавить 100 аниме', icon: '❤️', title: 'Коллекционер', rarity: 'common', target: 100, metric: 'favorites' },
-    { id: 'ep1000', name: '🏆 Зритель 5 уровня', desc: 'Посмотреть 1000 серий', icon: '🏆', title: 'Легенда', rarity: 'legendary', target: 1000, metric: 'episodes' }
+    { id: 'fv100', name: '❤️ Коллекционер 1 уровня', desc: 'Добавить 100 аниме', icon: '❤️', title: 'Коллекционер', rarity: 'common', target: 100, metric: 'favorites' }
 ];
 
 function getGenreColor(genre) {
-    const colorMap = {
-        'Экшен': '#ff2d78', 'Приключения': '#f39c12', 'Комедия': '#f1c40f',
-        'Драма': '#8e44ad', 'Фэнтези': '#3498db', 'Романтика': '#e84393',
-        'Фантастика': '#00b894', 'Повседневность': '#636e72', 'Триллер': '#c0392b',
-        'Ужасы': '#6c5ce7', 'Спорт': '#e67e22', 'Музыка': '#00cec9'
-    };
+    const colorMap = { 'Экшен': '#ff2d78', 'Приключения': '#f39c12', 'Комедия': '#f1c40f', 'Драма': '#8e44ad', 'Фэнтези': '#3498db', 'Романтика': '#e84393' };
     return colorMap[genre] || '#6c5ce7';
 }
 
@@ -74,7 +58,6 @@ function navigate(pageName) {
     if (pageName === 'favorites') renderFavorites();
     if (pageName === 'profile') renderProfile();
     if (pageName === 'achievements') renderAchievements();
-    if (pageName === 'mycomments') renderMyComments();
 
     window.scrollTo(0, 0);
 }
@@ -92,13 +75,7 @@ function goBack() {
 // UI
 // ============================================
 function updateUI() {
-    const user = DB.get('currentUser');
-    // В новом дизайне мы используем нижнее меню, поэтому обновляем только бейджи в профиле
-    if (user) {
-        const favs = DB.getUserData(user.name, 'favorites', []);
-        const favCount = favs.length;
-        // Можно добавить обновление бейджей на иконках меню, если нужно
-    }
+    // Обновляем бейджи, если нужно
 }
 
 // ============================================
@@ -177,12 +154,8 @@ function renderHero(anime) {
         backdrop.style.backgroundImage = `url('${poster}')`;
     }
 
-    if (watchBtn) {
-        watchBtn.onclick = function() { openDetail(id); };
-    }
-    if (moreBtn) {
-        moreBtn.onclick = function() { openDetail(id); };
-    }
+    if (watchBtn) watchBtn.onclick = function() { openDetail(id); };
+    if (moreBtn) moreBtn.onclick = function() { openDetail(id); };
 }
 
 // ============================================
@@ -231,10 +204,7 @@ function renderRail(containerId, items) {
 
 async function loadRails() {
     renderRailSkeleton('trendingTrack', 4);
-
-    const [trending] = await Promise.allSettled([
-        API.getCatalog(1, 10, 'popularity')
-    ]);
+    const [trending] = await Promise.allSettled([API.getCatalog(1, 10, 'popularity')]);
 
     if (trending.status === 'fulfilled' && trending.value?.items) {
         renderRail('trendingTrack', trending.value.items);
@@ -256,7 +226,9 @@ async function loadCatalog(targetPage = null) {
     const searchInput = document.getElementById('catalogSearchInput');
     const searchValue = searchInput ? searchInput.value.trim() : '';
 
-    if (!allItems.length) grid.innerHTML = `<div class="skeleton-card"><div class="skeleton-poster"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div></div>`;
+    if (!allItems.length) {
+        grid.innerHTML = `<div class="skeleton-card"><div class="skeleton-poster"></div></div><div class="skeleton-card"><div class="skeleton-poster"></div></div>`;
+    }
 
     try {
         let result;
@@ -272,9 +244,7 @@ async function loadCatalog(targetPage = null) {
 
         if (result && result.items && result.items.length > 0) {
             allItems = result.items;
-            totalCount = result.totalCount || 0;
             allItems.forEach(item => { allData[item.mal_id] = item; });
-
             renderCatalog(allItems);
         } else {
             grid.innerHTML = `<div style="text-align:center;padding:40px 20px;color:#888;grid-column:1/-1;"><p>Ничего не найдено</p></div>`;
@@ -406,7 +376,7 @@ function showDetail(anime) {
 }
 
 // ============================================
-// ПЛЕЕР (ВНЕШНИЙ)
+// ПЛЕЕР
 // ============================================
 function watchOnVeoveo() {
     const anime = allData[currentAnimeId];
@@ -415,7 +385,6 @@ function watchOnVeoveo() {
     let shikimoriId = anime.rawId || String(anime.id).replace('shikimori_', '');
     const url = `https://veoveo.ru/embed/${shikimoriId}?episode=1`;
     
-    // В Telegram Mini App лучше открывать ссылки через API
     if (window.Telegram && window.Telegram.WebApp) {
         window.Telegram.WebApp.openLink(url);
     } else {
@@ -475,9 +444,7 @@ function renderFavorites() {
         html += `
             <div class="card" onclick="openDetail('${id}')">
                 <div class="card-img">${img ? `<img src="${img}">` : '🎬'}</div>
-                <div class="card-body">
-                    <div class="title">${name}</div>
-                </div>
+                <div class="card-body"><div class="title">${name}</div></div>
             </div>
         `;
     });
@@ -498,12 +465,13 @@ function findAnimeByName(name) {
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
-    if (!user) { navigate('home'); return; }
+    if (!user) { 
+        document.getElementById('page-profile').innerHTML = `<div style="padding:40px;text-align:center;"><h3>Войдите в аккаунт</h3><button class="btn-watch" onclick="showLoginModal()" style="margin-top:20px;">Войти</button></div>`;
+        return; 
+    }
 
     const profiles = DB.get('profiles', {});
     const profile = profiles[user.name] || { bio: '', avatar: '' };
-    const favs = DB.getUserData(user.name, 'favorites', []);
-    const earned = DB.getAchievements(user.name);
 
     const nameEl = document.getElementById('profileName');
     const emailEl = document.getElementById('profileEmail');
@@ -513,8 +481,7 @@ function renderProfile() {
     if (emailEl) emailEl.textContent = user.email;
     
     const xp = calculateXP(user.name);
-    const level = Math.floor(xp / 100);
-    if (levelEl) levelEl.textContent = 'Lv.' + level;
+    if (levelEl) levelEl.textContent = 'Lv.' + Math.floor(xp / 100);
 
     const img = document.getElementById('avatarImg');
     const letter = document.getElementById('avatarLetter');
@@ -536,7 +503,7 @@ function calculateXP(user) {
 }
 
 // ============================================
-// ДОСТИЖЕНИЯ (УПРОЩЕННО)
+// ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -560,16 +527,6 @@ function renderAchievements() {
     });
     html += '</div></div>';
     container.innerHTML = html;
-}
-
-// ============================================
-// МОИ КОММЕНТАРИИ (УПРОЩЕННО)
-// ============================================
-function renderMyComments() {
-    const container = document.getElementById('page-mycomments');
-    if (container) {
-        container.innerHTML = `<div style="padding:20px;"><h1>Мои комментарии</h1><p>Раздел в разработке.</p></div>`;
-    }
 }
 
 // ============================================
@@ -604,7 +561,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const user = DB.get('currentUser');
     if (user) startOnlineTracking();
-    console.log('✅ OnikaAnime готов!');
 });
 
 // Экспорт функций
