@@ -13,14 +13,14 @@ function loadProfileData() {
     const avatarEl = document.getElementById('tg-avatar');
 
     if (customAvatar && avatarEl) {
-        avatarEl.innerHTML = `<img src="${customAvatar}" style="width: 100%; height: 100%; object-fit: cover;">`;
+        avatarEl.innerHTML = `<img src="${customAvatar}">`;
     } else if (avatarEl) {
         if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
             const user = tg.initDataUnsafe.user;
             if (user.photo_url) {
-                avatarEl.innerHTML = `<img src="${user.photo_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                avatarEl.innerHTML = `<img src="${user.photo_url}">`;
             } else {
-                avatarEl.innerHTML = `<span id="avatar-letter">${user.first_name[0].toUpperCase()}</span>`;
+                avatarEl.innerHTML = `<span>${user.first_name[0].toUpperCase()}</span>`;
             }
         }
     }
@@ -48,41 +48,38 @@ function loadProfileData() {
     const xpCurrentLevel = stats.xp % 100;
     const progressPercent = (xpCurrentLevel / 100) * 100;
 
-    const elLevel = document.getElementById('user-level');
-    if (elLevel) elLevel.textContent = currentLevel;
-    
-    const elLevelText = document.getElementById('user-level-text');
-    if (elLevelText) elLevelText.textContent = currentLevel;
-    
-    const elXpCur = document.getElementById('user-xp-current');
-    if (elXpCur) elXpCur.textContent = xpCurrentLevel;
-    
-    const elXpNext = document.getElementById('user-xp-next');
-    if (elXpNext) elXpNext.textContent = xpForNextLevel;
-    
-    const elXpBar = document.getElementById('user-xp-bar');
-    if (elXpBar) elXpBar.style.width = `${progressPercent}%`;
+    // Обновляем основной экран
+    setElText('user-level', currentLevel);
+    setElText('user-level-text', currentLevel);
+    setElText('user-xp-current', xpCurrentLevel);
+    setElText('user-xp-next', xpForNextLevel);
+    setElWidth('user-xp-bar', progressPercent + '%');
 
-    const elEp = document.getElementById('stat-episodes');
-    if (elEp) elEp.textContent = stats.episodesWatched;
-    
-    const elMin = document.getElementById('stat-minutes');
-    if (elMin) elMin.innerHTML = `${stats.minutesWatched} <span style="font-size: 14px; font-weight: normal;">мин</span>`;
-    
-    const elDays = document.getElementById('stat-days');
-    if (elDays) elDays.textContent = stats.daysStreak;
-    
-    const elAchPoints = document.getElementById('ach-points');
-    if (elAchPoints) elAchPoints.textContent = stats.xp;
-    
+    setElText('stat-episodes', stats.episodesWatched);
+    setElHTML('stat-minutes', `${stats.minutesWatched} <span style="font-size: 14px; font-weight: normal;">мин</span>`);
+    setElText('stat-days', stats.daysStreak);
+
+    setElText('ach-points', stats.xp);
     const earnedAch = Math.floor(stats.xp / 20);
-    const elAchEarned = document.getElementById('ach-earned');
-    if (elAchEarned) elAchEarned.textContent = earnedAch;
+    setElText('ach-earned', earnedAch);
+    setElWidth('ach-bar', (earnedAch / 108) * 100 + '%');
+
+    // Обновляем модалки (чтобы данные совпадали)
+    setElText('modal-level-num', currentLevel);
+    setElText('modal-xp-cur', xpCurrentLevel);
+    setElText('modal-xp-next', xpForNextLevel);
+    setElWidth('modal-xp-bar', progressPercent + '%');
     
-    const elAchBar = document.getElementById('ach-bar');
-    if (elAchBar) elAchBar.style.width = `${(earnedAch / 108) * 100}%`;
+    setElText('modal-ach-earned', earnedAch);
+    setElWidth('modal-ach-bar', (earnedAch / 108) * 100 + '%');
 }
 
+// Вспомогательные функции для безопасного обновления DOM
+function setElText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
+function setElHTML(id, html) { const el = document.getElementById(id); if (el) el.innerHTML = html; }
+function setElWidth(id, width) { const el = document.getElementById(id); if (el) el.style.width = width; }
+
+// Загрузка аватарки
 function uploadCustomAvatar(input) {
     if (input.files && input.files[0]) {
         const file = input.files[0];
@@ -109,7 +106,8 @@ function uploadCustomAvatar(input) {
 
                 const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
                 localStorage.setItem('onika_custom_avatar', compressedBase64);
-                loadProfileData();
+                
+                loadProfileData(); // Обновляем экран
                 if (tg) tg.HapticFeedback.notificationOccurred('success');
             };
             img.src = e.target.result;
@@ -118,22 +116,37 @@ function uploadCustomAvatar(input) {
     }
 }
 
+// Переключение вкладок (Профиль / Настройки)
 function switchProfileTab(tab) {
-    const tabs = document.querySelectorAll('.tab-btn');
-    const profileContent = document.getElementById('profile-content-tab');
-    const settingsContent = document.getElementById('settings-content-tab');
+    const btnProfile = document.getElementById('tab-btn-profile');
+    const btnSettings = document.getElementById('tab-btn-settings');
+    const contentProfile = document.getElementById('profile-content-tab');
+    const contentSettings = document.getElementById('settings-content-tab');
 
     if (tab === 'profile') {
-        tabs[0].classList.add('active');
-        tabs[1].classList.remove('active');
-        profileContent.style.display = 'block';
-        settingsContent.style.display = 'none';
+        if(btnProfile) btnProfile.classList.add('active');
+        if(btnSettings) btnSettings.classList.remove('active');
+        if(contentProfile) contentProfile.style.display = 'block';
+        if(contentSettings) contentSettings.style.display = 'none';
     } else {
-        tabs[0].classList.remove('active');
-        tabs[1].classList.add('active');
-        profileContent.style.display = 'none';
-        settingsContent.style.display = 'block';
+        if(btnProfile) btnProfile.classList.remove('active');
+        if(btnSettings) btnSettings.classList.add('active');
+        if(contentProfile) contentProfile.style.display = 'none';
+        if(contentSettings) contentSettings.style.display = 'block';
     }
+}
+
+// Модальные окна
+function openLevelModal() {
+    document.getElementById('levelModal').classList.add('active');
+    if (tg) tg.HapticFeedback.impactOccurred('light');
+}
+function openAchievementsModal() {
+    document.getElementById('achievementsModal').classList.add('active');
+    if (tg) tg.HapticFeedback.impactOccurred('light');
+}
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
 }
 
 function addXP(amount) {
