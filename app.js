@@ -6,7 +6,7 @@ if (tg) {
 }
 
 // ==========================================
-// СПИСОК ДОСТИЖЕНИЙ
+// 50 ДОСТИЖЕНИЙ
 // ==========================================
 const ACHIEVEMENTS = [
     { id: 1, name: "Первый шаг", desc: "Зарегистрироваться на сайте", icon: "🚀", check: (s) => true },
@@ -88,6 +88,15 @@ const LEVEL_TITLES = [
 ];
 
 // ==========================================
+// СИСТЕМА СБРОСА СТАРЫХ БАГОВ
+// ==========================================
+// Если в LocalStorage есть старые данные (с багом), мы их сбрасываем
+if (localStorage.getItem('onika_stats_v2') === null) {
+    localStorage.removeItem('onika_stats'); // Удаляем старый кэш
+    localStorage.setItem('onika_stats_v2', 'clean'); // Ставим метку, что кэш обновлен
+}
+
+// ==========================================
 // СИСТЕМА УРОВНЕЙ И СТАТИСТИКИ
 // ==========================================
 function getStats() {
@@ -146,7 +155,6 @@ function loadProfileData() {
 
     let stats = getStats();
 
-    // Ежедневный вход
     const today = new Date().toDateString();
     if (stats.lastVisit !== today) {
         stats.daysStreak += 1;
@@ -361,6 +369,7 @@ function initHeroSlider() {
                     <h1 class="hero-title">${anime.title}</h1>
                     <div class="hero-actions">
                         <button class="btn-primary" onclick="playAnime(${anime.id})">▶ Смотреть</button>
+                        <!-- Передаем ID аниме в функцию -->
                         <button class="btn-icon-heart" onclick="toggleFavorite(this, ${anime.id})">🤍</button>
                     </div>
                 </div>
@@ -392,17 +401,21 @@ function addSwipeSupport(element) {
     }, { passive: true });
 }
 
+// ==========================================
 // ИСПРАВЛЕННЫЙ БАГ С ЛАЙКОМ
+// ==========================================
 function toggleFavorite(btn, animeId) {
     let stats = getStats();
     const isFaved = stats.favedAnime.includes(animeId);
 
     if (isFaved) {
+        // Если уже лайкнуто -> убираем лайк (XP не даем)
         btn.classList.remove('faved'); 
         btn.innerHTML = '🤍';
         stats.favedAnime = stats.favedAnime.filter(id => id !== animeId);
         saveStats(stats);
     } else {
+        // Если не лайкнуто -> ставим лайк и даем +10 XP
         btn.classList.add('faved'); 
         btn.innerHTML = '❤️';
         stats.favedAnime.push(animeId);
@@ -411,7 +424,9 @@ function toggleFavorite(btn, animeId) {
     }
 }
 
+// ==========================================
 // ИСПРАВЛЕННЫЙ БАГ С ПРОСМОТРОМ
+// ==========================================
 function playAnime(id) { 
     let stats = getStats();
     const today = new Date().toDateString();
