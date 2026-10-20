@@ -6,6 +6,26 @@ if (tg) {
 }
 
 // ==========================================
+// ПЕРЕМЕННЫЕ ДЛЯ ПЛЕЕРА
+// ==========================================
+let currentAnimeForPlayer = null;
+let selectedVoice = '';
+let selectedPlayer = '';
+
+const VOICES = [
+    { id: 'anilibria', name: 'AniLibria', icon: '🎙️' },
+    { id: 'studioband', name: 'StudioBand', icon: '🎙️' },
+    { id: 'jamclub', name: 'JAM Club', icon: '🎙️' },
+    { id: 'original', name: 'Оригинал (Субтитры)', icon: '📝' }
+];
+
+const PLAYERS = [
+    { id: 'kodik', name: 'Kodik', icon: '▶️' },
+    { id: 'sibnet', name: 'Sibnet', icon: '🎬' },
+    { id: 'veoveo', name: 'Veoveo', icon: '🎥' }
+];
+
+// ==========================================
 // СОСТОЯНИЕ КАТАЛОГА
 // ==========================================
 let catalogPage = 1;
@@ -59,12 +79,78 @@ function switchTab(tabName, element) {
         loadCatalog(true);
     }
     if (tabName === 'my') renderMyList();
+    if (tabName === 'voice') renderVoiceSelection();
 }
 
 function goBackFromDetail() {
     if (previousScreen === 'my') switchTab('my');
     else if (previousScreen === 'home') switchTab('home');
     else switchTab('catalog');
+}
+
+// ==========================================
+// ПЛЕЕР (3 ШАГА)
+// ==========================================
+function startWatching(anime) {
+    currentAnimeForPlayer = anime;
+    switchTab('voice');
+}
+
+function renderVoiceSelection() {
+    const container = document.getElementById('voice-list');
+    if (!container) return;
+    let html = '';
+    VOICES.forEach(v => {
+        html += `<div onclick="selectVoice('${v.id}', '${v.name}')" style="background: #14141f; border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 14px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.2s;"><div style="font-size: 24px;">${v.icon}</div><div style="font-size: 16px; font-weight: 600; color: #fff;">${v.name}</div></div>`;
+    });
+    container.innerHTML = html;
+}
+
+function selectVoice(id, name) {
+    selectedVoice = name;
+    switchTab('player');
+    renderPlayerSelection();
+}
+
+function renderPlayerSelection() {
+    const container = document.getElementById('player-list');
+    if (!container) return;
+    let html = '';
+    PLAYERS.forEach(p => {
+        html += `<div onclick="selectPlayer('${p.id}', '${p.name}')" style="background: #14141f; border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 14px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.2s;"><div style="font-size: 24px;">${p.icon}</div><div style="font-size: 16px; font-weight: 600; color: #fff;">${p.name}</div></div>`;
+    });
+    container.innerHTML = html;
+}
+
+function selectPlayer(id, name) {
+    selectedPlayer = name;
+    switchTab('episodes');
+    renderEpisodesSelection();
+}
+
+function renderEpisodesSelection() {
+    document.getElementById('selected-voice-text').textContent = selectedVoice;
+    document.getElementById('selected-player-text').textContent = selectedPlayer;
+    const container = document.getElementById('episodes-list');
+    if (!container || !currentAnimeForPlayer) return;
+    
+    let totalEpisodes = currentAnimeForPlayer.episodes || 12;
+    if (totalEpisodes > 50) totalEpisodes = 50;
+
+    let html = '';
+    for (let i = 1; i <= totalEpisodes; i++) {
+        html += `<div onclick="playEpisode(${i})" style="background: #1a1a20; border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; text-align: center; font-size: 16px; font-weight: bold; color: #fff; cursor: pointer; transition: 0.2s;">${i}</div>`;
+    }
+    container.innerHTML = html;
+}
+
+function playEpisode(epNum) {
+    addXP(20);
+    let stats = getStats();
+    stats.episodesWatched += 1;
+    stats.minutesWatched += 24;
+    saveStats(stats);
+    if (tg) tg.showAlert(`🎬 Воспроизведение:\nАниме: ${currentAnimeForPlayer.title.romaji}\nОзвучка: ${selectedVoice}\nПлеер: ${selectedPlayer}\nСерия: ${epNum}\n\n(+20 XP, +1 серия)`);
 }
 
 // ==========================================
@@ -99,18 +185,12 @@ function openFilterModal(type) {
     const container = document.getElementById('filter-options-container');
     let options = [];
     let currentVal = currentFilters[type];
-
     if (type === 'year') { options = YEARS; title.textContent = 'Год выхода'; }
     if (type === 'status') { options = STATUSES; title.textContent = 'Статус'; }
     if (type === 'sort') { options = SORTS; title.textContent = 'Сортировка'; }
-
     let html = `<button class="filter-option-btn ${currentVal === '' ? 'active' : ''}" onclick="applyFilter('${type}', '')">Любой</button>`;
-    options.forEach(opt => {
-        html += `<button class="filter-option-btn ${currentVal === opt.id ? 'active' : ''}" onclick="applyFilter('${type}', '${opt.id}')">${opt.name}</button>`;
-    });
-
-    container.innerHTML = html;
-    modal.classList.add('active');
+    options.forEach(opt => { html += `<button class="filter-option-btn ${currentVal === opt.id ? 'active' : ''}" onclick="applyFilter('${type}', '${opt.id}')">${opt.name}</button>`; });
+    container.innerHTML = html; modal.classList.add('active');
 }
 
 function applyFilter(type, value) {
@@ -119,12 +199,8 @@ function applyFilter(type, value) {
     const btnIndex = type === 'year' ? 0 : type === 'status' ? 1 : 2;
     const btns = document.querySelectorAll('#dropdown-filters .filter-btn');
     let optName = 'Любой';
-    if (value) {
-        const list = type === 'year' ? YEARS : type === 'status' ? STATUSES : SORTS;
-        optName = list.find(o => o.id === value).name;
-    } else {
-        optName = type === 'year' ? 'Год' : type === 'status' ? 'Статус' : 'Сортировка';
-    }
+    if (value) { const list = type === 'year' ? YEARS : type === 'status' ? STATUSES : SORTS; optName = list.find(o => o.id === value).name; }
+    else { optName = type === 'year' ? 'Год' : type === 'status' ? 'Статус' : 'Сортировка'; }
     btns[btnIndex].innerHTML = `${optName} ⌄`;
     loadCatalog(true);
 }
@@ -134,46 +210,27 @@ async function loadCatalog(reset = false) {
     isCatalogLoading = true;
     const grid = document.getElementById('catalog-grid');
     const loadMoreBtn = document.getElementById('load-more-btn');
-
-    if (reset) {
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
-        hasMoreCatalog = true; catalogPage = 1;
-    }
-
+    if (reset) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Загрузка...</div>'; hasMoreCatalog = true; catalogPage = 1; }
     try {
         let mediaArgs = 'type: ANIME';
         let queryVars = `$page: Int`;
         let variables = { page: catalogPage };
-
         if (currentFilters.sort) { queryVars += `, $sort: [MediaSort]`; mediaArgs += `, sort: $sort`; variables.sort = [currentFilters.sort]; }
         if (currentFilters.search) { queryVars += `, $search: String`; mediaArgs += `, search: $search`; variables.search = currentFilters.search; }
         if (currentFilters.genre) { queryVars += `, $genre: String`; mediaArgs += `, genre: $genre`; variables.genre = currentFilters.genre; }
         if (currentFilters.year) { queryVars += `, $year: Int`; mediaArgs += `, seasonYear: $year`; variables.year = parseInt(currentFilters.year); }
         if (currentFilters.status) { queryVars += `, $status: MediaStatus`; mediaArgs += `, status: $status`; variables.status = currentFilters.status; }
-
         const query = `query (${queryVars}) { Page(page: $page, perPage: 12) { media(${mediaArgs}) { id title { romaji } coverImage { large } averageScore } } }`;
-
         const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query, variables }) });
         const data = await response.json();
         const media = data?.data?.Page?.media || [];
-
         if (reset) grid.innerHTML = '';
-        if (media.length === 0) {
-            if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Ничего не найдено</div>';
-            hasMoreCatalog = false; if (loadMoreBtn) loadMoreBtn.style.display = 'none';
-            return;
-        }
-
+        if (media.length === 0) { if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Ничего не найдено</div>'; hasMoreCatalog = false; if (loadMoreBtn) loadMoreBtn.style.display = 'none'; return; }
         media.forEach(anime => {
-            const title = anime.title.romaji || 'Без названия';
-            const img = anime.coverImage.large;
-            const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : '?';
+            const title = anime.title.romaji || 'Без названия'; const img = anime.coverImage.large; const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : '?';
             grid.innerHTML += `<div class="catalog-card" onclick="openAnimeDetail(${anime.id}, 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`;
         });
-
-        if (media.length < 12) { hasMoreCatalog = false; if (loadMoreBtn) loadMoreBtn.style.display = 'none'; }
-        else { if (loadMoreBtn) loadMoreBtn.style.display = 'inline-block'; }
-
+        if (media.length < 12) { hasMoreCatalog = false; if (loadMoreBtn) loadMoreBtn.style.display = 'none'; } else { if (loadMoreBtn) loadMoreBtn.style.display = 'inline-block'; }
     } catch (e) { if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки (VPN)</div>'; }
     finally { isCatalogLoading = false; }
 }
@@ -181,7 +238,7 @@ function loadMoreCatalog() { if (!hasMoreCatalog || isCatalogLoading) return; ca
 function forceReloadCatalog() { document.getElementById('catalog-grid').innerHTML = ''; loadCatalog(true); }
 
 // ==========================================
-// МОИ СПИСКИ (С БЫСТРЫМ МЕНЮ)
+// МОИ СПИСКИ
 // ==========================================
 function filterMyList(type, btn) {
     currentMyListFilter = type;
@@ -193,70 +250,30 @@ function filterMyList(type, btn) {
 function renderMyList() {
     const grid = document.getElementById('my-grid');
     if (!grid) return;
-    
-    let stats = getStats();
-    let favs = stats.favedAnime || [];
-    
+    let stats = getStats(); let favs = stats.favedAnime || [];
     let filtered = favs;
-    if (currentMyListFilter !== 'all') {
-        filtered = favs.filter(a => a.status === currentMyListFilter);
-    }
-
-    if (filtered.length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Тут пусто</div>';
-        return;
-    }
-
+    if (currentMyListFilter !== 'all') { filtered = favs.filter(a => a.status === currentMyListFilter); }
+    if (filtered.length === 0) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Тут пусто</div>'; return; }
     const ids = filtered.map(a => a.id);
     const query = `query ($ids: [Int]) { Page(page: 1, perPage: 50) { media(id_in: $ids, type: ANIME) { id title { romaji } coverImage { large } averageScore } } }`;
-    
     fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query, variables: { ids } }) })
     .then(res => res.json()).then(data => {
         const media = data?.data?.Page?.media || [];
         if (media.length === 0) { grid.innerHTML = '<div style="text-align:center;color:#888;grid-column:1/-1;">Ошибка загрузки</div>'; return; }
-        
         grid.innerHTML = '';
         media.forEach(anime => {
-            const title = anime.title.romaji || 'Без названия';
-            const img = anime.coverImage.large;
-            const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : '?';
-            const favEntry = favs.find(a => a.id === anime.id);
-            const currentStatus = favEntry ? favEntry.status : '';
-
-            // Иконки для статусов (для быстрого доступа)
+            const title = anime.title.romaji || 'Без названия'; const img = anime.coverImage.large; const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : '?';
+            const favEntry = favs.find(a => a.id === anime.id); const currentStatus = favEntry ? favEntry.status : '';
             let statusIcon = '📚';
-            if (currentStatus === 'watching') statusIcon = '👀';
-            if (currentStatus === 'planned') statusIcon = '📅';
-            if (currentStatus === 'completed') statusIcon = '✅';
-            if (currentStatus === 'dropped') statusIcon = '🚫';
-            if (currentStatus === 'favorite') statusIcon = '❤️';
-
-            grid.innerHTML += `
-                <div class="catalog-card" style="overflow: visible;">
-                    <div onclick="openAnimeDetail(${anime.id}, 'my')" style="width: 100%; height: 100%;">
-                        <img class="catalog-card-img" src="${img}" loading="lazy">
-                        <div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div>
-                        <div class="catalog-card-title">${title}</div>
-                    </div>
-                    
-                    <!-- Кнопка быстрого изменения статуса -->
-                    <button onclick="event.stopPropagation(); openQuickStatus(${anime.id}, '${title.replace(/'/g, "\\'")}', this)" style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.7); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10; font-size: 16px; cursor: pointer; backdrop-filter: blur(5px);">
-                        ${statusIcon}
-                    </button>
-                </div>
-            `;
+            if (currentStatus === 'watching') statusIcon = '👀'; if (currentStatus === 'planned') statusIcon = '📅'; if (currentStatus === 'completed') statusIcon = '✅'; if (currentStatus === 'dropped') statusIcon = '🚫'; if (currentStatus === 'favorite') statusIcon = '❤️';
+            grid.innerHTML += `<div class="catalog-card" style="overflow: visible;"><div onclick="openAnimeDetail(${anime.id}, 'my')" style="width: 100%; height: 100%;"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div><button onclick="event.stopPropagation(); openQuickStatus(${anime.id}, '${title.replace(/'/g, "\\'")}', this)" style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.7); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10; font-size: 16px; cursor: pointer; backdrop-filter: blur(5px);">${statusIcon}</button></div>`;
         });
-    }).catch(() => {
-        grid.innerHTML = '<div style="text-align:center;color:#f44;grid-column:1/-1;">Ошибка сети</div>';
-    });
+    }).catch(() => { grid.innerHTML = '<div style="text-align:center;color:#f44;grid-column:1/-1;">Ошибка сети</div>'; });
 }
 
-// МОДАЛКА БЫСТРОГО ВЫБОРА СТАТУСА (ДЛЯ КАРТОЧЕК)
 function openQuickStatus(id, title, btnElement) {
     document.getElementById('status-anime-title').textContent = title;
     document.getElementById('statusModal').classList.add('active');
-    
-    // Сохраняем ID и кнопку, чтобы обновить её после выбора
     window._currentAnimeForStatus = id;
     window._currentBtnForStatus = btnElement;
 }
@@ -269,34 +286,25 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
     switchTab('detail');
     const container = document.getElementById('detail-content');
     container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
-
     try {
         const query = `query ($id: Int) { Media(id: $id, type: ANIME) { id title { romaji english } coverImage { extraLarge } bannerImage description averageScore episodes status genres recommendations(perPage: 6, sort: RATING_DESC) { nodes { mediaRecommendation { id title { romaji } coverImage { large } } } } } }`;
         const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query, variables: { id } }) });
         const data = await response.json();
         const anime = data?.data?.Media;
-
         if (!anime) throw new Error('Не найдено');
-
         const title = anime.title.romaji || anime.title.english;
         const desc = anime.description ? anime.description.replace(/<[^>]*>/g, '') : 'Описание отсутствует.';
         const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : '?';
         const banner = anime.bannerImage || anime.coverImage.extraLarge;
         const poster = anime.coverImage.extraLarge;
-        
         let statusColor = '#2ecc71'; let statusText = 'Завершено';
         if (anime.status === 'RELEASING') { statusColor = '#3498db'; statusText = 'Онгоинг'; }
         if (anime.status === 'NOT_YET_RELEASED') { statusColor = '#e74c3c'; statusText = 'Анонс'; }
-
-        const stats = getStats();
-        const favEntry = (stats.favedAnime || []).find(a => a.id === anime.id);
-        const isFaved = !!favEntry;
-
+        const stats = getStats(); const favEntry = (stats.favedAnime || []).find(a => a.id === anime.id); const isFaved = !!favEntry;
         let recsHtml = '';
         if (anime.recommendations && anime.recommendations.nodes.length > 0) {
             recsHtml = `<div style="margin-top: 30px;"><h3 style="font-size: 18px; margin-bottom: 15px; color: #fff;">🎯 Похожие аниме</h3><div class="horizontal-scroll" style="padding: 0 0 10px 0;">${anime.recommendations.nodes.map(r => { const rec = r.mediaRecommendation; if (!rec) return ''; return `<div class="card" style="min-width: 120px; height: 180px;" onclick="openAnimeDetail(${rec.id}, 'detail')"><img class="card-img" src="${rec.coverImage.large}" loading="lazy"><div class="card-title" style="font-size: 11px;">${rec.title.romaji}</div></div>`; }).join('')}</div></div>`;
         }
-
         container.innerHTML = `
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;"><img src="${banner}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"></div>
             <div style="padding-top: 30px;">
@@ -308,7 +316,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <button onclick="playAnime(${anime.id})" style="flex: 1; background: #5b5bff; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); display: flex; justify-content: center; align-items: center; gap: 8px;">▶ Смотреть</button>
+                    <button onclick='startWatching(${JSON.stringify(anime).replace(/'/g, "\\'")})' style="flex: 1; background: #5b5bff; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); display: flex; justify-content: center; align-items: center; gap: 8px;">▶ Смотреть</button>
                     <button onclick="openStatusModal(${anime.id}, '${title.replace(/'/g, "\\'")}', '${isFaved ? '❤️' : '🤍'}')" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'}; border: 1px solid ${isFaved ? '#ff2d78' : 'rgba(255,255,255,0.15)'}; width: 56px; border-radius: 14px; font-size: 22px; cursor: pointer; display: flex; justify-content: center; align-items: center;">${isFaved ? '❤️' : '🤍'}</button>
                 </div>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">${anime.genres.map(g => `<span onclick="switchTab('catalog'); document.getElementById('search-input').value='${g}'; searchAnime();" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer;">${g}</span>`).join('')}</div>
@@ -318,63 +326,33 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
     } catch (e) { container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>'; }
 }
 
-// МОДАЛКА ВЫБОРА СТАТУСА
 function openStatusModal(id, title, currentIcon) {
     document.getElementById('status-anime-title').textContent = title;
     document.getElementById('statusModal').classList.add('active');
     window._currentAnimeForStatus = id;
-    window._currentBtnForStatus = null; // Сбрасываем, так как открыли с детальной
+    window._currentBtnForStatus = null;
 }
 
 function setAnimeStatus(status) {
     const id = window._currentAnimeForStatus;
     if (!id) return;
-    
-    let stats = getStats();
-    stats.favedAnime = stats.favedAnime || [];
-    stats.favedAnime = stats.favedAnime.filter(a => a.id !== id);
-    
-    if (status !== '') {
-        stats.favedAnime.push({ id: id, status: status });
-        addXP(10);
-        showToast('Статус обновлен!');
-    } else {
-        showToast('Удалено из списка');
-    }
-    
-    saveStats(stats);
-    closeModal('statusModal');
-    
-    // Обновляем кнопку, если мы в «Моё» (карточка)
+    let stats = getStats(); stats.favedAnime = stats.favedAnime || []; stats.favedAnime = stats.favedAnime.filter(a => a.id !== id);
+    if (status !== '') { stats.favedAnime.push({ id: id, status: status }); addXP(10); showToast('Статус обновлен!'); } else { showToast('Удалено из списка'); }
+    saveStats(stats); closeModal('statusModal');
     if (window._currentBtnForStatus) {
-        let icon = '📚';
-        if (status === 'watching') icon = '👀';
-        if (status === 'planned') icon = '📅';
-        if (status === 'completed') icon = '✅';
-        if (status === 'dropped') icon = '🚫';
-        if (status === 'favorite') icon = '❤️';
-        if (status === '') icon = '📚';
+        let icon = '📚'; if (status === 'watching') icon = '👀'; if (status === 'planned') icon = '📅'; if (status === 'completed') icon = '✅'; if (status === 'dropped') icon = '🚫'; if (status === 'favorite') icon = '❤️'; if (status === '') icon = '📚';
         window._currentBtnForStatus.innerHTML = icon;
     }
-
-    // Обновляем кнопку на детальной странице
     const heartBtn = document.querySelector('#detail-content button[onclick^="openStatusModal"]');
     if (heartBtn) {
-        if (status !== '') {
-            heartBtn.style.background = 'rgba(255,45,120,0.2)';
-            heartBtn.style.borderColor = '#ff2d78';
-            heartBtn.style.color = '#ff2d78';
-            heartBtn.innerHTML = '❤️';
-        } else {
-            heartBtn.style.background = 'rgba(255,255,255,0.1)';
-            heartBtn.style.borderColor = 'rgba(255,255,255,0.15)';
-            heartBtn.style.color = '#fff';
-            heartBtn.innerHTML = '🤍';
-        }
+        if (status !== '') { heartBtn.style.background = 'rgba(255,45,120,0.2)'; heartBtn.style.borderColor = '#ff2d78'; heartBtn.style.color = '#ff2d78'; heartBtn.innerHTML = '❤️'; }
+        else { heartBtn.style.background = 'rgba(255,255,255,0.1)'; heartBtn.style.borderColor = 'rgba(255,255,255,0.15)'; heartBtn.style.color = '#fff'; heartBtn.innerHTML = '🤍'; }
     }
 }
 
-// ОСТАЛЬНОЙ КОД (ПРОФИЛЬ, XP, ГЛАВНАЯ)
+// ==========================================
+// ОСТАЛЬНОЙ КОД
+// ==========================================
 async function openRandomAnime() { if (tg) tg.HapticFeedback.impactOccurred('medium'); showToast('🎲 Ищем случайное аниме...'); try { const randomPage = Math.floor(Math.random() * 50) + 1; const query = `query ($page: Int) { Page(page: $page, perPage: 1) { media(type: ANIME, sort: POPULARITY_DESC) { id } } }`; const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query, variables: { page: randomPage } }) }); const data = await response.json(); const media = data?.data?.Page?.media; if (media && media.length > 0) openAnimeDetail(media[0].id, 'catalog'); } catch (e) { showToast('Ошибка поиска', 'error'); } }
 function toggleDescription() { const descEl = document.getElementById('desc-text'); const btnEl = document.getElementById('desc-btn'); if (descEl.style.webkitLineClamp === '4' || descEl.style.webkitLineClamp === '') { descEl.style.webkitLineClamp = 'unset'; btnEl.innerHTML = 'Свернуть ▲'; } else { descEl.style.webkitLineClamp = '4'; btnEl.innerHTML = 'Читать полностью ▼'; } }
 
