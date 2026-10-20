@@ -87,13 +87,10 @@ const LEVEL_TITLES = [
     "Великий отаку-владыка", "Хранитель последнего эпизода", "Мастер пересмотров", "Дух аниме-сообщества", "Верховный хранитель сезонов"
 ];
 
-// ==========================================
-// СИСТЕМА СБРОСА СТАРЫХ БАГОВ
-// ==========================================
-// Если в LocalStorage есть старые данные (с багом), мы их сбрасываем
-if (localStorage.getItem('onika_stats_v2') === null) {
-    localStorage.removeItem('onika_stats'); // Удаляем старый кэш
-    localStorage.setItem('onika_stats_v2', 'clean'); // Ставим метку, что кэш обновлен
+// Сброс старого кэша (один раз при обновлении)
+if (localStorage.getItem('onika_stats_v3') === null) {
+    localStorage.removeItem('onika_stats');
+    localStorage.setItem('onika_stats_v3', 'clean');
 }
 
 // ==========================================
@@ -104,9 +101,7 @@ function getStats() {
     if (!stats) {
         stats = {
             episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, lastVisit: new Date().toDateString(), 
-            unlockedAchievements: [], 
-            favedAnime: [], 
-            watchedToday: [] 
+            unlockedAchievements: [], favedAnime: [], watchedToday: [] 
         };
         localStorage.setItem('onika_stats', JSON.stringify(stats));
     }
@@ -355,7 +350,17 @@ function initHeroSlider() {
     const dotsContainer = document.getElementById('heroDots');
     if (!slider || heroData.length === 0) return;
     let sliderHTML = '', dotsHTML = '';
+    
+    // Получаем список лайкнутых аниме
+    const stats = getStats();
+    const favedList = stats.favedAnime || [];
+
     heroData.forEach((anime, index) => {
+        // Проверяем, лайкнуто ли это аниме
+        const isFaved = favedList.includes(anime.id);
+        const heartClass = isFaved ? 'faved' : '';
+        const heartIcon = isFaved ? '❤️' : '🤍';
+
         sliderHTML += `
             <div class="hero-slide ${index === 0 ? 'active' : ''}">
                 <div class="hero-bg" style="background-image: url('${anime.img}')"></div>
@@ -369,8 +374,7 @@ function initHeroSlider() {
                     <h1 class="hero-title">${anime.title}</h1>
                     <div class="hero-actions">
                         <button class="btn-primary" onclick="playAnime(${anime.id})">▶ Смотреть</button>
-                        <!-- Передаем ID аниме в функцию -->
-                        <button class="btn-icon-heart" onclick="toggleFavorite(this, ${anime.id})">🤍</button>
+                        <button class="btn-icon-heart ${heartClass}" onclick="toggleFavorite(this, ${anime.id})">${heartIcon}</button>
                     </div>
                 </div>
             </div>`;
@@ -402,7 +406,7 @@ function addSwipeSupport(element) {
 }
 
 // ==========================================
-// ИСПРАВЛЕННЫЙ БАГ С ЛАЙКОМ
+// ФУНКЦИЯ ЛАЙКА (ИСПРАВЛЕНА)
 // ==========================================
 function toggleFavorite(btn, animeId) {
     let stats = getStats();
@@ -424,9 +428,6 @@ function toggleFavorite(btn, animeId) {
     }
 }
 
-// ==========================================
-// ИСПРАВЛЕННЫЙ БАГ С ПРОСМОТРОМ
-// ==========================================
 function playAnime(id) { 
     let stats = getStats();
     const today = new Date().toDateString();
