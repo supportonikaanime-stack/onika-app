@@ -6,20 +6,12 @@ if (tg) {
 }
 
 // ==========================================
-// СОСТОЯНИЕ КАТАЛОГА
+// КАТАЛОГ: УПРОЩЕННАЯ ЛОГИКА
 // ==========================================
 let catalogPage = 1;
 let isCatalogLoading = false;
 let hasMoreCatalog = true;
-
-let filters = {
-    search: '',
-    genre: '',
-    type: '',
-    year: '',
-    status: '',
-    sort: 'POPULARITY_DESC'
-};
+let currentGenre = '';
 
 const GENRES = [
     { id: 'Action', name: 'Экшен' },
@@ -29,26 +21,6 @@ const GENRES = [
     { id: 'Drama', name: 'Драма' },
     { id: 'Adventure', name: 'Приключения' },
     { id: 'Sci-Fi', name: 'Фантастика' }
-];
-
-const TYPES = [
-    { id: 'TV', name: 'ТВ Сериал' }, { id: 'MOVIE', name: 'Фильм' }, { id: 'OVA', name: 'OVA' }, { id: 'ONA', name: 'ONA' }
-];
-
-const YEARS = [
-    { id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' },
-    { id: '2021', name: '2021' }, { id: '2020', name: '2020' }
-];
-
-const STATUSES = [
-    { id: 'RELEASING', name: 'Онгоинг' }, { id: 'FINISHED', name: 'Завершено' }, { id: 'NOT_YET_RELEASED', name: 'Анонс' }
-];
-
-const SORTS = [
-    { id: 'POPULARITY_DESC', name: 'По популярности' },
-    { id: 'TRENDING_DESC', name: 'В тренде' },
-    { id: 'START_DATE_DESC', name: 'Новинки' },
-    { id: 'SCORE_DESC', name: 'По рейтингу' }
 ];
 
 // ==========================================
@@ -77,8 +49,13 @@ function switchTab(tabName, element) {
     }
 }
 
+function forceReloadCatalog() {
+    document.getElementById('catalog-grid').innerHTML = '';
+    loadCatalog(true);
+}
+
 // ==========================================
-// КАТАЛОГ И ФИЛЬТРЫ
+// КАТАЛОГ
 // ==========================================
 function initCatalogFilters() {
     const genreContainer = document.getElementById('genre-filters');
@@ -91,62 +68,18 @@ function initCatalogFilters() {
 }
 
 function setGenreFilter(genreId, btn) {
-    filters.genre = genreId;
+    currentGenre = genreId;
     document.querySelectorAll('#genre-filters .genre-pill').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
     if (genreId === '') btn.innerHTML = '<div class="dot"></div>Все';
     loadCatalog(true);
 }
 
-function openFilterModal(type) {
-    const modal = document.getElementById('filterModal');
-    const title = document.getElementById('filter-modal-title');
-    const container = document.getElementById('filter-options-container');
-    
-    let options = [];
-    let currentVal = filters[type];
-
-    if (type === 'type') { options = TYPES; title.textContent = 'Тип аниме'; }
-    if (type === 'year') { options = YEARS; title.textContent = 'Год выхода'; }
-    if (type === 'status') { options = STATUSES; title.textContent = 'Статус'; }
-    if (type === 'sort') { options = SORTS; title.textContent = 'Сортировка'; }
-
-    let html = `<button class="filter-option-btn ${currentVal === '' ? 'active' : ''}" onclick="applyFilter('${type}', '')">Любой</button>`;
-    
-    options.forEach(opt => {
-        html += `<button class="filter-option-btn ${currentVal === opt.id ? 'active' : ''}" onclick="applyFilter('${type}', '${opt.id}')">${opt.name}</button>`;
-    });
-
-    container.innerHTML = html;
-    modal.classList.add('active');
-}
-
-function applyFilter(type, value) {
-    filters[type] = value;
-    closeModal('filterModal');
-    
-    const btnIndex = type === 'type' ? 0 : type === 'year' ? 1 : type === 'status' ? 2 : 3;
-    const btns = document.querySelectorAll('#dropdown-filters .filter-btn');
-    
-    let optName = 'Любой';
-    if (value) {
-        const list = type === 'type' ? TYPES : type === 'year' ? YEARS : type === 'status' ? STATUSES : SORTS;
-        optName = list.find(o => o.id === value).name;
-    } else {
-        optName = type === 'type' ? 'Тип' : type === 'year' ? 'Год' : type === 'status' ? 'Статус' : 'Сортировка';
-    }
-    
-    btns[btnIndex].innerHTML = `${optName} ⌄`;
-    loadCatalog(true);
-}
-
 function searchAnime() {
-    const query = document.getElementById('search-input').value.trim();
-    if (query === filters.search) return;
-    filters.search = query;
     loadCatalog(true);
 }
 
+// ПРОСТОЙ И НАДЕЖНЫЙ ЗАПРОС
 async function loadCatalog(reset = false) {
     if (isCatalogLoading) return;
     isCatalogLoading = true;
@@ -161,49 +94,38 @@ async function loadCatalog(reset = false) {
     }
 
     try {
-        // Формируем запрос динамически, чтобы не отправлять пустые строки (это ломает AniList)
-        let queryStr = `query ($page: Int, $sort: [MediaSort]`;
-        let variables = { page: catalogPage, sort: [filters.sort || 'POPULARITY_DESC'] };
-        let mediaParams = `type: ANIME, sort: $sort`;
+        const searchVal = document.getElementById('search-input')?.value.trim() || '';
+        
+        // Динамически собираем запрос, чтобы пустые параметры не ломали AniList
+        let mediaArgs = 'type: ANIME, sort: POPULARITY_DESC';
+        let variables = { page: catalogPage };
 
-        if (filters.search) {
-            queryStr += `, $search: String`;
-            mediaParams += `, search: $search`;
-            variables.search = filters.search;
+        if (searchVal) {
+            mediaArgs += ', search: $search';
+            variables.search = searchVal;
         }
-        if (filters.genre) {
-            queryStr += `, $genre: String`;
-            mediaParams += `, genre: $genre`;
-            variables.genre = filters.genre;
-        }
-        if (filters.type) {
-            queryStr += `, $type: MediaType`;
-            mediaParams += `, format: $type`;
-            variables.type = filters.type;
-        }
-        if (filters.year) {
-            queryStr += `, $year: Int`;
-            mediaParams += `, seasonYear: $year`;
-            variables.year = parseInt(filters.year);
-        }
-        if (filters.status) {
-            queryStr += `, $status: MediaStatus`;
-            mediaParams += `, status: $status`;
-            variables.status = filters.status;
+        if (currentGenre) {
+            mediaArgs += ', genre: $genre';
+            variables.genre = currentGenre;
         }
 
-        queryStr += `) {
-            Page(page: $page, perPage: 12) {
-                media(${mediaParams}) {
-                    id title { romaji english } coverImage { large } averageScore format episodes
+        const query = `
+            query ($page: Int ${searchVal ? ', $search: String' : ''} ${currentGenre ? ', $genre: String' : ''}) {
+                Page(page: $page, perPage: 12) {
+                    media(${mediaArgs}) {
+                        id
+                        title { romaji }
+                        coverImage { large }
+                        averageScore
+                    }
                 }
             }
-        }`;
+        `;
 
         const response = await fetch('https://graphql.anilist.co', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ query: queryStr, variables })
+            body: JSON.stringify({ query, variables })
         });
         const data = await response.json();
         
@@ -223,7 +145,7 @@ async function loadCatalog(reset = false) {
         }
 
         media.forEach(anime => {
-            const title = anime.title.romaji || anime.title.english || 'Без названия';
+            const title = anime.title.romaji || 'Без названия';
             const img = anime.coverImage.large;
             const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : '?';
 
@@ -245,7 +167,7 @@ async function loadCatalog(reset = false) {
 
     } catch (e) {
         console.error('Ошибка каталога:', e);
-        if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>';
+        if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки (проверьте VPN)</div>';
     } finally {
         isCatalogLoading = false;
     }
@@ -600,7 +522,7 @@ function openAchievementsModal() {
 }
 
 // ==========================================
-// ГЛАВНАЯ
+// ГЛАВНАЯ (КАРУСЕЛЬ И ЛЕНТЫ)
 // ==========================================
 let heroData = [];
 let currentSlide = 0;
