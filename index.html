@@ -59,15 +59,6 @@
         .horizontal-scroll .card { min-width: 130px; width: 130px; height: 195px; }
         .horizontal-scroll .card-img { height: 100%; }
 
-        /* Продолжить просмотр */
-        .continue-card { min-width: 260px; width: 260px; height: 140px; background: var(--card); border-radius: 12px; overflow: hidden; position: relative; }
-        .continue-card-img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; }
-        .continue-card-info { position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 15px; background: linear-gradient(to top, rgba(10,10,15,0.95) 0%, rgba(10,10,15,0.4) 60%, transparent 100%); display: flex; flex-direction: column; justify-content: flex-end; z-index: 2; }
-        .continue-card-title { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.2; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .continue-card-ep { font-size: 11px; color: rgba(255,255,255,0.7); margin-bottom: 6px; }
-        .continue-progress-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; }
-        .continue-progress-fill { height: 100%; background: var(--primary); border-radius: 2px; box-shadow: 0 0 8px var(--primary); }
-
         /* Кнопка ТГ */
         .tg-banner-section { padding: 10px 20px 20px; }
         .tg-banner { display: flex; align-items: center; background: linear-gradient(135deg, rgba(0,136,204,0.15), rgba(0,136,204,0.05)); border: 1px solid rgba(0,136,204,0.3); padding: 16px; border-radius: 16px; text-decoration: none !important; color: white !important; }
@@ -207,10 +198,7 @@
             <div class="hero-dots" id="heroDots"></div>
         </section>
 
-        <section class="content-section">
-            <div class="section-header"><h2>▶ Продолжить просмотр</h2></div>
-            <div class="horizontal-scroll" id="continue-list"></div>
-        </section>
+        <!-- Блок Продолжить просмотр УДАЛЕН -->
 
         <section class="content-section">
             <div class="section-header"><h2>🔥 Популярное сейчас</h2></div>
@@ -429,6 +417,6 @@
         <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon">👤</span><span class="nav-text">Профиль</span></div>
     </nav>
 
-    <script src="app.js?v=18"></script>
+    <script src="app.js?v=19"></script>
 </body>
 </html>
