@@ -5,7 +5,14 @@ if (tg) {
     tg.setBackgroundColor('#0a0a0f');
 }
 
-// Переключение вкладок
+// ==========================================
+// ⚙️ НАСТРОЙКИ ПРОКСИ (Если не работает, поменяйте на второй)
+// ==========================================
+// Вариант 1 (основной)
+const PROXY_URL = 'https://corsproxy.io/?https://shikimori.one/api/graphql';
+// Вариант 2 (запасной, если первый выдаст ошибку)
+// const PROXY_URL = 'https://api.allorigins.win/raw?url=https://shikimori.one/api/graphql';
+
 function switchTab(tabName, element) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     if (tabName === 'home') document.getElementById('screen-home').classList.add('active');
@@ -19,21 +26,81 @@ function switchTab(tabName, element) {
 }
 
 // ==========================================
-// 1) КИНЕМАТОГРАФИЧНЫЙ БАННЕР
+// ФУНКЦИЯ ЗАПРОСА К SHIKIMORI (ЧЕРЕЗ ПРОКСИ)
 // ==========================================
-const heroData = [
-    { id: 42310, title: "Киберпанк: Бегущие по краю", img: "https://shikimori.one/system/animes/original/42310.jpg", score: "8.9", type: "ТВ Сериал", year: "2022" },
-    { id: 16498, title: "Атака Титанов", img: "https://shikimori.one/system/animes/original/16498.jpg", score: "8.6", type: "ТВ Сериал", year: "2013" },
-    { id: 40748, title: "Магическая битва", img: "https://shikimori.one/system/animes/original/40748.jpg", score: "8.7", type: "ТВ Сериал", year: "2020" }
-];
+async function fetchShikimori(query) {
+    try {
+        const response = await fetch(PROXY_URL, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ query })
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const data = await response.json();
+        if (data.errors) {
+            console.error('GraphQL Ошибка:', data.errors);
+            return null;
+        }
+        return data.data;
+    } catch (e) {
+        console.error('Ошибка сети (Прокси):', e);
+        return null;
+    }
+}
 
+// ==========================================
+// 1) БАННЕР (Реальные данные)
+// ==========================================
+let heroData = [];
 let currentSlide = 0;
 let slideInterval;
 let touchStartX = 0;
 
+async function loadHeroData() {
+    const query = `{
+        animes(page: 1, limit: 3, order: ranked) {
+            id
+            name
+            russian
+            score
+            kind
+            airedOn { year }
+            poster { originalUrl }
+        }
+    }`;
+    
+    const data = await fetchShikimori(query);
+    
+    // Если прокси не сработал, показываем заглушку
+    if (!data || !data.animes) {
+        console.warn('API не ответил, показываем тестовые данные');
+        heroData = [
+            { id: 42310, title: "Киберпанк: Бегущие по краю", img: "https://shikimori.one/system/animes/original/42310.jpg", score: "8.9", type: "ТВ", year: "2022" },
+            { id: 16498, title: "Атака Титанов", img: "https://shikimori.one/system/animes/original/16498.jpg", score: "8.6", type: "ТВ", year: "2013" }
+        ];
+    } else {
+        heroData = data.animes.map(a => ({
+            id: a.id,
+            title: a.russian || a.name,
+            img: a.poster?.originalUrl || '',
+            score: a.score ? a.score.toFixed(1) : '?',
+            type: a.kind || 'ТВ',
+            year: a.airedOn?.year || '?'
+        }));
+    }
+    initHeroSlider();
+}
+
 function initHeroSlider() {
     const slider = document.getElementById('heroSlider');
     const dotsContainer = document.getElementById('heroDots');
+    if (!slider || heroData.length === 0) return;
+
     let sliderHTML = '';
     let dotsHTML = '';
     
@@ -98,21 +165,20 @@ function toggleFavorite(btn) {
     else { btn.classList.add('faved'); btn.innerHTML = '❤️'; if (tg) tg.HapticFeedback.impactOccurred('medium'); }
 }
 
-function playAnime(id) { if (tg) tg.showAlert(`🎬 Плеер: аниме ${id}`); }
+function playAnime(id) { if (tg) tg.showAlert(`🎬 Плеер для ID: ${id}`); }
 
 // ==========================================
-// 2) ПРОДОЛЖИТЬ ПРОСМОТР
+// 2) ПРОДОЛЖИТЬ ПРОСМОТР (Тест)
 // ==========================================
-const continueWatchingData = [
-    { id: 1, title: "Тетрадь смерти", img: "https://shikimori.one/system/animes/original/1535.jpg", ep: 5, total: 37 },
-    { id: 2, title: "Ван-Пис", img: "https://shikimori.one/system/animes/original/21.jpg", ep: 150, total: 1000 }
-];
-
 function renderContinueWatching() {
     const container = document.getElementById('continue-list');
     if (!container) return;
+    const data = [
+        { id: 1, title: "Тетрадь смерти", img: "https://shikimori.one/system/animes/original/1535.jpg", ep: 5, total: 37 },
+        { id: 2, title: "Ван-Пис", img: "https://shikimori.one/system/animes/original/21.jpg", ep: 150, total: 1000 }
+    ];
     let html = '';
-    continueWatchingData.forEach(anime => {
+    data.forEach(anime => {
         const percent = Math.round((anime.ep / anime.total) * 100);
         html += `
             <div class="continue-card" onclick="playAnime(${anime.id})">
@@ -121,9 +187,7 @@ function renderContinueWatching() {
                     <div class="continue-card-title">${anime.title}</div>
                     <div>
                         <div class="continue-card-ep">Серия ${anime.ep} из ${anime.total}</div>
-                        <div class="continue-progress-bar">
-                            <div class="continue-progress-fill" style="width: ${percent}%"></div>
-                        </div>
+                        <div class="continue-progress-bar"><div class="continue-progress-fill" style="width: ${percent}%"></div></div>
                     </div>
                 </div>
             </div>
@@ -133,23 +197,33 @@ function renderContinueWatching() {
 }
 
 // ==========================================
-// 3) ПОПУЛЯРНОЕ СЕЙЧАС
+// 3) ПОПУЛЯРНОЕ (Реальные данные)
 // ==========================================
-const popularData = [
-    { id: 10, title: "Магическая битва", img: "https://shikimori.one/system/animes/original/40748.jpg" },
-    { id: 11, title: "Атака Титанов", img: "https://shikimori.one/system/animes/original/16498.jpg" },
-    { id: 12, title: "Клинок, рассекающий демонов", img: "https://shikimori.one/system/animes/original/40456.jpg" }
-];
-
-function renderPopular() {
+async function loadPopular() {
+    const query = `{
+        animes(page: 1, limit: 6, order: popularity) {
+            id
+            name
+            russian
+            poster { originalUrl }
+        }
+    }`;
+    
+    const data = await fetchShikimori(query);
     const container = document.getElementById('popular-list');
     if (!container) return;
+
+    if (!data || !data.animes) {
+        container.innerHTML = '<p style="color:#888; padding:0 20px;">Не удалось загрузить</p>';
+        return;
+    }
+
     let html = '';
-    popularData.forEach(anime => {
+    data.animes.forEach(anime => {
         html += `
             <div class="card" onclick="openAnime(${anime.id})">
-                <img class="card-img" src="${anime.img}" loading="lazy">
-                <div class="card-title">${anime.title}</div>
+                <img class="card-img" src="${anime.poster?.originalUrl || ''}" loading="lazy">
+                <div class="card-title">${anime.russian || anime.name}</div>
             </div>
         `;
     });
@@ -157,24 +231,33 @@ function renderPopular() {
 }
 
 // ==========================================
-// 5) РЕКОМЕНДАЦИИ ДЛЯ ВАС (Сетка)
+// 5) РЕКОМЕНДАЦИИ (Реальные данные)
 // ==========================================
-const recommendedData = [
-    { id: 20, title: "Стальной алхимик", img: "https://shikimori.one/system/animes/original/5114.jpg" },
-    { id: 21, title: "Наруто", img: "https://shikimori.one/system/animes/original/20.jpg" },
-    { id: 22, title: "Евангелион", img: "https://shikimori.one/system/animes/original/30.jpg" },
-    { id: 23, title: "Врата Штейна", img: "https://shikimori.one/system/animes/original/9253.jpg" }
-];
-
-function renderRecommended() {
+async function loadRecommended() {
+    const query = `{
+        animes(page: 2, limit: 4, order: ranked) {
+            id
+            name
+            russian
+            poster { originalUrl }
+        }
+    }`;
+    
+    const data = await fetchShikimori(query);
     const container = document.getElementById('recommended-list');
     if (!container) return;
+
+    if (!data || !data.animes) {
+        container.innerHTML = '<p style="color:#888;">Не удалось загрузить</p>';
+        return;
+    }
+
     let html = '';
-    recommendedData.forEach(anime => {
+    data.animes.forEach(anime => {
         html += `
             <div class="card" onclick="openAnime(${anime.id})">
-                <img class="card-img" src="${anime.img}" loading="lazy">
-                <div class="card-title">${anime.title}</div>
+                <img class="card-img" src="${anime.poster?.originalUrl || ''}" loading="lazy">
+                <div class="card-title">${anime.russian || anime.name}</div>
             </div>
         `;
     });
@@ -185,8 +268,8 @@ function openAnime(id) { if (tg) tg.showAlert(`Открываем аниме ID:
 
 // Запуск
 document.addEventListener('DOMContentLoaded', () => {
-    initHeroSlider();
+    loadHeroData();
     renderContinueWatching();
-    renderPopular();
-    renderRecommended();
+    loadPopular();
+    loadRecommended();
 });
