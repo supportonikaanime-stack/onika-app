@@ -1,23 +1,15 @@
 // ==========================================
-// 1. НАСТРОЙКА SUPABASE (ВАШИ КЛЮЧИ)
+// 1. НАСТРОЙКА SUPABASE
 // ==========================================
 const SUPABASE_URL = 'https://wsaykqhojwfhpqzxptke.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzYXlrcWhvandmaHBxenhwdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MzAxMDgsImV4cCI6MjEwODEwNjEwOH0.6eHuhYt2CyVvIurt-TW3MgP4VE0kzv39vqVHwskodLk';
 
+// Инициализируем клиент СРАЗУ
 let supabaseClient = null;
-
-window.addEventListener('load', () => {
-    try {
-        if (window.supabase) {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            console.log('✅ Supabase подключен');
-        } else {
-            console.error('Библиотека Supabase не загрузилась');
-        }
-    } catch (e) {
-        console.error('Ошибка подключения Supabase:', e);
-    }
-});
+try {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log('✅ Supabase инициализирован');
+} catch(e) { console.error('Ошибка инициализации Supabase:', e); }
 
 const tg = window.Telegram.WebApp;
 let MY_TG_ID = null;
@@ -99,11 +91,18 @@ async function syncProfileToDB() {
     if (!MY_TG_ID || !supabaseClient) return;
     let stats = getStats();
     try {
-        await supabaseClient.from('users').upsert({
-            tg_id: MY_TG_ID, name: MY_NAME, xp: stats.xp,
-            episodes_watched: stats.episodesWatched, minutes_watched: stats.minutesWatched, days_streak: stats.daysStreak
+        // Отправляем данные в базу
+        const { error } = await supabaseClient.from('users').upsert({
+            tg_id: MY_TG_ID, 
+            name: MY_NAME, 
+            xp: stats.xp,
+            episodes_watched: stats.episodesWatched, 
+            minutes_watched: stats.minutesWatched, 
+            days_streak: stats.daysStreak
         }, { onConflict: 'tg_id' });
-        console.log('📡 Профиль синхронизирован');
+        
+        if (error) console.error('Ошибка синхронизации:', error);
+        else console.log('📡 Профиль сохранен в БД');
     } catch (e) { console.error('Ошибка синхронизации:', e); }
 }
 
@@ -158,6 +157,7 @@ function loadProfileData() {
     if (nextAch) setElText('next-ach-name', nextAch.name); 
     else setElText('next-ach-name', 'Все выполнено!'); 
 
+    // Синхронизация
     syncProfileToDB();
 }
 
@@ -169,7 +169,7 @@ async function loadFriends() {
     if (!listContainer) return;
     
     if (!supabaseClient) {
-        listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка: База данных не подключена (проверьте интернет)</div>';
+        listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка: База данных не подключена</div>';
         return;
     }
     if (!MY_TG_ID) {
