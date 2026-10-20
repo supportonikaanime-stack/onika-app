@@ -9,47 +9,46 @@ if (tg) {
 // СОСТОЯНИЕ КАТАЛОГА
 // ==========================================
 let catalogPage = 1;
-let catalogSort = 'POPULARITY_DESC';
-let catalogSearchQuery = '';
 let isCatalogLoading = false;
 let hasMoreCatalog = true;
 
-// ==========================================
-// СПИСОК ДОСТИЖЕНИЙ
-// ==========================================
-const ACHIEVEMENTS = [
-    { id: 1, name: "Первый шаг", desc: "Зарегистрироваться на сайте", icon: "🚀", check: (s) => true },
-    { id: 2, name: "Дебютный просмотр", desc: "Посмотреть первый эпизод", icon: "🎬", check: (s) => s.episodesWatched >= 1 },
-    { id: 3, name: "Марафонец", desc: "Посмотреть 10 эпизодов за день", icon: "🏃", check: (s) => s.episodesWatched >= 10 },
-    { id: 4, name: "Ночной страж", desc: "Посмотреть аниме после 3:00", icon: "🌙", check: () => { let h = new Date().getHours(); return h >= 3 && h < 6; } },
-    { id: 33, name: "Ежедневный визит", desc: "Заходить 7 дней подряд", icon: "📅", check: (s) => s.daysStreak >= 7 },
-    { id: 36, name: "Первый уровень", desc: "Достичь 10 уровня", icon: "🎖️", check: (s) => Math.floor(s.xp / 100) + 1 >= 10 }
+let filters = {
+    search: '',
+    genre: '',
+    type: '',
+    year: '',
+    status: '',
+    sort: 'POPULARITY_DESC'
+};
+
+const GENRES = [
+    { id: 'Action', name: 'Экшен' },
+    { id: 'Romance', name: 'Романтика' },
+    { id: 'Comedy', name: 'Комедия' },
+    { id: 'Fantasy', name: 'Фэнтези' },
+    { id: 'Drama', name: 'Драма' },
+    { id: 'Adventure', name: 'Приключения' },
+    { id: 'Sci-Fi', name: 'Фантастика' }
 ];
 
-// ==========================================
-// 100 УРОВНЕЙ (ЗВАНИЙ)
-// ==========================================
-const LEVEL_TITLES = [
-    "Первый эпизод", "Любопытный зритель", "Случайный странник", "Ученик манги", "Читатель субтитров",
-    "Собиратель тайтлов", "Ночной марафонец", "Ценитель опенингов", "Знаток сейю", "Ловец спойлеров",
-    "Страж таймлайна", "Искатель шедевров", "Коллекционер жанров", "Следопыт сезона", "Архивариус эпизодов",
-    "Пилот меха", "Ученик додзё", "Начинающий маг", "Дух сакуры", "Странник измерений",
-    "Хранитель клинка", "Проводник сюжета", "Алхимик эмоций", "Писец рецензий", "Охотник за онгоингами",
-    "Мастер бинджвотча", "Сэнпай сайта", "Хранитель лора", "Ткач теорий", "Лунный самурай",
-    "Небесный курьер", "Хранитель опенингов", "Повелитель плейлистов", "Критик с катаной", "Мудрец субтитров",
-    "Дубляжный маг", "Страж спойлеров", "Картограф арок", "Коллекционер аватарок", "Ловец редких тайтлов",
-    "Хроникёр сезонов", "Мастер клиффхэнгеров", "Дуэлянт мнений", "Хранитель уютного уголка", "Рыцарь романтики",
-    "Тень сёнэна", "Адепт исэкая", "Архимаг тайтлов", "Небесный отаку", "Странник по мирам",
-    "Хранитель легенд", "Мастер сюжетных поворотов", "Голос фандома", "Судья сезона", "Хранитель аниме-реликвий",
-    "Пилот звёздного поезда", "Лунный библиотекарь", "Самурай субботы", "Повелитель финальных титров", "Искатель скрытых жемчужин",
-    "Маг рекомендаций", "Страж уютных вечеров", "Рыцарь онгоинга", "Дух обсуждений", "Хранитель мемов",
-    "Мастер аниме-детектива", "Небесный критик", "Повелитель сезонных марафонов", "Хранитель канона", "Ткач фанфиков",
-    "Оракул спойлеров", "Лунный сэнпай", "Самурай рейтингов", "Архивариус легенд", "Маг жанров",
-    "Страж ночных просмотров", "Повелитель опенингов", "Хранитель тропов", "Рыцарь вечернего просмотра", "Дух фестиваля",
-    "Мастер эмоциональных качелей", "Следопыт забытых тайтлов", "Хранитель аниме-хроник", "Небесный администратор", "Самурай финального эпизода",
-    "Оракул сезонов", "Повелитель легендарных арок", "Хранитель аниме-вселенной", "Маг идеального топа", "Дух великого марафона",
-    "Рыцарь вечного онгоинга", "Архимаг фандома", "Страж золотой коллекции", "Легенда аниме-сайта", "Небесный хранитель тайтлов",
-    "Великий отаку-владыка", "Хранитель последнего эпизода", "Мастер пересмотров", "Дух аниме-сообщества", "Верховный хранитель сезонов"
+const TYPES = [
+    { id: 'TV', name: 'ТВ Сериал' }, { id: 'MOVIE', name: 'Фильм' }, { id: 'OVA', name: 'OVA' }, { id: 'ONA', name: 'ONA' }
+];
+
+const YEARS = [
+    { id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' },
+    { id: '2021', name: '2021' }, { id: '2020', name: '2020' }
+];
+
+const STATUSES = [
+    { id: 'RELEASING', name: 'Онгоинг' }, { id: 'FINISHED', name: 'Завершено' }, { id: 'NOT_YET_RELEASED', name: 'Анонс' }
+];
+
+const SORTS = [
+    { id: 'POPULARITY_DESC', name: 'По популярности' },
+    { id: 'TRENDING_DESC', name: 'В тренде' },
+    { id: 'START_DATE_DESC', name: 'Новинки' },
+    { id: 'SCORE_DESC', name: 'По рейтингу' }
 ];
 
 // ==========================================
@@ -57,7 +56,6 @@ const LEVEL_TITLES = [
 // ==========================================
 function switchTab(tabName, element) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    
     const screen = document.getElementById(`screen-${tabName}`);
     if (screen) screen.classList.add('active');
 
@@ -73,34 +71,79 @@ function switchTab(tabName, element) {
     }
 
     if (tabName === 'profile') loadProfileData();
-    if (tabName === 'catalog') {
-        if (document.getElementById('catalog-grid').children.length === 0) {
-            loadCatalog(true);
-        }
+    if (tabName === 'catalog' && document.getElementById('catalog-grid').children.length === 0) {
+        initCatalogFilters();
+        loadCatalog(true);
     }
 }
 
 // ==========================================
-// КАТАЛОГ
+// КАТАЛОГ И ФИЛЬТРЫ
 // ==========================================
-function setFilter(sort, btn) {
-    catalogSort = sort;
-    catalogPage = 1;
-    catalogSearchQuery = '';
-    document.getElementById('search-input').value = '';
-    
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+function initCatalogFilters() {
+    const genreContainer = document.getElementById('genre-filters');
+    let html = `<div class="genre-pill active" onclick="setGenreFilter('', this)"><div class="dot"></div>Все</div>`;
+    GENRES.forEach(g => {
+        html += `<div class="genre-pill" onclick="setGenreFilter('${g.id}', this)">${g.name}</div>`;
+    });
+    genreContainer.innerHTML = html;
+}
+
+function setGenreFilter(genreId, btn) {
+    filters.genre = genreId;
+    document.querySelectorAll('#genre-filters .genre-pill').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
+    if (genreId === '') btn.innerHTML = '<div class="dot"></div>Все';
+    else if (btn.innerHTML.indexOf('dot') === -1) {} // Оставляем как есть
+    loadCatalog(true);
+}
+
+function openFilterModal(type) {
+    const modal = document.getElementById('filterModal');
+    const title = document.getElementById('filter-modal-title');
+    const container = document.getElementById('filter-options-container');
     
+    let options = [];
+    let currentVal = filters[type];
+
+    if (type === 'type') { options = TYPES; title.textContent = 'Тип аниме'; }
+    if (type === 'year') { options = YEARS; title.textContent = 'Год выхода'; }
+    if (type === 'status') { options = STATUSES; title.textContent = 'Статус'; }
+    if (type === 'sort') { options = SORTS; title.textContent = 'Сортировка'; }
+
+    let html = `<button class="filter-option-btn ${currentVal === '' ? 'active' : ''}" onclick="applyFilter('${type}', '')">Любой</button>`;
+    
+    options.forEach(opt => {
+        html += `<button class="filter-option-btn ${currentVal === opt.id ? 'active' : ''}" onclick="applyFilter('${type}', '${opt.id}')">${opt.name}</button>`;
+    });
+
+    container.innerHTML = html;
+    modal.classList.add('active');
+}
+
+function applyFilter(type, value) {
+    filters[type] = value;
+    closeModal('filterModal');
+    
+    const btnIndex = type === 'type' ? 0 : type === 'year' ? 1 : type === 'status' ? 2 : 3;
+    const btns = document.querySelectorAll('#dropdown-filters .filter-btn');
+    
+    let optName = 'Любой';
+    if (value) {
+        const list = type === 'type' ? TYPES : type === 'year' ? YEARS : type === 'status' ? STATUSES : SORTS;
+        optName = list.find(o => o.id === value).name;
+    } else {
+        optName = type.charAt(0).toUpperCase() + type.slice(1);
+    }
+    
+    btns[btnIndex].innerHTML = `${optName} ⌄`;
     loadCatalog(true);
 }
 
 function searchAnime() {
     const query = document.getElementById('search-input').value.trim();
-    if (query === catalogSearchQuery) return; 
-    
-    catalogSearchQuery = query;
-    catalogPage = 1;
+    if (query === filters.search) return;
+    filters.search = query;
     loadCatalog(true);
 }
 
@@ -114,39 +157,31 @@ async function loadCatalog(reset = false) {
     if (reset) {
         grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
         hasMoreCatalog = true;
+        catalogPage = 1;
     }
 
     try {
-        let query, variables;
+        let queryStr = `
+            query ($page: Int, $search: String, $genre: String, $type: MediaType, $year: Int, $status: MediaStatus, $sort: [MediaSort]) {
+                Page(page: $page, perPage: 12) {
+                    media(type: ANIME, search: $search, genre: $genre, format: $type, seasonYear: $year, status: $status, sort: $sort) {
+                        id title { romaji english } coverImage { large } averageScore format episodes
+                    }
+                }
+            }
+        `;
 
-        if (catalogSearchQuery.length > 1) {
-            query = `
-                query ($page: Int, $search: String) {
-                    Page(page: $page, perPage: 12) {
-                        media(type: ANIME, search: $search, sort: POPULARITY_DESC) {
-                            id title { romaji english } coverImage { large } averageScore format episodes
-                        }
-                    }
-                }
-            `;
-            variables = { page: catalogPage, search: catalogSearchQuery };
-        } else {
-            query = `
-                query ($page: Int, $sort: [MediaSort]) {
-                    Page(page: $page, perPage: 12) {
-                        media(type: ANIME, sort: $sort) {
-                            id title { romaji english } coverImage { large } averageScore format episodes
-                        }
-                    }
-                }
-            `;
-            variables = { page: catalogPage, sort: [catalogSort] };
-        }
+        let variables = { page: catalogPage, sort: [filters.sort] };
+        if (filters.search) variables.search = filters.search;
+        if (filters.genre) variables.genre = filters.genre;
+        if (filters.type) variables.type = filters.type;
+        if (filters.year) variables.year = parseInt(filters.year);
+        if (filters.status) variables.status = filters.status;
 
         const response = await fetch('https://graphql.anilist.co', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ query, variables })
+            body: JSON.stringify({ query: queryStr, variables })
         });
         const data = await response.json();
         
@@ -197,7 +232,35 @@ function loadMoreCatalog() {
 }
 
 // ==========================================
-// УЛУЧШЕННАЯ ДЕТАЛЬНАЯ СТРАНИЦА АНИМЕ
+// СЛУЧАЙНОЕ АНИМЕ
+// ==========================================
+async function openRandomAnime() {
+    if (tg) tg.HapticFeedback.impactOccurred('medium');
+    showToast('🎲 Ищем случайное аниме...');
+    
+    try {
+        const randomPage = Math.floor(Math.random() * 50) + 1;
+        const query = `
+            query ($page: Int) {
+                Page(page: $page, perPage: 1) {
+                    media(type: ANIME, sort: POPULARITY_DESC) { id }
+                }
+            }
+        `;
+        const response = await fetch('https://graphql.anilist.co', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ query, variables: { page: randomPage } })
+        });
+        const data = await response.json();
+        const media = data?.data?.Page?.media;
+        if (media && media.length > 0) openAnimeDetail(media[0].id);
+    } catch (e) {
+        showToast('Ошибка поиска', 'error');
+    }
+}
+
+// ==========================================
+// ДЕТАЛЬНАЯ СТРАНИЦА
 // ==========================================
 async function openAnimeDetail(id) {
     switchTab('detail');
@@ -211,18 +274,13 @@ async function openAnimeDetail(id) {
                     id title { romaji english } coverImage { extraLarge } bannerImage
                     description averageScore episodes status genres
                     recommendations(perPage: 6, sort: RATING_DESC) {
-                        nodes {
-                            mediaRecommendation {
-                                id title { romaji } coverImage { large } averageScore
-                            }
-                        }
+                        nodes { mediaRecommendation { id title { romaji } coverImage { large } } }
                     }
                 }
             }
         `;
         const response = await fetch('https://graphql.anilist.co', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify({ query, variables: { id } })
         });
         const data = await response.json();
@@ -233,16 +291,13 @@ async function openAnimeDetail(id) {
         const title = anime.title.romaji || anime.title.english;
         const desc = anime.description ? anime.description.replace(/<[^>]*>/g, '') : 'Описание отсутствует.';
         const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : '?';
-        const banner = anime.bannerImage || anime.coverImage.extraLarge; // Фон
+        const banner = anime.bannerImage || anime.coverImage.extraLarge;
         const poster = anime.coverImage.extraLarge;
         
-        // Форматируем статус
-        let statusColor = '#2ecc71'; // Зеленый для завершенных
-        let statusText = 'Завершено';
+        let statusColor = '#2ecc71'; let statusText = 'Завершено';
         if (anime.status === 'RELEASING') { statusColor = '#3498db'; statusText = 'Онгоинг'; }
         if (anime.status === 'NOT_YET_RELEASED') { statusColor = '#e74c3c'; statusText = 'Анонс'; }
 
-        // Рекомендации
         let recsHtml = '';
         if (anime.recommendations && anime.recommendations.nodes.length > 0) {
             recsHtml = `
@@ -252,12 +307,7 @@ async function openAnimeDetail(id) {
                         ${anime.recommendations.nodes.map(r => {
                             const rec = r.mediaRecommendation;
                             if (!rec) return '';
-                            return `
-                                <div class="card" style="min-width: 120px; height: 180px;" onclick="openAnimeDetail(${rec.id})">
-                                    <img class="card-img" src="${rec.coverImage.large}" loading="lazy">
-                                    <div class="card-title" style="font-size: 11px;">${rec.title.romaji}</div>
-                                </div>
-                            `;
+                            return `<div class="card" style="min-width: 120px; height: 180px;" onclick="openAnimeDetail(${rec.id})"><img class="card-img" src="${rec.coverImage.large}" loading="lazy"><div class="card-title" style="font-size: 11px;">${rec.title.romaji}</div></div>`;
                         }).join('')}
                     </div>
                 </div>
@@ -265,19 +315,14 @@ async function openAnimeDetail(id) {
         }
 
         container.innerHTML = `
-            <!-- КИНЕМАТОГРАФИЧНЫЙ ФОН -->
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;">
                 <img src="${banner}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);">
             </div>
-
             <div style="padding-top: 30px;">
-                <!-- Постер и заголовок -->
                 <div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;">
                     <img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 2px solid rgba(255,255,255,0.1);">
                     <div style="flex: 1; padding-bottom: 5px;">
                         <h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">${title}</h1>
-                        
-                        <!-- Красивые плашки -->
                         <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                             <span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;">⭐ ${score}</span>
                             <span style="background: rgba(255,255,255,0.15); backdrop-filter: blur(5px); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">📺 ${anime.episodes || '?'} эп.</span>
@@ -285,47 +330,27 @@ async function openAnimeDetail(id) {
                         </div>
                     </div>
                 </div>
-
-                <!-- Кнопка смотреть -->
-                <button onclick="playAnime(${anime.id})" style="width: 100%; background: #5b5bff; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 8px;">
-                    ▶ Смотреть
-                </button>
-
-                <!-- Кликабельные жанры -->
+                <button onclick="playAnime(${anime.id})" style="width: 100%; background: #5b5bff; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 8px;">▶ Смотреть</button>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">
-                    ${anime.genres.map(g => `
-                        <span onclick="switchTab('catalog'); document.getElementById('search-input').value='${g}'; searchAnime();" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                            ${g}
-                        </span>
-                    `).join('')}
+                    ${anime.genres.map(g => `<span onclick="switchTab('catalog'); document.getElementById('search-input').value='${g}'; searchAnime();" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer;">${g}</span>`).join('')}
                 </div>
-
-                <!-- Описание с кнопкой "Читать далее" -->
                 <div style="margin-bottom: 20px;">
                     <h3 style="font-size: 16px; margin-bottom: 10px; color: #fff;">📖 Описание</h3>
                     <p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p>
                     <button id="desc-btn" onclick="toggleDescription()" style="background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button>
                 </div>
-
-                <!-- Похожие аниме -->
                 ${recsHtml}
             </div>
         `;
-
-        // Сохраняем полный текст описания в глобальную переменную для кнопки
-        window._fullDesc = desc;
-
     } catch (e) {
         console.error(e);
-        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки информации</div>';
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>';
     }
 }
 
-// Функция раскрытия описания
 function toggleDescription() {
     const descEl = document.getElementById('desc-text');
     const btnEl = document.getElementById('desc-btn');
-    
     if (descEl.style.webkitLineClamp === '4' || descEl.style.webkitLineClamp === '') {
         descEl.style.webkitLineClamp = 'unset';
         btnEl.innerHTML = 'Свернуть ▲';
@@ -338,6 +363,38 @@ function toggleDescription() {
 // ==========================================
 // ПРОФИЛЬ (БЕЗ ИЗМЕНЕНИЙ)
 // ==========================================
+const ACHIEVEMENTS = [
+    { id: 1, name: "Первый шаг", desc: "Зарегистрироваться на сайте", icon: "🚀", check: (s) => true },
+    { id: 2, name: "Дебютный просмотр", desc: "Посмотреть первый эпизод", icon: "🎬", check: (s) => s.episodesWatched >= 1 },
+    { id: 3, name: "Марафонец", desc: "Посмотреть 10 эпизодов за день", icon: "🏃", check: (s) => s.episodesWatched >= 10 },
+    { id: 4, name: "Ночной страж", desc: "Посмотреть аниме после 3:00", icon: "🌙", check: () => { let h = new Date().getHours(); return h >= 3 && h < 6; } },
+    { id: 33, name: "Ежедневный визит", desc: "Заходить 7 дней подряд", icon: "📅", check: (s) => s.daysStreak >= 7 },
+    { id: 36, name: "Первый уровень", desc: "Достичь 10 уровня", icon: "🎖️", check: (s) => Math.floor(s.xp / 100) + 1 >= 10 }
+];
+
+const LEVEL_TITLES = [
+    "Первый эпизод", "Любопытный зритель", "Случайный странник", "Ученик манги", "Читатель субтитров",
+    "Собиратель тайтлов", "Ночной марафонец", "Ценитель опенингов", "Знаток сейю", "Ловец спойлеров",
+    "Страж таймлайна", "Искатель шедевров", "Коллекционер жанров", "Следопыт сезона", "Архивариус эпизодов",
+    "Пилот меха", "Ученик додзё", "Начинающий маг", "Дух сакуры", "Странник измерений",
+    "Хранитель клинка", "Проводник сюжета", "Алхимик эмоций", "Писец рецензий", "Охотник за онгоингами",
+    "Мастер бинджвотча", "Сэнпай сайта", "Хранитель лора", "Ткач теорий", "Лунный самурай",
+    "Небесный курьер", "Хранитель опенингов", "Повелитель плейлистов", "Критик с катаной", "Мудрец субтитров",
+    "Дубляжный маг", "Страж спойлеров", "Картограф арок", "Коллекционер аватарок", "Ловец редких тайтлов",
+    "Хроникёр сезонов", "Мастер клиффхэнгеров", "Дуэлянт мнений", "Хранитель уютного уголка", "Рыцарь романтики",
+    "Тень сёнэна", "Адепт исэкая", "Архимаг тайтлов", "Небесный отаку", "Странник по мирам",
+    "Хранитель легенд", "Мастер сюжетных поворотов", "Голос фандома", "Судья сезона", "Хранитель аниме-реликвий",
+    "Пилот звёздного поезда", "Лунный библиотекарь", "Самурай субботы", "Повелитель финальных титров", "Искатель скрытых жемчужин",
+    "Маг рекомендаций", "Страж уютных вечеров", "Рыцарь онгоинга", "Дух обсуждений", "Хранитель мемов",
+    "Мастер аниме-детектива", "Небесный критик", "Повелитель сезонных марафонов", "Хранитель канона", "Ткач фанфиков",
+    "Оракул спойлеров", "Лунный сэнпай", "Самурай рейтингов", "Архивариус легенд", "Маг жанров",
+    "Страж ночных просмотров", "Повелитель опенингов", "Хранитель тропов", "Рыцарь вечернего просмотра", "Дух фестиваля",
+    "Мастер эмоциональных качелей", "Следопыт забытых тайтлов", "Хранитель аниме-хроник", "Небесный администратор", "Самурай финального эпизода",
+    "Оракул сезонов", "Повелитель легендарных арок", "Хранитель аниме-вселенной", "Маг идеального топа", "Дух великого марафона",
+    "Рыцарь вечного онгоинга", "Архимаг фандома", "Страж золотой коллекции", "Легенда аниме-сайта", "Небесный хранитель тайтлов",
+    "Великий отаку-владыка", "Хранитель последнего эпизода", "Мастер пересмотров", "Дух аниме-сообщества", "Верховный хранитель сезонов"
+];
+
 function getStats() {
     let stats = JSON.parse(localStorage.getItem('onika_stats'));
     if (!stats) {
@@ -419,6 +476,10 @@ function loadProfileData() {
     setElText('modal-xp-next', xpForNextLevel);
     setElWidth('modal-xp-bar', progressPercent + '%');
     setElText('modal-ach-earned', stats.unlockedAchievements.length);
+
+    const nextAch = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id));
+    if (nextAch) setElText('next-ach-name', nextAch.name);
+    else setElText('next-ach-name', 'Все выполнено!');
 }
 
 function addXP(amount) {
