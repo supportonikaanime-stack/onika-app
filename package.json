@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "pg": "^8.13.0",
+    "bcrypt": "^5.1.1",
+    "dotenv": "^16.4.5",
+    "joi": "^17.13.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
