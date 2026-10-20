@@ -14,33 +14,13 @@
     <!-- ================= ГЛАВНАЯ СТРАНИЦА ================= -->
     <div id="screen-home" class="screen active">
         
-        <!-- Шапка -->
-        <header class="top-header">
-            <div class="logo">Onika<span>Anime</span></div>
-            <div class="header-icons">
-                <button class="icon-btn">🔔</button>
-                <button class="icon-btn" onclick="switchTab('profile')">👤</button>
+        <!-- Кинематографичный Баннер -->
+        <section class="hero-section" id="heroSection">
+            <div class="hero-slider" id="heroSlider">
+                <!-- Слайды генерируются в app.js -->
             </div>
-        </header>
-
-        <!-- Баннер (Hero) -->
-        <section class="hero-section">
-            <div class="hero-bg" id="heroBg"></div>
-            <div class="hero-gradient"></div>
-            <div class="hero-content">
-                <div class="hero-badges" id="heroBadges">
-                    <span class="badge">⭐ 8.7</span>
-                    <span class="badge">ТВ Сериал</span>
-                    <span class="badge">2026</span>
-                </div>
-                <h1 class="hero-title" id="heroTitle">Загрузка...</h1>
-                <p class="hero-desc" id="heroDesc">Пожалуйста, подождите...</p>
-                
-                <div class="hero-actions">
-                    <button class="btn-primary" onclick="playHero()">▶ Смотреть</button>
-                    <button class="btn-secondary">👁 Подробнее</button>
-                </div>
-            </div>
+            <!-- Индикаторы (точки) -->
+            <div class="hero-dots" id="heroDots"></div>
         </section>
 
         <!-- Секция: Тренды -->
@@ -68,15 +48,15 @@
 
     <!-- ================= СТРАНИЦА ПРОФИЛЯ ================= -->
     <div id="screen-profile" class="screen">
-        <header class="top-header">
+        <header class="top-header" style="position: relative; background: transparent;">
             <div class="logo">Профиль</div>
         </header>
         
-        <div class="profile-container">
+        <div class="profile-container" style="padding-top: 20px;">
             <div class="profile-card">
-                <div class="avatar">U</div>
+                <div class="avatar" id="profileAvatar">U</div>
                 <div class="user-info">
-                    <h2>Пользователь</h2>
+                    <h2 id="profileName">Гость</h2>
                     <p>Уровень 1</p>
                 </div>
             </div>
