@@ -6,33 +6,36 @@ if (tg) {
 }
 
 // ==========================================
-// ПРОФИЛЬ И СТАТИСТИКА
+// ПРОФИЛЬ: АВАТАРКА И СТАТИСТИКА
 // ==========================================
 function loadProfileData() {
-    // 1. Данные из Telegram
-    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
-        const user = tg.initDataUnsafe.user;
-        const fullName = user.first_name + (user.last_name ? ' ' + user.last_name : '');
-        
-        const nameEl = document.getElementById('tg-name');
-        if (nameEl) nameEl.textContent = fullName;
-        
-        const avatarEl = document.getElementById('tg-avatar');
-        if (avatarEl) {
+    const customAvatar = localStorage.getItem('onika_custom_avatar');
+    const avatarEl = document.getElementById('tg-avatar');
+
+    if (customAvatar && avatarEl) {
+        avatarEl.innerHTML = `<img src="${customAvatar}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    } else if (avatarEl) {
+        if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            const user = tg.initDataUnsafe.user;
             if (user.photo_url) {
                 avatarEl.innerHTML = `<img src="${user.photo_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
             } else {
-                avatarEl.textContent = user.first_name[0].toUpperCase();
+                avatarEl.innerHTML = `<span id="avatar-letter">${user.first_name[0].toUpperCase()}</span>`;
             }
         }
     }
 
-    // 2. Статистика из LocalStorage
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        const user = tg.initDataUnsafe.user;
+        const fullName = user.first_name + (user.last_name ? ' ' + user.last_name : '');
+        const nameEl = document.getElementById('tg-name');
+        if (nameEl) nameEl.textContent = fullName;
+    }
+
     let stats = JSON.parse(localStorage.getItem('onika_stats')) || {
         episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 30, lastVisit: new Date().toDateString()
     };
 
-    // Обновляем стрик (дни подряд)
     const today = new Date().toDateString();
     if (stats.lastVisit !== today) {
         stats.daysStreak += 1;
@@ -40,27 +43,97 @@ function loadProfileData() {
         localStorage.setItem('onika_stats', JSON.stringify(stats));
     }
 
-    // 3. Расчет уровня
     const currentLevel = Math.floor(stats.xp / 100) + 1;
     const xpForNextLevel = currentLevel * 100;
     const xpCurrentLevel = stats.xp % 100;
     const progressPercent = (xpCurrentLevel / 100) * 100;
 
-    // 4. Вставляем на экран
-    document.getElementById('user-level').textContent = currentLevel;
-    document.getElementById('user-level-text').textContent = currentLevel;
-    document.getElementById('user-xp-current').textContent = xpCurrentLevel;
-    document.getElementById('user-xp-next').textContent = xpForNextLevel;
-    document.getElementById('user-xp-bar').style.width = `${progressPercent}%`;
-
-    document.getElementById('stat-episodes').textContent = stats.episodesWatched;
-    document.getElementById('stat-minutes').innerHTML = `${stats.minutesWatched} <span style="font-size: 14px; font-weight: normal;">мин</span>`;
-    document.getElementById('stat-days').textContent = stats.daysStreak;
+    const elLevel = document.getElementById('user-level');
+    if (elLevel) elLevel.textContent = currentLevel;
     
-    document.getElementById('ach-points').textContent = stats.xp;
+    const elLevelText = document.getElementById('user-level-text');
+    if (elLevelText) elLevelText.textContent = currentLevel;
+    
+    const elXpCur = document.getElementById('user-xp-current');
+    if (elXpCur) elXpCur.textContent = xpCurrentLevel;
+    
+    const elXpNext = document.getElementById('user-xp-next');
+    if (elXpNext) elXpNext.textContent = xpForNextLevel;
+    
+    const elXpBar = document.getElementById('user-xp-bar');
+    if (elXpBar) elXpBar.style.width = `${progressPercent}%`;
+
+    const elEp = document.getElementById('stat-episodes');
+    if (elEp) elEp.textContent = stats.episodesWatched;
+    
+    const elMin = document.getElementById('stat-minutes');
+    if (elMin) elMin.innerHTML = `${stats.minutesWatched} <span style="font-size: 14px; font-weight: normal;">мин</span>`;
+    
+    const elDays = document.getElementById('stat-days');
+    if (elDays) elDays.textContent = stats.daysStreak;
+    
+    const elAchPoints = document.getElementById('ach-points');
+    if (elAchPoints) elAchPoints.textContent = stats.xp;
+    
     const earnedAch = Math.floor(stats.xp / 20);
-    document.getElementById('ach-earned').textContent = earnedAch;
-    document.getElementById('ach-bar').style.width = `${(earnedAch / 108) * 100}%`;
+    const elAchEarned = document.getElementById('ach-earned');
+    if (elAchEarned) elAchEarned.textContent = earnedAch;
+    
+    const elAchBar = document.getElementById('ach-bar');
+    if (elAchBar) elAchBar.style.width = `${(earnedAch / 108) * 100}%`;
+}
+
+function uploadCustomAvatar(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const maxSize = 200;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > maxSize) { height *= maxSize / width; width = maxSize; }
+                } else {
+                    if (height > maxSize) { width *= maxSize / height; height = maxSize; }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                localStorage.setItem('onika_custom_avatar', compressedBase64);
+                loadProfileData();
+                if (tg) tg.HapticFeedback.notificationOccurred('success');
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function switchProfileTab(tab) {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const profileContent = document.getElementById('profile-content-tab');
+    const settingsContent = document.getElementById('settings-content-tab');
+
+    if (tab === 'profile') {
+        tabs[0].classList.add('active');
+        tabs[1].classList.remove('active');
+        profileContent.style.display = 'block';
+        settingsContent.style.display = 'none';
+    } else {
+        tabs[0].classList.remove('active');
+        tabs[1].classList.add('active');
+        profileContent.style.display = 'none';
+        settingsContent.style.display = 'block';
+    }
 }
 
 function addXP(amount) {
@@ -86,7 +159,7 @@ function switchTab(tabName, element) {
 }
 
 // ==========================================
-// API ANILIST (Оставляем без изменений)
+// API ANILIST
 // ==========================================
 async function fetchAniList(query, variables = {}) {
     try {
@@ -100,9 +173,7 @@ async function fetchAniList(query, variables = {}) {
     } catch (e) { return null; }
 }
 
-// ==========================================
-// ГЛАВНАЯ СТРАНИЦА
-// ==========================================
+// БАННЕР
 let heroData = [];
 let currentSlide = 0;
 let slideInterval;
