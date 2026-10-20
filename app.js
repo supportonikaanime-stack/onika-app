@@ -197,7 +197,7 @@ function loadMoreCatalog() {
 }
 
 // ==========================================
-// ДЕТАЛЬНАЯ СТРАНИЦА
+// УЛУЧШЕННАЯ ДЕТАЛЬНАЯ СТРАНИЦА АНИМЕ
 // ==========================================
 async function openAnimeDetail(id) {
     switchTab('detail');
@@ -210,6 +210,13 @@ async function openAnimeDetail(id) {
                 Media(id: $id, type: ANIME) {
                     id title { romaji english } coverImage { extraLarge } bannerImage
                     description averageScore episodes status genres
+                    recommendations(perPage: 6, sort: RATING_DESC) {
+                        nodes {
+                            mediaRecommendation {
+                                id title { romaji } coverImage { large } averageScore
+                            }
+                        }
+                    }
                 }
             }
         `;
@@ -224,27 +231,107 @@ async function openAnimeDetail(id) {
         if (!anime) throw new Error('Не найдено');
 
         const title = anime.title.romaji || anime.title.english;
-        const desc = anime.description ? anime.description.replace(/<[^>]*>/g, '') : 'Описание отсутствует';
+        const desc = anime.description ? anime.description.replace(/<[^>]*>/g, '') : 'Описание отсутствует.';
         const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : '?';
+        const banner = anime.bannerImage || anime.coverImage.extraLarge; // Фон
+        const poster = anime.coverImage.extraLarge;
+        
+        // Форматируем статус
+        let statusColor = '#2ecc71'; // Зеленый для завершенных
+        let statusText = 'Завершено';
+        if (anime.status === 'RELEASING') { statusColor = '#3498db'; statusText = 'Онгоинг'; }
+        if (anime.status === 'NOT_YET_RELEASED') { statusColor = '#e74c3c'; statusText = 'Анонс'; }
+
+        // Рекомендации
+        let recsHtml = '';
+        if (anime.recommendations && anime.recommendations.nodes.length > 0) {
+            recsHtml = `
+                <div style="margin-top: 30px;">
+                    <h3 style="font-size: 18px; margin-bottom: 15px; color: #fff;">🎯 Похожие аниме</h3>
+                    <div class="horizontal-scroll" style="padding: 0 0 10px 0;">
+                        ${anime.recommendations.nodes.map(r => {
+                            const rec = r.mediaRecommendation;
+                            if (!rec) return '';
+                            return `
+                                <div class="card" style="min-width: 120px; height: 180px;" onclick="openAnimeDetail(${rec.id})">
+                                    <img class="card-img" src="${rec.coverImage.large}" loading="lazy">
+                                    <div class="card-title" style="font-size: 11px;">${rec.title.romaji}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
 
         container.innerHTML = `
-            <div style="display: flex; gap: 20px; margin-bottom: 20px;">
-                <img class="detail-poster" src="${anime.coverImage.extraLarge}">
-                <div>
-                    <h1 class="detail-title">${title}</h1>
-                    <div style="color: #ffd700; font-weight: bold; margin-bottom: 10px;">⭐ ${score}</div>
-                    <div style="color: #888; font-size: 13px;">${anime.episodes || '?'} эп. • ${anime.status}</div>
-                    <button onclick="playAnime(${anime.id})" style="margin-top: 15px; background: #5b5bff; color: #fff; border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%;">▶ Смотреть</button>
+            <!-- КИНЕМАТОГРАФИЧНЫЙ ФОН -->
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;">
+                <img src="${banner}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);">
+            </div>
+
+            <div style="padding-top: 30px;">
+                <!-- Постер и заголовок -->
+                <div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;">
+                    <img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 2px solid rgba(255,255,255,0.1);">
+                    <div style="flex: 1; padding-bottom: 5px;">
+                        <h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">${title}</h1>
+                        
+                        <!-- Красивые плашки -->
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                            <span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;">⭐ ${score}</span>
+                            <span style="background: rgba(255,255,255,0.15); backdrop-filter: blur(5px); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">📺 ${anime.episodes || '?'} эп.</span>
+                            <span style="background: ${statusColor}; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">${statusText}</span>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Кнопка смотреть -->
+                <button onclick="playAnime(${anime.id})" style="width: 100%; background: #5b5bff; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                    ▶ Смотреть
+                </button>
+
+                <!-- Кликабельные жанры -->
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">
+                    ${anime.genres.map(g => `
+                        <span onclick="switchTab('catalog'); document.getElementById('search-input').value='${g}'; searchAnime();" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                            ${g}
+                        </span>
+                    `).join('')}
+                </div>
+
+                <!-- Описание с кнопкой "Читать далее" -->
+                <div style="margin-bottom: 20px;">
+                    <h3 style="font-size: 16px; margin-bottom: 10px; color: #fff;">📖 Описание</h3>
+                    <p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p>
+                    <button id="desc-btn" onclick="toggleDescription()" style="background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button>
+                </div>
+
+                <!-- Похожие аниме -->
+                ${recsHtml}
             </div>
-            <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 15px;">
-                ${anime.genres.map(g => `<span style="background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 8px; font-size: 12px;">${g}</span>`).join('')}
-            </div>
-            <p class="detail-desc">${desc}</p>
         `;
 
+        // Сохраняем полный текст описания в глобальную переменную для кнопки
+        window._fullDesc = desc;
+
     } catch (e) {
-        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>';
+        console.error(e);
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки информации</div>';
+    }
+}
+
+// Функция раскрытия описания
+function toggleDescription() {
+    const descEl = document.getElementById('desc-text');
+    const btnEl = document.getElementById('desc-btn');
+    
+    if (descEl.style.webkitLineClamp === '4' || descEl.style.webkitLineClamp === '') {
+        descEl.style.webkitLineClamp = 'unset';
+        btnEl.innerHTML = 'Свернуть ▲';
+    } else {
+        descEl.style.webkitLineClamp = '4';
+        btnEl.innerHTML = 'Читать полностью ▼';
     }
 }
 
@@ -332,10 +419,6 @@ function loadProfileData() {
     setElText('modal-xp-next', xpForNextLevel);
     setElWidth('modal-xp-bar', progressPercent + '%');
     setElText('modal-ach-earned', stats.unlockedAchievements.length);
-
-    const nextAch = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id));
-    if (nextAch) setElText('next-ach-name', nextAch.name);
-    else setElText('next-ach-name', 'Все выполнено!');
 }
 
 function addXP(amount) {
@@ -477,7 +560,7 @@ function initHeroSlider() {
                     </div>
                     <h1 class="hero-title">${anime.title}</h1>
                     <div class="hero-actions">
-                        <button class="btn-primary" onclick="playAnime(${anime.id})">▶ Смотреть</button>
+                        <button class="btn-primary" onclick="openAnimeDetail(${anime.id})">▶ Смотреть</button>
                         <button class="btn-icon-heart ${heartClass}" onclick="toggleFavorite(this, ${anime.id})">${heartIcon}</button>
                     </div>
                 </div>
@@ -509,9 +592,6 @@ function addSwipeSupport(element) {
     }, { passive: true });
 }
 
-// ==========================================
-// ЛАЙК И ПРОСМОТР
-// ==========================================
 function toggleFavorite(btn, animeId) {
     let stats = getStats();
     const isFaved = stats.favedAnime.includes(animeId);
@@ -539,9 +619,6 @@ function playAnime(id) {
     if (tg) tg.showAlert(`🎬 Плеер для ID: ${id}\n(+20 XP, +1 серия)`);
 }
 
-// ==========================================
-// ЗАГРУЗКА КОНТЕНТА ГЛАВНОЙ
-// ==========================================
 function renderContinueWatching() {
     const container = document.getElementById('continue-list');
     if (!container) return;
