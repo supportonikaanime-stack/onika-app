@@ -2,251 +2,110 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
-    <meta name="theme-color" content="#6c5ce7">
-    <title>OnikaAnime - Смотри аниме онлайн</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Стили вашего старого сайта -->
-    <link rel="stylesheet" href="style/main.css">
-    
-    <!-- Telegram WebApp SDK -->
+    <title>OnikaAnime</title>
+    <!-- Подключаем скрипт Telegram -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Подключаем наши стили -->
+    <link rel="stylesheet" href="style.css">
 </head>
-<body data-page="home">
+<body>
 
-    <!-- Убрали прелоадер, чтобы не мешал загрузке в Телеграме -->
-
-    <input type="file" id="avatarFileInput" accept="image/*" style="display:none;" onchange="uploadAvatar(this)">
-
-    <header class="header">
-        <div class="header-left">
-            <button class="menu-toggle" onclick="toggleMenu()">
-                <svg width="24" height="24"><use href="icons/icons.svg#icon-menu"/></svg>
-            </button>
-        </div>
-        <div class="header-center">
-            <span class="site-title">OnikaAnime</span>
-        </div>
-        <div class="header-right"></div>
-    </header>
-
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMenu()"></div>
-
-    <div class="layout">
-        <!-- ВАШЕ СТАРОЕ БОКОВОЕ МЕНЮ -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <h2>🌟 Навигация</h2>
-            </div>
-            <nav class="sidebar-nav" id="sidebarNav"></nav>
-            <div class="sidebar-divider"></div>
-            <div class="sidebar-footer" id="sidebarFooter">
-                <button class="sidebar-login-btn" onclick="showLoginModal(); closeMenu();">
-                    <span>🚀</span><span>Войти в аккаунт</span>
-                </button>
-            </div>
-        </aside>
-
-        <div class="content">
-            <div class="content-inner">
-
-                <!-- ===== ГЛАВНАЯ ===== -->
-                <div id="page-home">
-                    <!-- HERO BANNER -->
-                    <section class="hero-banner" id="heroBanner">
-                        <div class="hero-backdrop" id="heroBackdrop"></div>
-                        <div class="hero-vignette"></div>
-                        <div class="hero-noise"></div>
-                        <div class="hero-content">
-                            <div class="hero-badge">
-                                <span class="hero-badge-dot"></span>
-                                <span id="heroBadgeText">Аниме дня</span>
-                            </div>
-                            <h1 class="hero-title" id="heroTitle">Загрузка...</h1>
-                            <div class="hero-subtitle" id="heroSubtitle"></div>
-                            <div class="hero-meta" id="heroMeta"></div>
-                            <p class="hero-desc" id="heroDesc"></p>
-                            <div class="hero-actions">
-                                <button class="hero-btn hero-btn-primary" id="heroWatchBtn">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>Смотреть</span>
-                                </button>
-                                <button class="hero-btn hero-btn-ghost" id="heroFavBtn">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span>В избранное</span>
-                                </button>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- TRENDING -->
-                    <section class="rail-section">
-                        <div class="rail-header">
-                            <div class="rail-title-wrap">
-                                <h2 class="rail-title">🔥 Сейчас в тренде</h2>
-                                <span class="rail-count" id="trendingCount">0</span>
-                            </div>
-                        </div>
-                        <div class="rail-track" id="trendingTrack"></div>
-                    </section>
-
-                    <!-- NEW RELEASES -->
-                    <section class="rail-section">
-                        <div class="rail-header">
-                            <div class="rail-title-wrap">
-                                <h2 class="rail-title">🌙 Новинки</h2>
-                                <span class="rail-count" id="newCount">0</span>
-                            </div>
-                        </div>
-                        <div class="rail-track" id="newTrack"></div>
-                    </section>
-
-                    <!-- CATALOG -->
-                    <section class="catalog-section">
-                        <div class="catalog-header">
-                            <h2 id="catalogTitle">📚 ВСЕ АНИМЕ</h2>
-                        </div>
-                        <div class="catalog-search-row">
-                            <div class="catalog-search-wrapper">
-                                <span class="catalog-search-icon">🔍</span>
-                                <input type="text" id="catalogSearchInput" placeholder="Поиск аниме по названию..." class="catalog-search-input" oninput="applyCatalogFilters()">
-                                <button class="catalog-search-clear" id="catalogSearchClear" onclick="clearCatalogSearch()" style="display:none;">✕</button>
-                            </div>
-                        </div>
-                        <div class="grid" id="grid"></div>
-                        <div class="pagination" id="pagination" style="display:none;">
-                            <button class="pagination-btn" id="prevPageBtn" onclick="goToPrevPage()">‹ <span>Назад</span></button>
-                            <div class="pagination-pages" id="paginationPages"></div>
-                            <button class="pagination-btn" id="nextPageBtn" onclick="goToNextPage()"><span>Вперёд</span> ›</button>
-                        </div>
-                    </section>
-                </div>
-
-                <!-- ===== ДЕТАЛЬНАЯ ===== -->
-                <div id="page-detail" style="display:none;">
-                    <div class="detail-ambient-glow" id="detailAmbientGlow"></div>
-                    <span class="back-btn" onclick="goBack()">
-                        <svg width="20" height="20"><use href="icons/icons.svg#icon-back"/></svg> Назад
-                    </span>
-                    <div class="detail-hero">
-                        <div class="detail-hero-bg" id="detailHeroBg"></div>
-                        <div class="detail-hero-overlay"></div>
-                        <div class="detail-hero-content">
-                            <div class="detail-poster-wrapper">
-                                <img class="detail-poster" id="detailPoster" src="" alt="Постер" referrerpolicy="no-referrer">
-                            </div>
-                            <div class="detail-info">
-                                <h1 id="detailTitle"></h1>
-                                <div class="eng" id="detailEng"></div>
-                                <div class="detail-meta-row" id="detailMeta"></div>
-                                <div class="detail-tags" id="detailTags"></div>
-                                <div class="detail-desc-wrapper">
-                                    <div class="detail-desc" id="detailDesc"></div>
-                                    <button class="desc-toggle" id="descToggle" onclick="toggleDescription()">Читать полностью <span class="arrow">▼</span></button>
-                                </div>
-                                <button class="fav-btn" id="favBtn" onclick="toggleFav()">В избранное</button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="watch-section" id="watchSection">
-                        <div class="watch-header"><h3>🎬 Где смотреть</h3></div>
-                        <div class="watch-grid">
-                            <button onclick="watchOnVeoveo()" class="watch-card watch-deep">
-                                <div class="watch-icon"><span style="font-size:36px;">🎥</span></div>
-                                <div class="watch-content">
-                                    <h4>Veoveo Player</h4>
-                                    <p>Быстрый источник</p>
-                                </div>
-                                <div class="watch-arrow">→</div>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===== ПРОФИЛЬ ===== -->
-                <div id="page-profile" style="display:none;">
-                    <div class="profile-container">
-                        <div class="profile-banner" id="profileBanner"></div>
-                        <div class="profile-header-card">
-                            <div class="profile-avatar-wrapper">
-                                <div class="avatar-large" onclick="document.getElementById('avatarFileInput').click()">
-                                    <img id="avatarImg" src="" style="display:none;">
-                                    <span id="avatarLetter">?</span>
-                                </div>
-                                <div class="level-badge" id="profileLevelBadge">Lv.1</div>
-                            </div>
-                            <div class="profile-name-section">
-                                <h1 id="profileName">--</h1>
-                                <div class="profile-email" id="profileEmail">📧 --</div>
-                                <div class="profile-level-xp">
-                                    <div class="xp-bar">
-                                        <div class="xp-fill" id="profileXpFill"></div>
-                                        <span class="xp-text" id="profileXpText">0 / 100 XP</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="stats-cards">
-                            <div class="stat-card" onclick="navigate('favorites')"><div class="num" id="statFav">0</div><div class="lbl">В избранном</div></div>
-                            <div class="stat-card"><div class="num" id="statComments">0</div><div class="lbl">Комментариев</div></div>
-                            <div class="stat-card"><div class="num" id="statAchievements">0</div><div class="lbl">Достижений</div></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Остальные страницы (заглушки) -->
-                <div id="page-favorites" style="display:none;"></div>
-                <div id="page-achievements" style="display:none;"></div>
-                <div id="page-mycomments" style="display:none;"></div>
-                <div id="page-settings" style="display:none;"></div>
-
-            </div>
-        </div>
-    </div>
-
-    <!-- Модалки -->
-    <div class="modal" id="loginModal">
-        <div class="modal-box">
-            <button class="modal-close" onclick="closeLoginModal()">✕</button>
-            <div id="loginForm">
-                <input type="email" id="loginEmail" placeholder="Email">
-                <input type="password" id="loginPass" placeholder="Пароль">
-                <button class="btn-primary" onclick="login()" style="width:100%;">🚀 Войти</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ВАШИ СКРИПТЫ -->
-    <script src="script/storage.js"></script>
-    <script src="script/api.js"></script>
-    <script src="script/utils.js"></script>
-    <script src="script/auth.js"></script>
-    <script src="script/main.js"></script>
-
-    <script>
-        // Инициализация Телеграма
-        const tg = window.Telegram.WebApp;
-        tg.expand(); 
-        tg.setHeaderColor('#0a0a12'); 
-        tg.setBackgroundColor('#0a0a12');
-
-        // Кнопка назад в Телеграме
-        tg.BackButton.onClick(() => {
-            if (typeof goBack === 'function') goBack();
-        });
+    <!-- ================= ГЛАВНАЯ СТРАНИЦА ================= -->
+    <div id="screen-home" class="screen active">
         
-        // Следим за навигацией, чтобы показывать/скрывать кнопку "Назад" в Телеграме
-        const originalNavigate = window.navigate;
-        window.navigate = function(pageName) {
-            originalNavigate(pageName);
-            if (pageName === 'home') tg.BackButton.hide();
-            else tg.BackButton.show();
-        };
-    </script>
+        <!-- Шапка -->
+        <header class="top-header">
+            <div class="logo">Onika<span>Anime</span></div>
+            <div class="header-icons">
+                <button class="icon-btn">🔔</button>
+                <button class="icon-btn" onclick="switchTab('profile')">👤</button>
+            </div>
+        </header>
+
+        <!-- Баннер (Hero) -->
+        <section class="hero-section">
+            <div class="hero-bg" id="heroBg"></div>
+            <div class="hero-gradient"></div>
+            <div class="hero-content">
+                <div class="hero-badges" id="heroBadges">
+                    <span class="badge">⭐ 8.7</span>
+                    <span class="badge">ТВ Сериал</span>
+                    <span class="badge">2026</span>
+                </div>
+                <h1 class="hero-title" id="heroTitle">Загрузка...</h1>
+                <p class="hero-desc" id="heroDesc">Пожалуйста, подождите...</p>
+                
+                <div class="hero-actions">
+                    <button class="btn-primary" onclick="playHero()">▶ Смотреть</button>
+                    <button class="btn-secondary">👁 Подробнее</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Секция: Тренды -->
+        <section class="content-section">
+            <div class="section-header">
+                <h2>🔥 Сейчас в тренде</h2>
+                <a href="#">Все →</a>
+            </div>
+            <div class="horizontal-scroll" id="trending-list">
+                <!-- Сюда JS вставит карточки -->
+            </div>
+        </section>
+
+        <!-- Секция: Каталог -->
+        <section class="content-section">
+            <div class="section-header">
+                <h2>📚 Каталог аниме</h2>
+            </div>
+            <div class="grid-catalog" id="catalog-list">
+                <!-- Сюда JS вставит карточки -->
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ================= СТРАНИЦА ПРОФИЛЯ ================= -->
+    <div id="screen-profile" class="screen">
+        <header class="top-header">
+            <div class="logo">Профиль</div>
+        </header>
+        
+        <div class="profile-container">
+            <div class="profile-card">
+                <div class="avatar">U</div>
+                <div class="user-info">
+                    <h2>Пользователь</h2>
+                    <p>Уровень 1</p>
+                </div>
+            </div>
+
+            <div class="menu-list">
+                <div class="menu-item">📺 Мой список</div>
+                <div class="menu-item">🏆 Достижения</div>
+                <div class="menu-item">⚙️ Настройки</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= НИЖНЕЕ МЕНЮ ================= -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('home', this)">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-text">Главная</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('catalog', this)">
+            <span class="nav-icon">🔍</span>
+            <span class="nav-text">Каталог</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('profile', this)">
+            <span class="nav-icon">👤</span>
+            <span class="nav-text">Профиль</span>
+        </div>
+    </nav>
+
+    <!-- ПОДКЛЮЧАЕМ ЛОГИКУ -->
+    <script src="app.js"></script>
 </body>
 </html>
