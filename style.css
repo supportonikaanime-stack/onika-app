@@ -442,3 +442,34 @@ body {
 .nav-item.active { color: var(--primary); }
 .nav-icon { font-size: 22px; margin-bottom: 4px; }
 .nav-text { font-size: 11px; font-weight: 500; }
+
+/* ===== ФИКС ССЫЛКИ TELEGRAM ===== */
+.tg-banner {
+    text-decoration: none !important;
+    color: white !important;
+    display: flex;
+    align-items: center;
+}
+
+.tg-banner h3, .tg-banner p, .tg-banner div {
+    color: white !important;
+    text-decoration: none !important;
+}
+
+/* ===== ФИКС КАРТИНОК В "ПРОДОЛЖИТЬ ПРОСМОТР" ===== */
+.continue-card-img {
+    width: 80px !important;
+    min-width: 80px !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 12px 0 0 12px;
+}
+
+/* ===== ФИКС КАРТИНОК В КАТАЛОГЕ И ЛЕНТАХ ===== */
+.card-img {
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: 2/3 !important;
+    object-fit: cover !important;
+    background-color: #222;
+}
