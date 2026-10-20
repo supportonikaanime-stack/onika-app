@@ -1,3 +1,24 @@
+// ==========================================
+// 1. НАСТРОЙКА SUPABASE (ВАШИ КЛЮЧИ)
+// ==========================================
+const SUPABASE_URL = 'https://wsaykqhojwfhpqzxptke.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzYXlrcWhvandmaHBxenhwdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MzAxMDgsImV4cCI6MjEwODEwNjEwOH0.6eHuhYt2CyVvIurt-TW3MgP4VE0kzv39vqVHwskodLk';
+
+let supabaseClient = null;
+
+window.addEventListener('load', () => {
+    try {
+        if (window.supabase) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            console.log('✅ Supabase подключен');
+        } else {
+            console.error('Библиотека Supabase не загрузилась');
+        }
+    } catch (e) {
+        console.error('Ошибка подключения Supabase:', e);
+    }
+});
+
 const tg = window.Telegram.WebApp;
 let MY_TG_ID = null;
 let MY_NAME = 'Гость';
@@ -13,29 +34,7 @@ if (tg) {
 }
 
 // ==========================================
-// НАСТРОЙКА SUPABASE (ВСТАВЬТЕ СВОИ КЛЮЧИ)
-// ==========================================
-const SUPABASE_URL = 'https://wsaykqhojwfhpqzxptke.supabase.co/rest/v1/'; // Например: https://xyz.supabase.co
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzYXlrcWhvandmaHBxenhwdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MzAxMDgsImV4cCI6MjEwODEwNjEwOH0.6eHuhYt2CyVvIurt-TW3MgP4VE0kzv39vqVHwskodLk'; // Длинный ключ
-
-let supabase = null;
-try {
-    if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
-        // Подключаемся через CDN, если ключи введены
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-        script.onload = () => {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            console.log('✅ Supabase подключен');
-        };
-        document.head.appendChild(script);
-    } else {
-        console.warn('⚠️ Вы не ввели ключи Supabase. Друзья и облачный профиль работать не будут.');
-    }
-} catch(e) { console.error(e); }
-
-// ==========================================
-// ПЕРЕМЕННЫЕ ДЛЯ ПЛЕЕРА
+// 2. ПЕРЕМЕННЫЕ ДЛЯ ПЛЕЕРА
 // ==========================================
 let currentAnimeForPlayer = null;
 let selectedVoice = '';
@@ -57,7 +56,7 @@ const STATUSES = [{ id: 'RELEASING', name: 'Онгоинг' }, { id: 'FINISHED',
 const SORTS = [{ id: 'POPULARITY_DESC', name: 'По популярности' }, { id: 'TRENDING_DESC', name: 'В тренде' }, { id: 'START_DATE_DESC', name: 'Новинки' }, { id: 'SCORE_DESC', name: 'По рейтингу' }];
 
 // ==========================================
-// НАВИГАЦИЯ
+// 3. НАВИГАЦИЯ
 // ==========================================
 function switchTab(tabName, element) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -94,16 +93,17 @@ function goBackFromDetail() {
 }
 
 // ==========================================
-// БАЗА ДАННЫХ: ПРОФИЛЬ
+// 4. ПРОФИЛЬ И БАЗА ДАННЫХ
 // ==========================================
 async function syncProfileToDB() {
-    if (!MY_TG_ID || !supabase) return;
+    if (!MY_TG_ID || !supabaseClient) return;
     let stats = getStats();
     try {
-        await supabase.from('users').upsert({
+        await supabaseClient.from('users').upsert({
             tg_id: MY_TG_ID, name: MY_NAME, xp: stats.xp,
             episodes_watched: stats.episodesWatched, minutes_watched: stats.minutesWatched, days_streak: stats.daysStreak
         }, { onConflict: 'tg_id' });
+        console.log('📡 Профиль синхронизирован');
     } catch (e) { console.error('Ошибка синхронизации:', e); }
 }
 
@@ -162,30 +162,34 @@ function loadProfileData() {
 }
 
 // ==========================================
-// БАЗА ДАННЫХ: ДРУЗЬЯ
+// 5. ДРУЗЬЯ (ЧЕРЕЗ БАЗУ)
 // ==========================================
 async function loadFriends() {
     const listContainer = document.getElementById('friends-list-container');
     if (!listContainer) return;
     
-    if (!MY_TG_ID || !supabase) {
-        listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка: База данных не подключена</div>';
+    if (!supabaseClient) {
+        listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка: База данных не подключена (проверьте интернет)</div>';
+        return;
+    }
+    if (!MY_TG_ID) {
+        listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка: Telegram ID не найден</div>';
         return;
     }
     
     listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">Загрузка друзей...</div>';
 
     try {
-        const { data: friendsData, error } = await supabase.from('friends').select('friend_id').eq('user_id', MY_TG_ID);
+        const { data: friendsData, error } = await supabaseClient.from('friends').select('friend_id').eq('user_id', MY_TG_ID);
         if (error) throw error;
 
         if (friendsData.length === 0) {
-            listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">У вас пока нет друзей</div>';
+            listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">У вас пока нет друзей. Найдите друга по ID выше!</div>';
             return;
         }
 
         const friendIds = friendsData.map(f => f.friend_id);
-        const { data: usersData, error: usersError } = await supabase.from('users').select('*').in('tg_id', friendIds);
+        const { data: usersData, error: usersError } = await supabaseClient.from('users').select('*').in('tg_id', friendIds);
         if (usersError) throw usersError;
 
         let html = '';
@@ -204,17 +208,17 @@ async function searchFriend() {
     const id = input.value.trim();
     const resultContainer = document.getElementById('search-result-container');
     
-    if (!id || !MY_TG_ID) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Введите ID</div>'; return; }
+    if (!id) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Введите ID</div>'; return; }
+    if (!supabaseClient) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">База данных не подключена</div>'; return; }
     if (id === MY_TG_ID.toString()) { resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Это ваш ID</div>'; return; }
-    if (!supabase) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">База данных не подключена</div>'; return; }
 
     resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Поиск...</div>';
     
     try {
-        const { data: userData, error } = await supabase.from('users').select('*').eq('tg_id', id).single();
-        if (error || !userData) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Пользователь не найден</div>'; return; }
+        const { data: userData, error } = await supabaseClient.from('users').select('*').eq('tg_id', id).single();
+        if (error || !userData) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Пользователь не найден (он должен хотя бы раз зайти в бота)</div>'; return; }
 
-        const { data: friendCheck } = await supabase.from('friends').select('*').eq('user_id', MY_TG_ID).eq('friend_id', id);
+        const { data: friendCheck } = await supabaseClient.from('friends').select('*').eq('user_id', MY_TG_ID).eq('friend_id', id);
         if (friendCheck && friendCheck.length > 0) { resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Этот пользователь уже в друзьях</div>'; return; }
 
         resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${userData.name[0].toUpperCase()}</div><div class="friend-info"><h3>${userData.name}</h3><p>ID: ${userData.tg_id} • Ур. ${Math.floor(userData.xp / 100) + 1}</p></div><button onclick="addFriend(${userData.tg_id})" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Добавить</button></div>`;
@@ -222,9 +226,9 @@ async function searchFriend() {
 }
 
 async function addFriend(friendId) {
-    if (!MY_TG_ID || !supabase) return;
+    if (!MY_TG_ID || !supabaseClient) return;
     try {
-        await supabase.from('friends').insert({ user_id: MY_TG_ID, friend_id: friendId });
+        await supabaseClient.from('friends').insert({ user_id: MY_TG_ID, friend_id: friendId });
         document.getElementById('search-result-container').innerHTML = '';
         document.getElementById('friend-search-input').value = '';
         showToast('👥 Друг добавлен!');
@@ -238,7 +242,7 @@ function openFriendProfile(id, name) {
 }
 
 // ==========================================
-// ОСТАЛЬНОЙ КОД (ПЛЕЕР, КАТАЛОГ, XP)
+// 6. ПЛЕЕР, КАТАЛОГ И ПРОЧЕЕ
 // ==========================================
 function startWatching(anime) { currentAnimeForPlayer = anime; switchTab('voice'); }
 function renderVoiceSelection() { const container = document.getElementById('voice-list'); if (!container) return; let html = ''; VOICES.forEach(v => { html += `<div onclick="selectVoice('${v.id}', '${v.name}')" style="background: #14141f; border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 14px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.2s;"><div style="font-size: 24px;">${v.icon}</div><div style="font-size: 16px; font-weight: 600; color: #fff;">${v.name}</div></div>`; }); container.innerHTML = html; }
