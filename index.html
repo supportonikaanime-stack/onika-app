@@ -78,13 +78,11 @@
         /* ================= ПРОФИЛЬ ================= */
         .profile-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; padding-top: 30px; }
         .profile-header h1 { font-size: 32px; font-weight: 800; color: #fff; }
-        .balance-badge { display: flex; align-items: center; gap: 5px; background: #1a1a20; border: 1px solid rgba(255, 215, 0, 0.3); padding: 5px 12px; border-radius: 20px; color: #ffd700; font-weight: 700; font-size: 14px; }
-        .balance-badge .plus { background: #5b5bff; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-left: 5px; }
         .profile-container { padding: 0 15px; }
         
         .user-card { background: #14141f; border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); position: relative; overflow: hidden; }
         .user-card::before { content: ''; position: absolute; top: 0; right: 0; width: 150px; height: 150px; background: radial-gradient(circle, rgba(108, 92, 231, 0.15), transparent 70%); border-radius: 50%; pointer-events: none; }
-        .avatar-container { position: relative; width: 80px; height: 80px; margin: 0 auto 15px auto; }
+        .avatar-container { position: relative; width: 80px; height: 80px; margin: 0 auto 15px auto; cursor: pointer; }
         .avatar { width: 100%; height: 100%; border-radius: 50%; background: #222; border: 2px solid #333; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; overflow: hidden; }
         .camera-icon { position: absolute; bottom: 0; right: 0; background: #1a1a20; border: 1px solid #333; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #888; }
         .user-details { text-align: center; }
@@ -110,7 +108,8 @@
         .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: #888; font-size: 14px; font-weight: 600; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .tab-btn.active { background: #2a2a3e; color: #fff; }
 
-        .achievements-card { background: #14141f; border-radius: 20px; padding: 20px; margin-top: 15px; border: 1px solid rgba(255, 215, 0, 0.2); position: relative; }
+        .achievements-card, .settings-card { background: #14141f; border-radius: 20px; padding: 20px; margin-top: 15px; border: 1px solid rgba(255, 215, 0, 0.2); position: relative; }
+        .settings-card { border-color: rgba(255,255,255,0.05); }
         .ach-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
         .ach-icon-big { width: 60px; height: 60px; background: rgba(255, 215, 0, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; color: #ffd700; }
         .ach-info h3 { font-size: 14px; color: #ffd700; margin-bottom: 4px; letter-spacing: 1px; }
@@ -172,17 +171,18 @@
     <div id="screen-profile" class="screen">
         <header class="profile-header">
             <h1>Профиль</h1>
-            <div class="balance-badge">
-                <span class="coin">🪙</span> 50 <span class="plus">+</span>
-            </div>
         </header>
 
         <div class="profile-container">
             <div class="user-card">
-                <div class="avatar-container">
-                    <div class="avatar" id="tg-avatar">?</div>
+                <div class="avatar-container" onclick="document.getElementById('avatar-upload').click()">
+                    <div class="avatar" id="tg-avatar">
+                        <span id="avatar-letter">?</span>
+                    </div>
                     <div class="camera-icon">📷</div>
                 </div>
+                <input type="file" id="avatar-upload" accept="image/*" style="display: none;" onchange="uploadCustomAvatar(this)">
+                
                 <div class="user-details">
                     <h2 id="tg-name">Гость</h2>
                     <p class="user-slogan">Your One and Only</p>
@@ -220,11 +220,11 @@
             </div>
 
             <div class="profile-tabs">
-                <button class="tab-btn active">👤 Профиль</button>
-                <button class="tab-btn">🔧 Кабинет</button>
+                <button class="tab-btn active" onclick="switchProfileTab('profile')">👤 Профиль</button>
+                <button class="tab-btn" onclick="switchProfileTab('settings')">⚙️ Настройки</button>
             </div>
 
-            <div class="achievements-card">
+            <div class="achievements-card" id="profile-content-tab">
                 <div class="ach-header">
                     <div class="ach-icon-big">🏆</div>
                     <div class="ach-info">
@@ -247,6 +247,12 @@
                     <div class="ach-reward">+60 🪙</div>
                 </div>
             </div>
+
+            <div class="settings-card" id="settings-content-tab" style="display: none;">
+                <div style="padding: 20px; text-align: center; color: #888;">
+                    ⚙️ Настройки в разработке
+                </div>
+            </div>
             
             <div style="height: 20px;"></div>
         </div>
@@ -265,6 +271,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=6"></script>
 </body>
 </html>
