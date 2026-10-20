@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>OnikaAnime</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* ================= БАЗОВЫЕ СТИЛИ ================= */
-        :root {
-            --bg: #0a0a0f; --card: #1a1a20; --primary: #5b5bff; --text: #fff; --muted: #888; --nav-h: 65px;
-        }
+        :root { --bg: #0a0a0f; --card: #1a1a20; --primary: #5b5bff; --text: #fff; --muted: #888; --nav-h: 65px; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background: var(--bg); color: var(--text); padding-bottom: calc(var(--nav-h) + 20px); overflow-x: hidden; }
         
@@ -18,7 +16,6 @@
         .screen.active { display: block; animation: fade 0.3s ease; }
         @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* ================= БАННЕР ================= */
         .hero-section { position: relative; height: 85vh; min-height: 500px; overflow: hidden; }
         .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; visibility: hidden; transition: 0.6s; display: flex; align-items: flex-end; }
         .hero-slide.active { opacity: 1; visibility: visible; z-index: 2; }
@@ -43,7 +40,6 @@
         .hero-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.3); transition: 0.3s; }
         .hero-dot.active { width: 18px; border-radius: 4px; background: var(--primary); box-shadow: 0 0 10px rgba(91,91,255,0.5); }
 
-        /* ================= СЕКЦИИ ================= */
         .content-section { padding: 20px 0; }
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-bottom: 15px; }
         .section-header h2 { font-size: 20px; font-weight: 700; }
@@ -51,7 +47,6 @@
         .horizontal-scroll::-webkit-scrollbar { display: none; }
         .grid-catalog { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 0 20px; }
 
-        /* Карточки */
         .card { background: var(--card); border-radius: 12px; overflow: hidden; position: relative; display: flex; flex-direction: column; }
         .card:active { transform: scale(0.96); }
         .card-img { width: 100%; aspect-ratio: 2/3; object-fit: cover; background: #222; display: block; }
@@ -59,26 +54,15 @@
         .horizontal-scroll .card { min-width: 130px; width: 130px; height: 195px; }
         .horizontal-scroll .card-img { height: 100%; }
 
-        /* Кнопка ТГ */
         .tg-banner-section { padding: 10px 20px 20px; }
         .tg-banner { display: flex; align-items: center; background: linear-gradient(135deg, rgba(0,136,204,0.15), rgba(0,136,204,0.05)); border: 1px solid rgba(0,136,204,0.3); padding: 16px; border-radius: 16px; text-decoration: none !important; color: white !important; }
         .tg-icon { width: 45px; height: 45px; background: #0088cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-right: 15px; }
         .tg-text h3 { font-size: 16px; font-weight: 700; margin-bottom: 2px; color: white !important; }
         .tg-text p { font-size: 12px; color: rgba(255,255,255,0.6) !important; }
 
-        /* ================= КАТАЛОГ ================= */
-        .filter-btn {
-            background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc;
-            padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;
-            white-space: nowrap; cursor: pointer; transition: 0.2s;
-            display: flex; align-items: center; gap: 5px;
-        }
+        .filter-btn { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc; padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
         .filter-btn.active { background: rgba(91,91,255,0.15); border-color: #5b5bff; color: #a29bfe; }
-        .genre-pill {
-            background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc;
-            padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;
-            white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 8px;
-        }
+        .genre-pill { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc; padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 8px; }
         .genre-pill.active { background: #2a2a3e; color: #fff; border-color: #5b5bff; }
         .genre-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; }
         
@@ -87,20 +71,16 @@
         .catalog-card-img { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; background: #222; }
         .catalog-card-title { position: absolute; bottom: 0; left: 0; width: 100%; padding: 30px 10px 10px 10px; font-size: 13px; font-weight: 700; color: #fff; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, transparent 100%); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* Модалка фильтров */
         .filter-option-btn { background: #1a1a20; border: 1px solid rgba(255,255,255,0.05); color: #fff; padding: 15px; border-radius: 12px; text-align: left; font-size: 15px; cursor: pointer; transition: 0.2s; }
         .filter-option-btn.active { background: rgba(91,91,255,0.2); border-color: #5b5bff; }
 
-        /* Детальная */
         .detail-poster { width: 140px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .detail-title { font-size: 24px; font-weight: 800; margin-bottom: 10px; line-height: 1.2; }
 
-        /* ================= МОЁ (СПИСКИ) ================= */
         .my-list-tabs { display: flex; gap: 10px; padding: 0 20px 15px; overflow-x: auto; scrollbar-width: none; }
         .my-list-tab { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #888; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
         .my-list-tab.active { background: #5b5bff; color: #fff; border-color: #5b5bff; }
 
-        /* ================= ДРУЗЬЯ ================= */
         .friends-search { display: flex; gap: 10px; padding: 0 20px 20px; }
         .friends-search input { flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px; color: #fff; font-size: 15px; outline: none; }
         .friends-search button { background: #5b5bff; border: none; border-radius: 12px; padding: 0 20px; color: #fff; font-weight: 700; cursor: pointer; }
@@ -110,7 +90,6 @@
         .friend-info h3 { font-size: 16px; color: #fff; margin-bottom: 2px; }
         .friend-info p { font-size: 12px; color: #888; }
 
-        /* ================= ПРОФИЛЬ ================= */
         .profile-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; padding-top: 30px; }
         .profile-header h1 { font-size: 32px; font-weight: 800; color: #fff; }
         .profile-container { padding: 0 15px; }
@@ -157,7 +136,6 @@
         .ach-next-info p { font-size: 11px; color: #888; }
         .ach-reward { font-size: 12px; font-weight: bold; color: #ffd700; }
 
-        /* МОДАЛЬНЫЕ ОКНА */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
         .modal-overlay.active { display: flex; animation: fade 0.3s ease; }
         .modal-content { background: #14141f; border-radius: 24px; width: 100%; max-width: 400px; padding: 30px 20px; border: 1px solid rgba(255,255,255,0.1); position: relative; text-align: center; max-height: 80vh; overflow-y: auto; }
@@ -183,7 +161,6 @@
         .level-up-popup .text h4 { color: #fff; font-size: 16px; margin-bottom: 2px; }
         .level-up-popup .text p { color: rgba(255,255,255,0.8); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* ================= НИЖНЕЕ МЕНЮ ================= */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-h); background: rgba(10,10,15,0.95); backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-around; align-items: center; z-index: 9999; padding-bottom: env(safe-area-inset-bottom); }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); cursor: pointer; }
         .nav-item.active { color: var(--primary); }
@@ -201,18 +178,15 @@
         </div>
     </div>
 
-    <!-- ЭКРАН: ГЛАВНАЯ -->
     <div id="screen-home" class="screen active">
         <section class="hero-section" id="heroSection">
             <div class="hero-slider" id="heroSlider"></div>
             <div class="hero-dots" id="heroDots"></div>
         </section>
-
         <section class="content-section">
             <div class="section-header"><h2>🔥 Популярное сейчас</h2></div>
             <div class="horizontal-scroll" id="popular-list"></div>
         </section>
-
         <section class="tg-banner-section">
             <a href="https://t.me/onikaanime" target="_blank" class="tg-banner">
                 <div class="tg-icon">✈️</div>
@@ -222,21 +196,18 @@
                 </div>
             </a>
         </section>
-
         <section class="content-section">
             <div class="section-header"><h2>✨ Рекомендации для вас</h2></div>
             <div class="grid-catalog" id="recommended-list"></div>
         </section>
     </div>
 
-    <!-- ЭКРАН: КАТАЛОГ -->
     <div id="screen-catalog" class="screen">
         <div style="padding: 20px 20px 10px 20px;">
             <div style="display: flex; align-items: center; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 0 15px; margin-bottom: 15px;">
                 <span style="color: #888; font-size: 18px;">🔍</span>
                 <input type="text" id="search-input" placeholder="Найти аниме..." oninput="searchAnime()" style="flex: 1; background: transparent; border: none; padding: 14px 10px; color: #fff; font-size: 15px; outline: none;">
             </div>
-
             <div onclick="openRandomAnime()" style="display: flex; align-items: center; justify-content: space-between; background: #14141f; border-radius: 16px; padding: 16px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <div style="width: 45px; height: 45px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px;">🎲</div>
@@ -247,9 +218,7 @@
                 </div>
                 <div style="color: #888; font-size: 20px;">›</div>
             </div>
-
             <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;" id="genre-filters"></div>
-
             <div style="display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 10px;" id="dropdown-filters">
                 <button class="filter-btn" onclick="openFilterModal('year')">Год ⌄</button>
                 <button class="filter-btn" onclick="openFilterModal('status')">Статус ⌄</button>
@@ -257,19 +226,14 @@
                 <button class="filter-btn" onclick="forceReloadCatalog()" style="border-color: #ff2d78; color: #ff2d78;">🔄 Обновить</button>
             </div>
         </div>
-
         <div class="grid-catalog" id="catalog-grid"></div>
-        
         <div style="text-align: center; padding: 20px;">
             <button id="load-more-btn" onclick="loadMoreCatalog()" style="display: none; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 12px 30px; border-radius: 20px; font-weight: bold; cursor: pointer;">Загрузить еще</button>
         </div>
     </div>
 
-    <!-- ЭКРАН: МОЁ -->
     <div id="screen-my" class="screen">
-        <header class="profile-header" style="padding-bottom: 10px;">
-            <h1>Моё</h1>
-        </header>
+        <header class="profile-header" style="padding-bottom: 10px;"><h1>Моё</h1></header>
         <div class="my-list-tabs" id="my-list-tabs">
             <div class="my-list-tab active" onclick="filterMyList('all', this)">Все</div>
             <div class="my-list-tab" onclick="filterMyList('watching', this)">Смотрю</div>
@@ -281,50 +245,39 @@
         <div class="grid-catalog" id="my-grid" style="margin-top: 10px;"></div>
     </div>
 
-    <!-- ЭКРАН: ДРУЗЬЯ -->
     <div id="screen-friends" class="screen">
-        <header class="profile-header" style="padding-bottom: 10px;">
-            <h1>Друзья</h1>
-        </header>
-        
+        <header class="profile-header" style="padding-bottom: 10px;"><h1>Друзья</h1></header>
         <div class="friends-search">
             <input type="number" id="friend-search-input" placeholder="Введите Telegram ID друга...">
             <button onclick="searchFriend()">Найти</button>
         </div>
-        
         <div id="search-result-container" style="padding: 0 20px 20px;"></div>
-
         <h2 style="padding: 0 20px 10px; font-size: 18px; color: #fff;">Мои друзья</h2>
         <div id="friends-list-container"></div>
     </div>
 
-    <!-- ЭКРАН: ПРОФИЛЬ ДРУГА -->
     <div id="screen-friend-profile" class="screen" style="padding: 20px;">
         <button onclick="switchTab('friends')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div id="friend-profile-content"></div>
     </div>
 
-    <!-- ЭКРАН: ДЕТАЛЬНАЯ СТРАНИЦА -->
     <div id="screen-detail" class="screen" style="padding: 20px;">
         <button onclick="goBackFromDetail()" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div id="detail-content"></div>
     </div>
 
-    <!-- ЭКРАН: ВЫБОР ОЗВУЧКИ -->
     <div id="screen-voice" class="screen" style="padding: 20px;">
         <button onclick="switchTab('detail')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор озвучки</h1>
         <div style="display: flex; flex-direction: column; gap: 12px;" id="voice-list"></div>
     </div>
 
-    <!-- ЭКРАН: ВЫБОР ПЛЕЕРА -->
     <div id="screen-player" class="screen" style="padding: 20px;">
         <button onclick="switchTab('voice')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор плеера</h1>
         <div style="display: flex; flex-direction: column; gap: 12px;" id="player-list"></div>
     </div>
 
-    <!-- ЭКРАН: ВЫБОР СЕРИИ -->
     <div id="screen-episodes" class="screen" style="padding: 20px;">
         <button onclick="switchTab('player')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 10px;">Выбор серии</h1>
@@ -332,11 +285,8 @@
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;" id="episodes-list"></div>
     </div>
 
-    <!-- ЭКРАН: ПРОФИЛЬ -->
     <div id="screen-profile" class="screen">
-        <header class="profile-header">
-            <h1>Профиль</h1>
-        </header>
+        <header class="profile-header"><h1>Профиль</h1></header>
         <div class="profile-container">
             <div class="user-card">
                 <div class="avatar-container" onclick="document.getElementById('avatar-upload').click()">
@@ -347,6 +297,14 @@
                 <div class="user-details">
                     <h2 id="tg-name">Гость</h2>
                     <p class="user-slogan">Your One and Only</p>
+                    
+                    <!-- ПЛАШКА С ID -->
+                    <div onclick="copyMyId()" style="background: rgba(91,91,255,0.1); border: 1px solid rgba(91,91,255,0.3); border-radius: 12px; padding: 8px 15px; display: inline-flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer; margin-top: 5px;">
+                        <span style="color: #888; font-size: 12px;">Мой ID:</span>
+                        <span id="my-tg-id" style="color: #fff; font-weight: bold; font-size: 14px;">...</span>
+                        <span style="color: #5b5bff; font-size: 16px;">📋</span>
+                    </div>
+
                     <div class="level-row" onclick="openLevelModal()">
                         <div class="level-badge"><span id="user-level">1</span></div>
                         <div class="level-info">
@@ -392,7 +350,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛКИ -->
     <div class="modal-overlay" id="levelModal" onclick="closeModal('levelModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('levelModal')">✕</button>
@@ -423,7 +380,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА ВЫБОРА СПИСКА -->
     <div class="modal-overlay" id="statusModal" onclick="closeModal('statusModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('statusModal')">✕</button>
@@ -440,7 +396,6 @@
         </div>
     </div>
 
-    <!-- НИЖНЕЕ МЕНЮ -->
     <nav class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('home', this)"><span class="nav-icon">🏠</span><span class="nav-text">Главная</span></div>
         <div class="nav-item" onclick="switchTab('catalog', this)"><span class="nav-icon">🔍</span><span class="nav-text">Каталог</span></div>
@@ -449,6 +404,6 @@
         <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon">👤</span><span class="nav-text">Профиль</span></div>
     </nav>
 
-    <script src="app.js?v=20"></script>
+    <script src="app.js?v=21"></script>
 </body>
 </html>
