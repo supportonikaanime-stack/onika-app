@@ -6,35 +6,68 @@ if (tg) {
 }
 
 // ==========================================
-// АВТОРИЗАЦИЯ ЧЕРЕЗ TELEGRAM
+// ПРОФИЛЬ И СТАТИСТИКА
 // ==========================================
-function initTelegramAuth() {
-    if (!tg || !tg.initDataUnsafe || !tg.initDataUnsafe.user) {
-        console.log("Пользователь не авторизован в Telegram");
-        return;
-    }
-
-    const user = tg.initDataUnsafe.user;
-    const fullName = user.first_name + (user.last_name ? ' ' + user.last_name : '');
-    const username = user.username ? '@' + user.username : 'Нет юзернейма';
-
-    // Вставляем имя
-    const nameEl = document.getElementById('tg-name');
-    if (nameEl) nameEl.textContent = fullName;
-
-    // Вставляем юзернейм
-    const usernameEl = document.getElementById('tg-username');
-    if (usernameEl) usernameEl.textContent = username;
-
-    // Вставляем аватарку (если есть)
-    const avatarEl = document.getElementById('tg-avatar');
-    if (avatarEl) {
-        if (user.photo_url) {
-            avatarEl.innerHTML = `<img src="${user.photo_url}" alt="avatar">`;
-        } else {
-            avatarEl.textContent = user.first_name[0].toUpperCase();
+function loadProfileData() {
+    // 1. Данные из Telegram
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        const user = tg.initDataUnsafe.user;
+        const fullName = user.first_name + (user.last_name ? ' ' + user.last_name : '');
+        
+        const nameEl = document.getElementById('tg-name');
+        if (nameEl) nameEl.textContent = fullName;
+        
+        const avatarEl = document.getElementById('tg-avatar');
+        if (avatarEl) {
+            if (user.photo_url) {
+                avatarEl.innerHTML = `<img src="${user.photo_url}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            } else {
+                avatarEl.textContent = user.first_name[0].toUpperCase();
+            }
         }
     }
+
+    // 2. Статистика из LocalStorage
+    let stats = JSON.parse(localStorage.getItem('onika_stats')) || {
+        episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 30, lastVisit: new Date().toDateString()
+    };
+
+    // Обновляем стрик (дни подряд)
+    const today = new Date().toDateString();
+    if (stats.lastVisit !== today) {
+        stats.daysStreak += 1;
+        stats.lastVisit = today;
+        localStorage.setItem('onika_stats', JSON.stringify(stats));
+    }
+
+    // 3. Расчет уровня
+    const currentLevel = Math.floor(stats.xp / 100) + 1;
+    const xpForNextLevel = currentLevel * 100;
+    const xpCurrentLevel = stats.xp % 100;
+    const progressPercent = (xpCurrentLevel / 100) * 100;
+
+    // 4. Вставляем на экран
+    document.getElementById('user-level').textContent = currentLevel;
+    document.getElementById('user-level-text').textContent = currentLevel;
+    document.getElementById('user-xp-current').textContent = xpCurrentLevel;
+    document.getElementById('user-xp-next').textContent = xpForNextLevel;
+    document.getElementById('user-xp-bar').style.width = `${progressPercent}%`;
+
+    document.getElementById('stat-episodes').textContent = stats.episodesWatched;
+    document.getElementById('stat-minutes').innerHTML = `${stats.minutesWatched} <span style="font-size: 14px; font-weight: normal;">мин</span>`;
+    document.getElementById('stat-days').textContent = stats.daysStreak;
+    
+    document.getElementById('ach-points').textContent = stats.xp;
+    const earnedAch = Math.floor(stats.xp / 20);
+    document.getElementById('ach-earned').textContent = earnedAch;
+    document.getElementById('ach-bar').style.width = `${(earnedAch / 108) * 100}%`;
+}
+
+function addXP(amount) {
+    let stats = JSON.parse(localStorage.getItem('onika_stats')) || { xp: 0 };
+    stats.xp += amount;
+    localStorage.setItem('onika_stats', JSON.stringify(stats));
+    loadProfileData(); 
 }
 
 function switchTab(tabName, element) {
@@ -42,7 +75,7 @@ function switchTab(tabName, element) {
     if (tabName === 'home') document.getElementById('screen-home').classList.add('active');
     if (tabName === 'profile') {
         document.getElementById('screen-profile').classList.add('active');
-        initTelegramAuth(); // <-- Запускаем авторизацию при переходе в профиль
+        loadProfileData();
     }
 
     if (element) {
@@ -53,7 +86,7 @@ function switchTab(tabName, element) {
 }
 
 // ==========================================
-// API ANILIST
+// API ANILIST (Оставляем без изменений)
 // ==========================================
 async function fetchAniList(query, variables = {}) {
     try {
@@ -67,7 +100,9 @@ async function fetchAniList(query, variables = {}) {
     } catch (e) { return null; }
 }
 
-// БАННЕР
+// ==========================================
+// ГЛАВНАЯ СТРАНИЦА
+// ==========================================
 let heroData = [];
 let currentSlide = 0;
 let slideInterval;
@@ -151,9 +186,11 @@ function toggleFavorite(btn) {
     else { btn.classList.add('faved'); btn.innerHTML = '❤️'; if (tg) tg.HapticFeedback.impactOccurred('medium'); }
 }
 
-function playAnime(id) { if (tg) tg.showAlert(`🎬 Плеер для ID: ${id}`); }
+function playAnime(id) { 
+    addXP(10);
+    if (tg) tg.showAlert(`🎬 Плеер для ID: ${id}\n(+10 XP)`);
+}
 
-// ОСТАЛЬНЫЕ СЕКЦИИ
 function renderContinueWatching() {
     const container = document.getElementById('continue-list');
     if (!container) return;
@@ -208,5 +245,5 @@ document.addEventListener('DOMContentLoaded', () => {
     renderContinueWatching();
     loadPopular();
     loadRecommended();
-    initTelegramAuth(); // Инициализируем данные при старте
+    loadProfileData();
 });
