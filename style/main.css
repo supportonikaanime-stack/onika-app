@@ -4,8 +4,6 @@
     --accent: #5b5bff;
     --text-primary: #ffffff;
     --text-secondary: #a0a0a0;
-    --neon-cyan: #00f5ff;
-    --neon-purple: #b44aff;
     --radius: 14px;
 }
 
@@ -22,41 +20,38 @@ body { background: var(--bg-primary); color: var(--text-primary); }
     transition: transform 0.2s ease;
 }
 #grid .card:active { transform: scale(0.96); }
-#grid .card-img img {
-    width: 100%; height: 100%; object-fit: cover; aspect-ratio: 2/3; display: block;
+#grid .card-img {
+    width: 100%; aspect-ratio: 2/3; object-fit: cover; background: #222; display: flex; align-items: center; justify-content: center; font-size: 48px;
 }
+#grid .card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 #grid .card-body { padding: 10px; }
 #grid .title {
-    font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    color: #fff;
+    font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff;
 }
 #grid .info { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
 #grid .card-year, #grid .card-age {
     position: absolute; top: 8px; background: rgba(0,0,0,0.75); 
-    padding: 3px 8px; border-radius: 6px; font-size: 10px; backdrop-filter: blur(5px);
-    font-weight: 600;
+    padding: 3px 8px; border-radius: 6px; font-size: 10px; backdrop-filter: blur(5px); font-weight: 600;
 }
 #grid .card-year { left: 8px; }
 #grid .card-age { right: 8px; }
 
-/* Скелетоны загрузки */
+/* Скелетоны */
 .skeleton-card { background: var(--bg-card); border-radius: 12px; overflow: hidden; animation: pulse 1.5s infinite; }
 .skeleton-poster { width: 100%; aspect-ratio: 2/3; background: #222; }
-.skeleton-title { height: 14px; background: #222; margin: 10px; border-radius: 4px; }
-.skeleton-info { height: 10px; background: #222; margin: 10px; width: 50%; border-radius: 4px; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-/* Карточки в лентах (Тренды) */
+/* Ленты (Тренды) */
 .rail-card {
     flex: 0 0 130px; background: var(--bg-card); border-radius: 12px; overflow: hidden;
-    position: relative;
+    position: relative; cursor: pointer;
 }
+.rail-card:active { transform: scale(0.96); }
 .rail-card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; }
 .rail-card-body { padding: 8px; }
 .rail-card-title { font-size: 12px; font-weight:600; color:#fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rail-card-meta { font-size: 10px; color: #888; margin-top: 3px; }
 
-/* Модальное окно (для логина) */
+/* Модальное окно */
 .modal {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8);
     z-index: 10000; justify-content: center; align-items: center;
@@ -67,9 +62,9 @@ body { background: var(--bg-primary); color: var(--text-primary); }
 }
 .modal-box input {
     width: 100%; padding: 12px; margin-bottom: 10px; background: #0a0a0f;
-    border: 1px solid #333; border-radius: 8px; color: #fff;
+    border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 14px;
 }
 .modal-box button {
     background: #5b5bff; color: #fff; border: none; padding: 12px;
-    width: 100%; border-radius: 8px; font-weight: bold;
+    width: 100%; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer;
 }
