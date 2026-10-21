@@ -1,7 +1,6 @@
 // ==========================================
 // 1. НАСТРОЙКА SUPABASE
 // ==========================================
-// ВАЖНО: Убедись, что в Supabase включен RLS (Row Level Security) для таблиц users и friends!
 const SUPABASE_URL = 'https://wsaykqhojwfhpqzxptke.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzYXlrcWhvandmaHBxenhwdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MzAxMDgsImV4cCI6MjEwODEwNjEwOH0.6eHuhYt2CyVvIurt-TW3MgP4VE0kzv39vqVHwskodLk';
 
@@ -26,22 +25,40 @@ if (tg) {
     }
 }
 
-// Защита от XSS
 function escapeHTML(str) {
     if (!str) return '';
     return str.toString().replace(/[&<>'"]/g, 
-        tag => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[tag] || tag)
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
     );
 }
 
 // ==========================================
-// 2. ПЕРЕМЕННЫЕ ПЛЕЕРА
+// 2. SHIKIMORI API (через CORS-прокси)
+// ==========================================
+const SHIKIMORI_API = 'https://shikimori.one/api/graphql';
+const CORS_PROXY = 'https://corsproxy.io/?';
+const API_URL = CORS_PROXY + encodeURIComponent(SHIKIMORI_API);
+
+const SHIKI_HEADERS = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'User-Agent': 'OnikaAnime/1.0 (https://t.me/onikaanime)'
+};
+
+async function shikiQuery(query, variables = {}) {
+    const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: SHIKI_HEADERS,
+        body: JSON.stringify({ query, variables })
+    });
+    if (!response.ok) throw new Error('Shikimori API error: ' + response.status);
+    const data = await response.json();
+    if (data.errors) throw new Error(data.errors[0]?.message || 'GraphQL error');
+    return data.data;
+}
+
+// ==========================================
+// 3. ПЕРЕМЕННЫЕ ПЛЕЕРА
 // ==========================================
 let currentAnimeForPlayer = null;
 let selectedVoice = '';
@@ -64,7 +81,7 @@ const STATUSES = [{ id: 'RELEASING', name: 'Онгоинг' }, { id: 'FINISHED',
 const SORTS = [{ id: 'POPULARITY_DESC', name: 'По популярности' }, { id: 'TRENDING_DESC', name: 'В тренде' }, { id: 'START_DATE_DESC', name: 'Новинки' }, { id: 'SCORE_DESC', name: 'По рейтингу' }];
 
 // ==========================================
-// 3. НАВИГАЦИЯ
+// 4. НАВИГАЦИЯ
 // ==========================================
 function switchTab(tabName, element) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -101,7 +118,7 @@ function goBackFromDetail() {
 }
 
 // ==========================================
-// 4. ПРОФИЛЬ
+// 5. ПРОФИЛЬ
 // ==========================================
 async function syncProfileToDB() {
     if (!MY_TG_ID || !supabaseClient) return;
@@ -180,7 +197,7 @@ function loadProfileData() {
 }
 
 // ==========================================
-// 5. ДРУЗЬЯ И ЗАЯВКИ
+// 6. ДРУЗЬЯ И ЗАЯВКИ
 // ==========================================
 async function loadFriends() {
     const listContainer = document.getElementById('friends-list-container');
@@ -284,7 +301,6 @@ async function rejectFriend(userId) {
     } catch (e) { console.error(e); }
 }
 
-// УДАЛЕНИЕ ИЗ ДРУЗЕЙ
 async function removeFriend(friendId) {
     if (!MY_TG_ID || !supabaseClient) return;
     try {
@@ -295,7 +311,6 @@ async function removeFriend(friendId) {
     } catch (e) { console.error(e); showToast('Ошибка удаления', 'error'); }
 }
 
-// ПРОФИЛЬ ДРУГА
 async function openFriendProfile(id, name) {
     switchTab('friend-profile');
     const container = document.getElementById('friend-profile-content');
@@ -307,8 +322,6 @@ async function openFriendProfile(id, name) {
 
         const lvl = Math.floor(friend.xp / 100) + 1;
         const rank = LEVEL_TITLES[Math.min(lvl - 1, 99)];
-        
-        let achHtml = '<div style="color: #888; font-size: 12px;">Достижения не синхронизированы</div>';
         
         let lastWatchedHtml = '';
         if (friend.last_watched) {
@@ -335,7 +348,6 @@ async function openFriendProfile(id, name) {
                     </div>
                 </div>
             </div>
-            
             <div class="stats-card">
                 <div class="stat-item"><div class="stat-value">${friend.episodes_watched || 0}</div><div class="stat-label">серий</div></div>
                 <div class="stat-divider"></div>
@@ -343,24 +355,14 @@ async function openFriendProfile(id, name) {
                 <div class="stat-divider"></div>
                 <div class="stat-item"><div class="stat-value">${friend.days_streak || 1}</div><div class="stat-label">дней подряд</div></div>
             </div>
-
             ${lastWatchedHtml}
-
-            <div class="achievements-card" style="margin-top: 15px;">
-                <div class="ach-header">
-                    <div class="ach-icon-big">🏆</div>
-                    <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p>Не синхронизированы</p></div>
-                </div>
-                ${achHtml}
-            </div>
-
             <button onclick="removeFriend(${friend.tg_id})" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">🗑️ Удалить из друзей</button>
         `;
     } catch (e) { container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки профиля</div>'; }
 }
 
 // ==========================================
-// 6. ПЛЕЕР, КАТАЛОГ И ПРОЧЕЕ
+// 7. ПЛЕЕР, КАТАЛОГ
 // ==========================================
 function startWatching(anime) { currentAnimeForPlayer = anime; switchTab('voice'); }
 function renderVoiceSelection() { 
@@ -402,7 +404,7 @@ function playEpisode(epNum) {
     stats.episodesWatched += 1; 
     stats.minutesWatched += 24; 
     saveStats(stats); 
-    if (tg) tg.showAlert(`🎬 Воспроизведение:\nАниме: ${currentAnimeForPlayer.title.romaji}\nОзвучка: ${selectedVoice}\nПлеер: ${selectedPlayer}\nСерия: ${epNum}\n\n(+20 XP, +1 серия)`); 
+    if (tg) tg.showAlert(`🎬 Воспроизведение:\nАниме: ${currentAnimeForPlayer.name || currentAnimeForPlayer.russian}\nОзвучка: ${selectedVoice}\nПлеер: ${selectedPlayer}\nСерия: ${epNum}\n\n(+20 XP, +1 серия)`); 
 }
 
 function initCatalogFilters() { 
@@ -469,43 +471,42 @@ async function loadCatalog(reset = false) {
     const loadMoreBtn = document.getElementById('load-more-btn');
     if (reset) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Загрузка...</div>'; hasMoreCatalog = true; catalogPage = 1; }
     try {
-        let mediaArgs = 'type: ANIME'; let queryVars = `$page: Int`; let variables = { page: catalogPage };
-        if (currentFilters.sort) { queryVars += `, $sort: [MediaSort]`; mediaArgs += `, sort: $sort`; variables.sort = [currentFilters.sort]; }
-        if (currentFilters.search) { queryVars += `, $search: String`; mediaArgs += `, search: $search`; variables.search = currentFilters.search; }
-        if (currentFilters.genre) { queryVars += `, $genre: String`; mediaArgs += `, genre: $genre`; variables.genre = currentFilters.genre; }
-        if (currentFilters.year) { queryVars += `, $year: Int`; mediaArgs += `, seasonYear: $year`; variables.year = parseInt(currentFilters.year); }
-        if (currentFilters.status) { queryVars += `, $status: MediaStatus`; mediaArgs += `, status: $status`; variables.status = currentFilters.status; }
-        
-        const query = `query (${queryVars}) { Page(page: $page, perPage: 12) { media(${mediaArgs}) { id title { romaji } coverImage { large } averageScore } } }`;
-        const response = await fetch('https://graphql.anilist.co', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, 
-            body: JSON.stringify({ query, variables }) 
-        });
-        
-        if (!response.ok) throw new Error('Ошибка сети (VPN)');
-        
-        const data = await response.json();
-        const media = data?.data?.Page?.media || [];
+        let query = `query ($page: Int, $limit: Int, $search: String, $genre: String) {
+            animes(page: $page, limit: $limit, search: $search, genre: $genre, kind: "!special") {
+                id
+                name
+                russian
+                poster { mainUrl }
+                score
+            }
+        }`;
+        const variables = {
+            page: catalogPage,
+            limit: 12,
+            search: currentFilters.search || null,
+            genre: currentFilters.genre || null
+        };
+        const data = await shikiQuery(query, variables);
+        const animes = data?.animes || [];
         
         if (reset) grid.innerHTML = '';
         
-        if (media.length === 0) { 
+        if (animes.length === 0) { 
             if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Ничего не найдено</div>'; 
             hasMoreCatalog = false; 
             if (loadMoreBtn) loadMoreBtn.style.display = 'none'; 
             return; 
         }
         
-        media.forEach(anime => { 
-            const title = escapeHTML(anime.title.romaji || 'Без названия'); 
-            const img = escapeHTML(anime.coverImage.large); 
-            const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : '?'; 
+        animes.forEach(anime => { 
+            const title = escapeHTML(anime.russian || anime.name || 'Без названия'); 
+            const img = escapeHTML(anime.poster?.mainUrl || ''); 
+            const score = anime.score ? (anime.score / 10).toFixed(1) : '?'; 
             const cardHtml = `<div class="catalog-card" onclick="openAnimeDetail(${anime.id}, 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`; 
             grid.insertAdjacentHTML('beforeend', cardHtml);
         });
         
-        if (media.length < 12) { 
+        if (animes.length < 12) { 
             hasMoreCatalog = false; 
             if (loadMoreBtn) loadMoreBtn.style.display = 'none'; 
         } else { 
@@ -513,7 +514,7 @@ async function loadCatalog(reset = false) {
         }
     } catch (e) { 
         console.error(e);
-        if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки (VPN)</div>'; 
+        if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки (проверьте VPN)</div>'; 
     }
     finally { isCatalogLoading = false; }
 }
@@ -544,25 +545,16 @@ function renderMyList() {
         grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Тут пусто</div>'; 
         return; 
     }
-    const ids = filtered.map(a => a.id);
-    const query = `query ($ids: [Int]) { Page(page: 1, perPage: 50) { media(id_in: $ids, type: ANIME) { id title { romaji } coverImage { large } averageScore } } }`;
-    fetch('https://graphql.anilist.co', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, 
-        body: JSON.stringify({ query, variables: { ids } }) 
-    })
-    .then(res => {
-        if (!res.ok) throw new Error('Network error');
-        return res.json();
-    })
-    .then(data => {
-        const media = data?.data?.Page?.media || [];
-        if (media.length === 0) { grid.innerHTML = '<div style="text-align:center;color:#888;grid-column:1/-1;">Ошибка загрузки</div>'; return; }
+    const ids = filtered.map(a => a.id).join(',');
+    const query = `query ($ids: String) { animes(ids: $ids) { id name russian poster { mainUrl } score } }`;
+    shikiQuery(query, { ids }).then(data => {
+        const animes = data?.animes || [];
+        if (animes.length === 0) { grid.innerHTML = '<div style="text-align:center;color:#888;grid-column:1/-1;">Ошибка загрузки</div>'; return; }
         grid.innerHTML = '';
-        media.forEach(anime => {
-            const title = escapeHTML(anime.title.romaji || 'Без названия'); 
-            const img = escapeHTML(anime.coverImage.large); 
-            const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : '?';
+        animes.forEach(anime => {
+            const title = escapeHTML(anime.russian || anime.name || 'Без названия'); 
+            const img = escapeHTML(anime.poster?.mainUrl || ''); 
+            const score = anime.score ? (anime.score / 10).toFixed(1) : '?';
             const favEntry = favs.find(a => a.id === anime.id); 
             const currentStatus = favEntry ? favEntry.status : '';
             let statusIcon = '📚'; 
@@ -593,52 +585,41 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
     const container = document.getElementById('detail-content');
     container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
     try {
-        const query = `query ($id: Int) { Media(id: $id, type: ANIME) { id title { romaji english } coverImage { extraLarge } bannerImage description averageScore episodes status genres recommendations(perPage: 6, sort: RATING_DESC) { nodes { mediaRecommendation { id title { romaji } coverImage { large } } } } } }`;
-        const response = await fetch('https://graphql.anilist.co', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, 
-            body: JSON.stringify({ query, variables: { id } }) 
-        });
-        
-        if (!response.ok) throw new Error('Network error');
-        
-        const data = await response.json(); 
-        const anime = data?.data?.Media;
+        const query = `query ($id: String) { animes(ids: $id) { id name russian description poster { originalUrl mainUrl } score status episodes genres { russian } related { anime { id name russian poster { mainUrl } } relationKind } } }`;
+        const data = await shikiQuery(query, { id: String(id) });
+        const anime = data?.animes?.[0];
         if (!anime) throw new Error('Не найдено');
         
-        const title = escapeHTML(anime.title.romaji || anime.title.english || 'Без названия');
-        const desc = anime.description ? escapeHTML(anime.description.replace(/<[^>]*>/g, '')) : 'Описание отсутствует.';
-        const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : '?';
-        const banner = escapeHTML(anime.bannerImage || anime.coverImage.extraLarge); 
-        const poster = escapeHTML(anime.coverImage.extraLarge);
+        const title = escapeHTML(anime.russian || anime.name || 'Без названия');
+        const desc = anime.description ? escapeHTML(anime.description.replace(/\[.*?\]/g, '').replace(/<[^>]*>/g, '')) : 'Описание отсутствует.';
+        const score = anime.score ? (anime.score / 10).toFixed(1) : '?';
+        const poster = escapeHTML(anime.poster?.originalUrl || anime.poster?.mainUrl || '');
         
         let statusColor = '#2ecc71'; 
         let statusText = 'Завершено';
-        if (anime.status === 'RELEASING') { statusColor = '#3498db'; statusText = 'Онгоинг'; }
-        if (anime.status === 'NOT_YET_RELEASED') { statusColor = '#e74c3c'; statusText = 'Анонс'; }
+        if (anime.status === 'ongoing') { statusColor = '#3498db'; statusText = 'Онгоинг'; }
+        if (anime.status === 'anons') { statusColor = '#e74c3c'; statusText = 'Анонс'; }
         
         const stats = getStats(); 
         const favEntry = (stats.favedAnime || []).find(a => a.id === anime.id); 
         const isFaved = !!favEntry;
         
         let recsHtml = '';
-        if (anime.recommendations && anime.recommendations.nodes.length > 0) { 
-            const recsNodes = anime.recommendations.nodes.map(r => { 
-                const rec = r.mediaRecommendation; 
-                if (!rec) return ''; 
-                return `<div class="card" style="min-width: 120px; height: 180px;" onclick="openAnimeDetail(${rec.id}, 'detail')"><img class="card-img" src="${escapeHTML(rec.coverImage.large)}" loading="lazy"><div class="card-title" style="font-size: 11px;">${escapeHTML(rec.title.romaji)}</div></div>`; 
+        if (anime.related && anime.related.length > 0) { 
+            const recsNodes = anime.related.filter(r => r.anime).slice(0, 6).map(r => { 
+                const rec = r.anime; 
+                return `<div class="card" style="min-width: 120px; height: 180px;" onclick="openAnimeDetail(${rec.id}, 'detail')"><img class="card-img" src="${escapeHTML(rec.poster?.mainUrl || '')}" loading="lazy"><div class="card-title" style="font-size: 11px;">${escapeHTML(rec.russian || rec.name)}</div></div>`; 
             }).join('');
-            recsHtml = `<div style="margin-top: 30px;"><h3 style="font-size: 18px; margin-bottom: 15px; color: #fff;">🎯 Похожие аниме</h3><div class="horizontal-scroll" style="padding: 0 0 10px 0;">${recsNodes}</div></div>`; 
+            recsHtml = `<div style="margin-top: 30px;"><h3 style="font-size: 18px; margin-bottom: 15px; color: #fff;">🎯 Связанные аниме</h3><div class="horizontal-scroll" style="padding: 0 0 10px 0;">${recsNodes}</div></div>`; 
         }
         
-        // Сохраняем данные аниме глобально для кнопки Смотреть
         window._tempAnimeData = anime; 
         
         container.innerHTML = `
-            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;"><img src="${banner}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"></div>
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;"><img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"></div>
             <div style="padding-top: 30px;"><div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;"><img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 2px solid rgba(255,255,255,0.1);"><div style="flex: 1; padding-bottom: 5px;"><h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">${title}</h1><div style="display: flex; flex-wrap: wrap; gap: 6px;"><span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;">⭐ ${score}</span><span style="background: rgba(255,255,255,0.15); backdrop-filter: blur(5px); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">📺 ${anime.episodes || '?'} эп.</span><span style="background: ${statusColor}; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">${statusText}</span></div></div></div>
                 <div style="display: flex; gap: 10px; margin-bottom: 20px;"><button onclick="startWatching(window._tempAnimeData)" style="flex: 1; background: #5b5bff; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); display: flex; justify-content: center; align-items: center; gap: 8px;">▶ Смотреть</button><button onclick="openStatusModal(${anime.id}, '${title.replace(/'/g, "\\'")}')" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'}; border: 1px solid ${isFaved ? '#ff2d78' : 'rgba(255,255,255,0.15)'}; width: 56px; border-radius: 14px; font-size: 22px; cursor: pointer; display: flex; justify-content: center; align-items: center;">${isFaved ? '❤️' : '🤍'}</button></div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">${anime.genres.map(g => `<span onclick="switchTab('catalog'); document.getElementById('search-input').value='${escapeHTML(g)}'; searchAnime();" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer;">${escapeHTML(g)}</span>`).join('')}</div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;">${escapeHTML(g.russian)}</span>`).join('')}</div>
                 <div style="margin-bottom: 20px;"><h3 style="font-size: 16px; margin-bottom: 10px; color: #fff;">📖 Описание</h3><p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p><button id="desc-btn" onclick="toggleDescription()" style="background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button></div>
                 ${recsHtml}
             </div>`;
@@ -701,16 +682,10 @@ async function openRandomAnime() {
     showToast('🎲 Ищем случайное аниме...'); 
     try { 
         const randomPage = Math.floor(Math.random() * 50) + 1; 
-        const query = `query ($page: Int) { Page(page: $page, perPage: 1) { media(type: ANIME, sort: POPULARITY_DESC) { id } } }`; 
-        const response = await fetch('https://graphql.anilist.co', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, 
-            body: JSON.stringify({ query, variables: { page: randomPage } }) 
-        }); 
-        if (!response.ok) throw new Error('Network error');
-        const data = await response.json(); 
-        const media = data?.data?.Page?.media; 
-        if (media && media.length > 0) openAnimeDetail(media[0].id, 'catalog'); 
+        const query = `query ($page: Int) { animes(page: $page, limit: 1, order: "ranked") { id } }`;
+        const data = await shikiQuery(query, { page: randomPage });
+        const animes = data?.animes;
+        if (animes && animes.length > 0) openAnimeDetail(animes[0].id, 'catalog'); 
     } catch (e) { 
         console.error(e);
         showToast('Ошибка поиска', 'error'); 
@@ -855,7 +830,7 @@ function openAchievementsModal() {
 }
 
 // ==========================================
-// 7. ГЛАВНАЯ СТРАНИЦА
+// 8. ГЛАВНАЯ СТРАНИЦА
 // ==========================================
 let heroData = []; 
 let currentSlide = 0; 
@@ -863,18 +838,10 @@ let slideInterval;
 
 async function loadHeroData() { 
     try {
-        const randomPage = Math.floor(Math.random() * 5) + 1; 
-        const query = `{ Page(page: ${randomPage}, perPage: 5) { media(type: ANIME, sort: TRENDING_DESC) { id title { romaji } averageScore coverImage { extraLarge } format startDate { year } } } }`; 
-        const response = await fetch('https://graphql.anilist.co', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, 
-            body: JSON.stringify({ query }) 
-        }); 
-        if (!response.ok) throw new Error('Network error');
-        const data = await response.json(); 
-        if (data && data.data.Page) { 
-            heroData = data.data.Page.media.map(a => ({ id: a.id, title: a.title.romaji, img: a.coverImage.extraLarge, score: a.averageScore ? (a.averageScore / 10).toFixed(1) : '?', type: a.format || 'TV', year: a.startDate?.year || '?' })); 
-        } 
+        const query = `query { animes(limit: 5, order: "popularity") { id name russian poster { originalUrl } score kind } }`;
+        const data = await shikiQuery(query);
+        const animes = data?.animes || [];
+        heroData = animes.map(a => ({ id: a.id, title: a.russian || a.name, img: a.poster?.originalUrl, score: a.score ? (a.score / 10).toFixed(1) : '?', type: a.kind || 'TV', year: '?' }));
         initHeroSlider(); 
     } catch(e) { 
         console.error("Ошибка баннера:", e);
@@ -894,7 +861,7 @@ function initHeroSlider() {
         const isFaved = favedList.includes(anime.id); 
         const heartClass = isFaved ? 'faved' : ''; 
         const heartIcon = isFaved ? '❤️' : '🤍'; 
-        sliderHTML += `<div class="hero-slide ${index === 0 ? 'active' : ''}"><div class="hero-bg" style="background-image: url('${escapeHTML(anime.img)}')"></div><div class="hero-gradient"></div><div class="hero-content"><div class="hero-badges"><span class="badge star">⭐ ${anime.score}</span><span class="badge">${escapeHTML(anime.type)}</span><span class="badge">${escapeHTML(anime.year)}</span></div><h1 class="hero-title">${escapeHTML(anime.title)}</h1><div class="hero-actions"><button class="btn-primary" onclick="openAnimeDetail(${anime.id}, 'home')">▶ Смотреть</button><button class="btn-icon-heart ${heartClass}" onclick="openStatusModal(${anime.id}, '${escapeHTML(anime.title).replace(/'/g, "\\'")}')">${heartIcon}</button></div></div></div>`; 
+        sliderHTML += `<div class="hero-slide ${index === 0 ? 'active' : ''}"><div class="hero-bg" style="background-image: url('${escapeHTML(anime.img)}')"></div><div class="hero-gradient"></div><div class="hero-content"><div class="hero-badges"><span class="badge star">⭐ ${anime.score}</span><span class="badge">${escapeHTML(anime.type)}</span></div><h1 class="hero-title">${escapeHTML(anime.title)}</h1><div class="hero-actions"><button class="btn-primary" onclick="openAnimeDetail(${anime.id}, 'home')">▶ Смотреть</button><button class="btn-icon-heart ${heartClass}" onclick="openStatusModal(${anime.id}, '${escapeHTML(anime.title).replace(/'/g, "\\'")}')">${heartIcon}</button></div></div></div>`; 
         dotsHTML += `<div class="hero-dot ${index === 0 ? 'active' : ''}" onclick="goToSlide(${index})"></div>`; 
     }); 
     slider.innerHTML = sliderHTML; 
@@ -928,18 +895,12 @@ function addSwipeSupport(element) {
 
 async function loadPopular() { 
     try {
-        const randomPage = Math.floor(Math.random() * 10) + 1; 
-        const query = `{ Page(page: ${randomPage}, perPage: 6) { media(type: ANIME, sort: POPULARITY_DESC) { id title { romaji } coverImage { large } } } }`; 
-        const response = await fetch('https://graphql.anilist.co', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, 
-            body: JSON.stringify({ query }) 
-        }); 
-        if (!response.ok) throw new Error('Network error');
-        const data = await response.json(); 
+        const query = `query { animes(limit: 6, order: "popularity") { id name russian poster { mainUrl } } }`;
+        const data = await shikiQuery(query);
+        const animes = data?.animes || [];
         const container = document.getElementById('popular-list'); 
-        if (!data || !data.data.Page) return; 
-        container.innerHTML = data.data.Page.media.map(anime => `<div class="card" onclick="openAnimeDetail(${anime.id}, 'home')"><img class="card-img" src="${escapeHTML(anime.coverImage.large)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title.romaji)}</div></div>`).join(''); 
+        if (!container) return; 
+        container.innerHTML = animes.map(anime => `<div class="card" onclick="openAnimeDetail(${anime.id}, 'home')"><img class="card-img" src="${escapeHTML(anime.poster?.mainUrl || '')}" loading="lazy"><div class="card-title">${escapeHTML(anime.russian || anime.name)}</div></div>`).join(''); 
     } catch(e) { 
         console.error("Ошибка популярного:", e); 
     }
@@ -947,18 +908,12 @@ async function loadPopular() {
 
 async function loadRecommended() { 
     try {
-        const randomPage = Math.floor(Math.random() * 5) + 1; 
-        const query = `{ Page(page: ${randomPage}, perPage: 4) { media(type: ANIME, sort: SCORE_DESC) { id title { romaji } coverImage { large } } } }`; 
-        const response = await fetch('https://graphql.anilist.co', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, 
-            body: JSON.stringify({ query }) 
-        }); 
-        if (!response.ok) throw new Error('Network error');
-        const data = await response.json(); 
+        const query = `query { animes(limit: 4, order: "ranked") { id name russian poster { mainUrl } } }`;
+        const data = await shikiQuery(query);
+        const animes = data?.animes || [];
         const container = document.getElementById('recommended-list'); 
-        if (!data || !data.data.Page) return; 
-        container.innerHTML = data.data.Page.media.map(anime => `<div class="card" onclick="openAnimeDetail(${anime.id}, 'home')"><img class="card-img" src="${escapeHTML(anime.coverImage.large)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title.romaji)}</div></div>`).join(''); 
+        if (!container) return; 
+        container.innerHTML = animes.map(anime => `<div class="card" onclick="openAnimeDetail(${anime.id}, 'home')"><img class="card-img" src="${escapeHTML(anime.poster?.mainUrl || '')}" loading="lazy"><div class="card-title">${escapeHTML(anime.russian || anime.name)}</div></div>`).join(''); 
     } catch(e) { 
         console.error("Ошибка рекомендаций:", e); 
     }
