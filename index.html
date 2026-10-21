@@ -6,16 +6,13 @@
     <title>OnikaAnime</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <style>
         :root { --bg: #0a0a0f; --card: #1a1a20; --primary: #5b5bff; --text: #fff; --muted: #888; --nav-h: 65px; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background: var(--bg); color: var(--text); padding-bottom: calc(var(--nav-h) + 20px); overflow-x: hidden; }
-        
         .screen { display: none; }
         .screen.active { display: block; animation: fade 0.3s ease; }
         @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
         .hero-section { position: relative; height: 85vh; min-height: 500px; overflow: hidden; }
         .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; visibility: hidden; transition: 0.6s; display: flex; align-items: flex-end; }
         .hero-slide.active { opacity: 1; visibility: visible; z-index: 2; }
@@ -24,63 +21,51 @@
         .hero-gradient { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(10,10,15,0.8) 0%, transparent 20%, transparent 50%, var(--bg) 95%), radial-gradient(circle at center, transparent 30%, rgba(10,10,15,0.6) 100%); z-index: 2; }
         .hero-content { position: relative; z-index: 3; padding: 20px; width: 100%; padding-bottom: 40px; transform: translateY(20px); opacity: 0; transition: 0.6s; }
         .hero-slide.active .hero-content { transform: translateY(0); opacity: 1; transition-delay: 0.2s; }
-        
         .hero-badges { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
         .badge { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #fff; border: 1px solid rgba(255,255,255,0.1); }
         .badge.star { color: #ffd700; background: rgba(0,0,0,0.4); border-color: rgba(255,215,0,0.2); }
-        
         .hero-title { font-size: 34px; font-weight: 800; line-height: 1.1; margin-bottom: 15px; color: #fff; text-shadow: 0 4px 20px rgba(0,0,0,0.8); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .hero-actions { display: flex; gap: 12px; align-items: center; }
         .btn-primary { flex: 1; background: var(--primary); color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 8px 25px rgba(91,91,255,0.4); cursor: pointer; }
         .btn-primary:active { transform: scale(0.96); }
         .btn-icon-heart { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 56px; height: 56px; border-radius: 14px; font-size: 22px; display: flex; justify-content: center; align-items: center; cursor: pointer;}
         .btn-icon-heart.faved { background: rgba(255,45,120,0.2); border-color: rgba(255,45,120,0.5); }
-        
         .hero-dots { position: absolute; bottom: 20px; right: 20px; display: flex; gap: 6px; z-index: 10; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 20px; backdrop-filter: blur(5px); }
         .hero-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.3); transition: 0.3s; }
         .hero-dot.active { width: 18px; border-radius: 4px; background: var(--primary); box-shadow: 0 0 10px rgba(91,91,255,0.5); }
-
         .content-section { padding: 20px 0; }
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-bottom: 15px; }
         .section-header h2 { font-size: 20px; font-weight: 700; }
         .horizontal-scroll { display: flex; gap: 12px; padding: 0 20px; overflow-x: auto; scrollbar-width: none; }
         .horizontal-scroll::-webkit-scrollbar { display: none; }
         .grid-catalog { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 0 20px; }
-
         .card { background: var(--card); border-radius: 12px; overflow: hidden; position: relative; display: flex; flex-direction: column; }
         .card:active { transform: scale(0.96); }
         .card-img { width: 100%; aspect-ratio: 2/3; object-fit: cover; background: #222; display: block; }
         .card-title { position: absolute; bottom: 0; left: 0; width: 100%; padding: 30px 10px 10px 10px; font-size: 13px; font-weight: 700; color: #fff; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, transparent 100%); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; z-index: 2; }
         .horizontal-scroll .card { min-width: 130px; width: 130px; height: 195px; }
         .horizontal-scroll .card-img { height: 100%; }
-
         .tg-banner-section { padding: 10px 20px 20px; }
         .tg-banner { display: flex; align-items: center; background: linear-gradient(135deg, rgba(0,136,204,0.15), rgba(0,136,204,0.05)); border: 1px solid rgba(0,136,204,0.3); padding: 16px; border-radius: 16px; text-decoration: none !important; color: white !important; }
         .tg-icon { width: 45px; height: 45px; background: #0088cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-right: 15px; }
         .tg-text h3 { font-size: 16px; font-weight: 700; margin-bottom: 2px; color: white !important; }
         .tg-text p { font-size: 12px; color: rgba(255,255,255,0.6) !important; }
-
         .filter-btn { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc; padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
         .filter-btn.active { background: rgba(91,91,255,0.15); border-color: #5b5bff; color: #a29bfe; }
         .genre-pill { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc; padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 8px; }
         .genre-pill.active { background: #2a2a3e; color: #fff; border-color: #5b5bff; }
         .genre-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; }
-        
         .catalog-card { background: #14141f; border-radius: 12px; overflow: hidden; position: relative; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); }
         .catalog-card:active { transform: scale(0.96); }
         .catalog-card-img { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; background: #222; }
         .catalog-card-title { position: absolute; bottom: 0; left: 0; width: 100%; padding: 30px 10px 10px 10px; font-size: 13px; font-weight: 700; color: #fff; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, transparent 100%); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
         .filter-option-btn { background: #1a1a20; border: 1px solid rgba(255,255,255,0.05); color: #fff; padding: 15px; border-radius: 12px; text-align: left; font-size: 15px; cursor: pointer; transition: 0.2s; }
         .filter-option-btn.active { background: rgba(91,91,255,0.2); border-color: #5b5bff; }
-
         .detail-poster { width: 140px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .detail-title { font-size: 24px; font-weight: 800; margin-bottom: 10px; line-height: 1.2; }
-
         .my-list-tabs { display: flex; gap: 10px; padding: 0 20px 15px; overflow-x: auto; scrollbar-width: none; }
         .my-list-tab { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #888; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
         .my-list-tab.active { background: #5b5bff; color: #fff; border-color: #5b5bff; }
-
         .friends-search { display: flex; gap: 10px; padding: 0 20px 20px; }
         .friends-search input { flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px; color: #fff; font-size: 15px; outline: none; }
         .friends-search button { background: #5b5bff; border: none; border-radius: 12px; padding: 0 20px; color: #fff; font-weight: 700; cursor: pointer; }
@@ -89,7 +74,6 @@
         .friend-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .friend-info h3 { font-size: 16px; color: #fff; margin-bottom: 2px; }
         .friend-info p { font-size: 12px; color: #888; }
-
         .profile-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; padding-top: 30px; }
         .profile-header h1 { font-size: 32px; font-weight: 800; color: #fff; }
         .profile-container { padding: 0 15px; }
@@ -135,7 +119,6 @@
         .ach-next-info h4 { font-size: 14px; color: #fff; margin-bottom: 2px; }
         .ach-next-info p { font-size: 11px; color: #888; }
         .ach-reward { font-size: 12px; font-weight: bold; color: #ffd700; }
-
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
         .modal-overlay.active { display: flex; animation: fade 0.3s ease; }
         .modal-content { background: #14141f; border-radius: 24px; width: 100%; max-width: 400px; padding: 30px 20px; border: 1px solid rgba(255,255,255,0.1); position: relative; text-align: center; max-height: 80vh; overflow-y: auto; }
@@ -160,7 +143,6 @@
         .level-up-popup .text { flex: 1; min-width: 0; }
         .level-up-popup .text h4 { color: #fff; font-size: 16px; margin-bottom: 2px; }
         .level-up-popup .text p { color: rgba(255,255,255,0.8); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-h); background: rgba(10,10,15,0.95); backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-around; align-items: center; z-index: 9999; padding-bottom: env(safe-area-inset-bottom); }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); cursor: pointer; }
         .nav-item.active { color: var(--primary); }
@@ -169,7 +151,6 @@
     </style>
 </head>
 <body>
-
     <div class="level-up-popup" id="levelUpPopup">
         <div class="icon">🎉</div>
         <div class="text">
@@ -296,13 +277,11 @@
                 <div class="user-details">
                     <h2 id="tg-name">Гость</h2>
                     <p class="user-slogan">Your One and Only</p>
-                    
                     <div onclick="copyMyId()" style="background: rgba(91,91,255,0.1); border: 1px solid rgba(91,91,255,0.3); border-radius: 12px; padding: 8px 15px; display: inline-flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer; margin-top: 5px;">
                         <span style="color: #888; font-size: 12px;">Мой ID:</span>
                         <span id="my-tg-id" style="color: #fff; font-weight: bold; font-size: 14px;">...</span>
                         <span style="color: #5b5bff; font-size: 16px;">📋</span>
                     </div>
-
                     <div class="level-row" onclick="openLevelModal()">
                         <div class="level-badge"><span id="user-level">1</span></div>
                         <div class="level-info">
@@ -313,7 +292,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="stats-card">
                 <div class="stat-item"><div class="stat-value" id="stat-episodes">0</div><div class="stat-label">серий</div></div>
                 <div class="stat-divider"></div>
@@ -321,12 +299,10 @@
                 <div class="stat-divider"></div>
                 <div class="stat-item"><div class="stat-value" id="stat-days">1</div><div class="stat-label">день подряд</div></div>
             </div>
-
             <div class="profile-tabs">
                 <button class="tab-btn active" id="tab-btn-profile" onclick="switchProfileTab('profile')">👤 Профиль</button>
                 <button class="tab-btn" id="tab-btn-settings" onclick="switchProfileTab('settings')">⚙️ Настройки</button>
             </div>
-
             <div class="achievements-card" id="profile-content-tab" onclick="openAchievementsModal()">
                 <div class="ach-header">
                     <div class="ach-icon-big">🏆</div>
@@ -340,7 +316,6 @@
                     <div class="ach-reward">+500 🪙</div>
                 </div>
             </div>
-
             <div class="settings-card" id="settings-content-tab" style="display: none;">
                 <div style="padding: 20px; text-align: center; color: #888;">⚙️ Настройки в разработке</div>
             </div>
@@ -402,6 +377,6 @@
         <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon">👤</span><span class="nav-text">Профиль</span></div>
     </nav>
 
-    <script src="app.js?v=27"></script>
+    <script src="app.js?v=28"></script>
 </body>
 </html>
