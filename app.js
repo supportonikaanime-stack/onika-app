@@ -88,10 +88,17 @@ function goBackFromDetail() {
 async function syncProfileToDB() {
     if (!MY_TG_ID || !supabaseClient) return;
     let stats = getStats();
+    let avatar = localStorage.getItem('onika_custom_avatar');
     try {
         await supabaseClient.from('users').upsert({
-            tg_id: MY_TG_ID, name: MY_NAME, xp: stats.xp,
-            episodes_watched: stats.episodesWatched, minutes_watched: stats.minutesWatched, days_streak: stats.daysStreak
+            tg_id: MY_TG_ID, 
+            name: MY_NAME, 
+            avatar_url: avatar,
+            xp: stats.xp,
+            episodes_watched: stats.episodesWatched, 
+            minutes_watched: stats.minutesWatched, 
+            days_streak: stats.daysStreak,
+            last_watched: stats.favedAnime.length > 0 ? stats.favedAnime[stats.favedAnime.length - 1].id : null
         }, { onConflict: 'tg_id' });
     } catch (e) { console.error('Ошибка синхронизации:', e); }
 }
@@ -175,7 +182,7 @@ async function loadFriends() {
             if (inUsers && inUsers.length > 0) {
                 html += '<h3 style="padding: 0 20px 10px; font-size: 16px; color: #ffd700;">🔔 Заявки в друзья</h3>';
                 inUsers.forEach(u => {
-                    html += `<div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);"><div class="friend-avatar">${u.name[0].toUpperCase()}</div><div class="friend-info"><h3>${u.name}</h3><p>ID: ${u.tg_id}</p></div><div style="display: flex; gap: 5px; margin-left: auto;"><button onclick="acceptFriend(${u.tg_id})" style="background: #2ecc71; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✓</button><button onclick="rejectFriend(${u.tg_id})" style="background: #e74c3c; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✕</button></div></div>`;
+                    html += `<div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);"><div class="friend-avatar">${u.avatar_url ? `<img src="${u.avatar_url}">` : u.name[0].toUpperCase()}</div><div class="friend-info"><h3>${u.name}</h3><p>ID: ${u.tg_id}</p></div><div style="display: flex; gap: 5px; margin-left: auto;"><button onclick="acceptFriend(${u.tg_id})" style="background: #2ecc71; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✓</button><button onclick="rejectFriend(${u.tg_id})" style="background: #e74c3c; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✕</button></div></div>`;
                 });
             }
         }
@@ -190,7 +197,7 @@ async function loadFriends() {
             
             if (accUsers && accUsers.length > 0) {
                 accUsers.forEach(friend => {
-                    html += `<div class="friend-card" onclick="openFriendProfile(${friend.tg_id}, '${friend.name}')"><div class="friend-avatar">${friend.name[0].toUpperCase()}</div><div class="friend-info"><h3>${friend.name}</h3><p>ID: ${friend.tg_id} • Ур. ${Math.floor(friend.xp / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
+                    html += `<div class="friend-card" onclick="openFriendProfile(${friend.tg_id}, '${friend.name}')"><div class="friend-avatar">${friend.avatar_url ? `<img src="${friend.avatar_url}">` : friend.name[0].toUpperCase()}</div><div class="friend-info"><h3>${friend.name}</h3><p>ID: ${friend.tg_id} • Ур. ${Math.floor(friend.xp / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
                 });
             }
         }
@@ -221,7 +228,7 @@ async function searchFriend() {
         const { data: friendCheck } = await supabaseClient.from('friends').select('*').eq('user_id', MY_TG_ID).eq('friend_id', id);
         if (friendCheck && friendCheck.length > 0) { resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Заявка уже отправлена или вы друзья</div>'; return; }
 
-        resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${userData.name[0].toUpperCase()}</div><div class="friend-info"><h3>${userData.name}</h3><p>ID: ${userData.tg_id}</p></div><button onclick="sendFriendRequest(${userData.tg_id})" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Заявка</button></div>`;
+        resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${userData.avatar_url ? `<img src="${userData.avatar_url}">` : userData.name[0].toUpperCase()}</div><div class="friend-info"><h3>${userData.name}</h3><p>ID: ${userData.tg_id}</p></div><button onclick="sendFriendRequest(${userData.tg_id})" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Заявка</button></div>`;
     } catch (e) { console.error(e); resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Ошибка поиска</div>'; }
 }
 
@@ -255,6 +262,17 @@ async function rejectFriend(userId) {
     } catch (e) { console.error(e); }
 }
 
+// УДАЛЕНИЕ ИЗ ДРУЗЕЙ
+async function removeFriend(friendId) {
+    if (!MY_TG_ID || !supabaseClient) return;
+    try {
+        await supabaseClient.from('friends').delete().eq('user_id', MY_TG_ID).eq('friend_id', friendId);
+        await supabaseClient.from('friends').delete().eq('user_id', friendId).eq('friend_id', MY_TG_ID);
+        showToast('Друг удален');
+        switchTab('friends');
+    } catch (e) { console.error(e); showToast('Ошибка удаления', 'error'); }
+}
+
 // ПРОФИЛЬ ДРУГА
 async function openFriendProfile(id, name) {
     switchTab('friend-profile');
@@ -267,11 +285,22 @@ async function openFriendProfile(id, name) {
 
         const lvl = Math.floor(friend.xp / 100) + 1;
         const rank = LEVEL_TITLES[Math.min(lvl - 1, 99)];
+        
+        // Получаем достижения друга (пока просто заглушка, так как достижения хранятся локально)
+        let achHtml = '<div style="color: #888; font-size: 12px;">Достижения не синхронизированы</div>';
+        
+        // Последнее просмотренное
+        let lastWatchedHtml = '';
+        if (friend.last_watched) {
+            lastWatchedHtml = `<div style="margin-top: 15px; padding: 15px; background: rgba(91,91,255,0.1); border-radius: 12px; border: 1px solid rgba(91,91,255,0.2);"><div style="font-size: 12px; color: #888; margin-bottom: 5px;">Последнее аниме:</div><div style="font-size: 16px; font-weight: bold; color: #fff;">ID: ${friend.last_watched}</div></div>`;
+        }
 
         container.innerHTML = `
             <div class="user-card">
                 <div class="avatar-container">
-                    <div class="avatar" style="background: linear-gradient(135deg, #5b5bff, #b44aff); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff;">${friend.name[0].toUpperCase()}</div>
+                    <div class="avatar" style="background: linear-gradient(135deg, #5b5bff, #b44aff); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff; overflow: hidden;">
+                        ${friend.avatar_url ? `<img src="${friend.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">` : friend.name[0].toUpperCase()}
+                    </div>
                 </div>
                 <div class="user-details">
                     <h2>${friend.name}</h2>
@@ -286,13 +315,27 @@ async function openFriendProfile(id, name) {
                     </div>
                 </div>
             </div>
+            
             <div class="stats-card">
                 <div class="stat-item"><div class="stat-value">${friend.episodes_watched || 0}</div><div class="stat-label">серий</div></div>
                 <div class="stat-divider"></div>
                 <div class="stat-item"><div class="stat-value">${friend.minutes_watched || 0} <span style="font-size: 14px; font-weight: normal;">мин</span></div><div class="stat-label">просмотра</div></div>
                 <div class="stat-divider"></div>
                 <div class="stat-item"><div class="stat-value">${friend.days_streak || 1}</div><div class="stat-label">дней подряд</div></div>
-            </div>`;
+            </div>
+
+            ${lastWatchedHtml}
+
+            <div class="achievements-card" style="margin-top: 15px;">
+                <div class="ach-header">
+                    <div class="ach-icon-big">🏆</div>
+                    <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p>Не синхронизированы</p></div>
+                </div>
+                ${achHtml}
+            </div>
+
+            <button onclick="removeFriend(${friend.tg_id})" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">🗑️ Удалить из друзей</button>
+        `;
     } catch (e) { container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки профиля</div>'; }
 }
 
