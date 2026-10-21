@@ -33,89 +33,158 @@ function escapeHTML(str) {
 }
 
 // ==========================================
-// 2. API МОДУЛЬ (ANILIBRIA)
+// 2. API МОДУЛЬ (SHIKIMORI + ОЧЕРЕДЬ)
 // ==========================================
 const API = {
-    // Используем официальное зеркало api.anilibria.app
-    BASE_URL: 'https://api.anilibria.app/api/v1',
+    PROXY: 'https://corsproxy.io/?url=',
+    SHIKIMORI_URL: 'https://shikimori.one/api/graphql',
+    SHIKIMORI_REST: 'https://shikimori.one/api/animes',
     
     _cache: new Map(),
     _cacheTTL: 15 * 60 * 1000,
+    _queue: Promise.resolve(),
 
-    async _fetch(endpoint) {
-        if (this._cache.has(endpoint)) {
-            const cached = this._cache.get(endpoint);
+    async _graphql(query, useCache = true, cacheKey = null) {
+        const key = cacheKey || query;
+        if (useCache && this._cache.has(key)) {
+            const cached = this._cache.get(key);
             if (Date.now() - cached.time < this._cacheTTL) return cached.data;
-            this._cache.delete(endpoint);
+            this._cache.delete(key);
         }
-        try {
-            const response = await fetch(this.BASE_URL + endpoint);
-            if (!response.ok) throw new Error('HTTP ' + response.status);
-            const data = await response.json();
-            this._cache.set(endpoint, { data: data, time: Date.now() });
-            return data;
-        } catch (e) {
-            console.error('❌ API Error:', e.message);
-            return null;
-        }
+
+        // Очередь с задержкой 250мс (лимит Shikimori 5 запросов в секунду)
+        const requestPromise = this._queue.then(async () => {
+            await new Promise(r => setTimeout(r, 250));
+            try {
+                const url = this.PROXY + encodeURIComponent(this.SHIKIMORI_URL);
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        // Обязательное требование Shikimori
+                        'User-Agent': 'OnikaAnime/1.0 (https://t.me/onikaanime)'
+                    },
+                    body: JSON.stringify({ query })
+                });
+                if (!response.ok) throw new Error('Proxy HTTP ' + response.status);
+                const data = await response.json();
+                if (data.errors) throw new Error(data.errors[0]?.message || 'GraphQL error');
+                if (useCache && data.data) this._cache.set(key, { data: data.data, time: Date.now() });
+                return data.data;
+            } catch (e) {
+                console.error('❌ GraphQL Error:', e.message);
+                return null;
+            }
+        });
+
+        this._queue = requestPromise.catch(() => {});
+        return requestPromise;
     },
 
-    async getCatalog(page = 1, limit = 12) {
-        const data = await this._fetch(`/anime/releases/latest?page=${page}&items_per_page=${limit}`);
-        if (!data || !data.data) return [];
-        return data.data.map(a => this._convertAnime(a));
+    _fixPoster(raw) {
+        if (!raw) return '';
+        if (raw.startsWith('http')) return raw;
+        if (raw.startsWith('//')) return 'https:' + raw;
+        return 'https://shikimori.one' + raw;
     },
 
-    async searchAnime(query, page = 1, limit = 12) {
-        if (!query || query.length < 2) return [];
-        const data = await this._fetch(`/anime/releases/search?query=${encodeURIComponent(query)}&page=${page}&items_per_page=${limit}`);
-        if (!data || !data.data) return [];
-        return data.data.map(a => this._convertAnime(a));
+    async getCatalog(page = 1, limit = 12, order = 'popularity') {
+        const query = `{ animes(page: ${page}, limit: ${limit}, order: ${order}) { id name russian english kind score status episodes episodesAired duration rating year: airedOn { year } poster { originalUrl mainUrl } genres { id name russian kind } } }`;
+        const data = await this._graphql(query, true, `catalog_${page}_${limit}_${order}`);
+        if (!data || !data.animes) return [];
+        return data.animes.map(a => this._convertAnime(a));
+    },
+
+    async searchAnime(queryStr, page = 1, limit = 12) {
+        if (!queryStr || queryStr.length < 2) return [];
+        const gql = `{ animes(search: ${JSON.stringify(queryStr)}, page: ${page}, limit: ${limit}) { id name russian english kind score status episodes episodesAired duration rating year: airedOn { year } poster { originalUrl mainUrl } genres { id name russian kind } } }`;
+        const data = await this._graphql(gql, true, `search_${queryStr}_${page}_${limit}`);
+        if (!data || !data.animes) return [];
+        return data.animes.map(a => this._convertAnime(a));
     },
 
     async getByGenre(genreId, page = 1, limit = 12) {
-        const data = await this._fetch(`/anime/releases/latest?genres=${genreId}&page=${page}&items_per_page=${limit}`);
-        if (!data || !data.data) return [];
-        return data.data.map(a => this._convertAnime(a));
+        const query = `{ animes(page: ${page}, limit: ${limit}, order: popularity, genre: "${genreId}") { id name russian english kind score status episodes episodesAired duration rating year: airedOn { year } poster { originalUrl mainUrl } genres { id name russian kind } } }`;
+        const data = await this._graphql(query, true, `genre_${genreId}_${page}_${limit}`);
+        if (!data || !data.animes) return [];
+        return data.animes.map(a => this._convertAnime(a));
     },
 
     async getAnimeDetails(id) {
-        const cleanId = id.toString().replace('anilibria_', '');
-        const data = await this._fetch(`/anime/releases/${cleanId}`);
-        if (!data || !data.data) return null;
-        return this._convertAnime(data.data, true);
+        const cleanId = id.toString().replace('shikimori_', '');
+        // Для деталей используем REST (он быстрее и стабильнее)
+        try {
+            const url = this.PROXY + encodeURIComponent(this.SHIKIMORI_REST + '/' + cleanId);
+            const response = await fetch(url, {
+                headers: { 'User-Agent': 'OnikaAnime/1.0 (https://t.me/onikaanime)' }
+            });
+            if (response.ok) {
+                const a = await response.json();
+                return this._convertRestAnime(a);
+            }
+        } catch (e) { console.warn('REST fail, fallback to GraphQL'); }
+        
+        // Если REST упал, используем GraphQL
+        const query = `{ anime(id: ${cleanId}) { id name russian english kind score status episodes episodesAired duration description year: airedOn { year } poster { originalUrl mainUrl } genres { id name russian kind } } }`;
+        const data = await this._graphql(query, false);
+        if (data && data.anime) return this._convertAnime(data.anime);
+        return null;
     },
 
     async getRandom(limit = 1) {
-        const data = await this._fetch(`/anime/releases/random`);
-        if (!data || !data.data) return [];
-        return [this._convertAnime(data.data)];
+        const randomPage = Math.floor(Math.random() * 50) + 1;
+        const query = `{ animes(page: ${randomPage}, limit: 50, order: ranked) { id name russian english kind score status episodes episodesAired duration rating description year: airedOn { year } poster { originalUrl mainUrl } genres { id name russian kind } } }`;
+        const data = await this._graphql(query, false);
+        if (!data || !data.animes || !data.animes.length) return [];
+        const valid = data.animes.filter(a => (a.poster?.originalUrl || a.poster?.mainUrl) && (a.score || 0) >= 6).map(a => this._convertAnime(a));
+        if (!valid.length) return [];
+        return valid.sort(() => Math.random() - 0.5).slice(0, limit);
     },
 
-    _convertAnime(a, full = false) {
-        const poster = a.poster?.original || a.poster?.preview || '';
-        const title = a.names?.ru || a.names?.en || 'Без названия';
-        
-        let statusText = 'Неизвестно';
-        if (a.status?.string) statusText = a.status.string;
-        if (a.status?.code === 1) statusText = 'Онгоинг';
-        if (a.status?.code === 2) statusText = 'Завершено';
-        if (a.status?.code === 3) statusText = 'Анонс';
+    _convertAnime(a) {
+        let title = a.russian || a.name || 'Без названия';
+        let poster = a.poster ? this._fixPoster(a.poster.originalUrl || a.poster.mainUrl || '') : '';
+        const genres = (a.genres || []).filter(g => g.kind === 'anime' || !g.kind).map(g => g.russian || g.name).filter(Boolean);
+        let description = a.description || '';
+        description = description.replace(/<[^>]*>/g, '').trim();
 
         return {
-            id: 'anilibria_' + a.id,
+            id: 'shikimori_' + a.id,
             rawId: a.id,
             title: title,
-            year: a.season?.year || '--',
-            episodes: a.type?.episodes || a.type?.length || '?',
+            year: a.year?.year || '--',
+            episodes: a.episodes || a.episodesAired || '?',
             images: { jpg: { image_url: poster } },
-            description: a.description || 'Описание отсутствует.',
-            genres: (a.genres || []).map(g => g.name),
-            score: a.statistics?.rating || 0,
-            status: statusText,
-            kind: a.type?.full_string || 'TV',
-            source: 'AniLibria'
+            synopsis: description || '',
+            description: description,
+            genres: genres,
+            score: a.score || 0,
+            status: a.status || 'Неизвестно',
+            kind: a.kind || '',
+            duration: a.duration,
+            source: 'Shikimori'
         };
+    },
+
+    _convertRestAnime(a) {
+        return this._convertAnime({
+            id: a.id,
+            name: a.name,
+            russian: a.russian,
+            english: a.english,
+            kind: a.kind,
+            score: a.score,
+            status: a.status,
+            episodes: a.episodes,
+            episodesAired: a.episodes_aired,
+            duration: a.duration,
+            rating: a.rating,
+            description: a.description,
+            airedOn: a.aired_on ? { year: new Date(a.aired_on).getFullYear() } : null,
+            poster: { originalUrl: a.image?.original, mainUrl: a.image?.preview },
+            genres: a.genres || []
+        });
     }
 };
 
@@ -551,7 +620,7 @@ async function loadCatalog(reset = false) {
         } else if (currentFilters.genre) {
             items = await API.getByGenre(currentFilters.genre, catalogPage, 12);
         } else {
-            items = await API.getCatalog(catalogPage, 12);
+            items = await API.getCatalog(catalogPage, 12, 'popularity');
         }
         
         if (reset) grid.innerHTML = '';
@@ -566,7 +635,7 @@ async function loadCatalog(reset = false) {
         items.forEach(anime => { 
             const title = escapeHTML(anime.title); 
             const img = escapeHTML(anime.images.jpg.image_url); 
-            const score = anime.score ? anime.score.toFixed(1) : '?'; 
+            const score = anime.score ? (anime.score / 10).toFixed(1) : '?'; 
             const cardHtml = `<div class="catalog-card" onclick="openAnimeDetail('${anime.id}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`; 
             grid.insertAdjacentHTML('beforeend', cardHtml);
         });
@@ -607,8 +676,8 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         if (!anime) throw new Error('Не найдено');
         
         const title = escapeHTML(anime.title);
-        const desc = escapeHTML(anime.description);
-        const score = anime.score ? anime.score.toFixed(1) : '?';
+        const desc = escapeHTML(anime.description || 'Описание отсутствует.');
+        const score = anime.score ? (anime.score / 10).toFixed(1) : '?';
         const poster = escapeHTML(anime.images.jpg.image_url);
         
         let statusColor = '#2ecc71'; 
@@ -742,7 +811,7 @@ function renderMyList() {
         validItems.forEach(anime => {
             const title = escapeHTML(anime.title); 
             const img = escapeHTML(anime.images.jpg.image_url); 
-            const score = anime.score ? anime.score.toFixed(1) : '?';
+            const score = anime.score ? (anime.score / 10).toFixed(1) : '?';
             const favEntry = favs.find(a => a.id === anime.id); 
             const currentStatus = favEntry ? favEntry.status : '';
             let statusIcon = '📚'; 
@@ -911,18 +980,18 @@ async function loadHomePage() {
     try {
         // Hero Banner
         const heroItems = await API.getRandom(5);
-        heroData = heroItems.map(a => ({ id: a.id, title: a.title, img: a.images.jpg.image_url, score: a.score ? a.score.toFixed(1) : '?', type: a.kind || 'TV', year: a.year }));
+        heroData = heroItems.map(a => ({ id: a.id, title: a.title, img: a.images.jpg.image_url, score: a.score ? (a.score / 10).toFixed(1) : '?', type: a.kind || 'TV', year: a.year }));
         initHeroSlider();
 
         // Popular
-        const popular = await API.getCatalog(1, 6);
+        const popular = await API.getCatalog(1, 6, 'popularity');
         const popularContainer = document.getElementById('popular-list');
         if (popularContainer) {
             popularContainer.innerHTML = popular.map(anime => `<div class="card" onclick="openAnimeDetail('${anime.id}', 'home')"><img class="card-img" src="${escapeHTML(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
         }
 
         // Recommended
-        const recommended = await API.getCatalog(2, 4);
+        const recommended = await API.getCatalog(2, 4, 'ranked');
         const recContainer = document.getElementById('recommended-list');
         if (recContainer) {
             recContainer.innerHTML = recommended.map(anime => `<div class="card" onclick="openAnimeDetail('${anime.id}', 'home')"><img class="card-img" src="${escapeHTML(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
