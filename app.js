@@ -1,4 +1,35 @@
 // ==========================================
+// СИСТЕМА ВИЗУАЛЬНЫХ ЛОГОВ (ЧЕРНЫЙ ЯЩИК)
+// ==========================================
+function showLog(msg, isError = false) {
+    let logBox = document.getElementById('debug-log-box');
+    if (!logBox) {
+        logBox = document.createElement('div');
+        logBox.id = 'debug-log-box';
+        logBox.style.cssText = 'position:fixed;bottom:80px;left:10px;right:10px;max-height:200px;background:rgba(0,0,0,0.95);color:#0f0;font-family:monospace;font-size:11px;padding:10px;border-radius:10px;z-index:99999;overflow-y:auto;border:1px solid #333;box-shadow:0 0 10px rgba(0,0,0,0.5);display:flex;flex-direction:column;';
+        
+        let header = document.createElement('div');
+        header.style.cssText = 'display:flex; justify-content:space-between; margin-bottom:5px; border-bottom:1px solid #333; padding-bottom:5px;';
+        header.innerHTML = '<b>ЛОГИ СЕТИ</b> <span style="color:#f44; cursor:pointer; padding:0 5px;" onclick="document.getElementById(\'debug-log-box\').style.display=\'none\'">[X] Закрыть</span>';
+        logBox.appendChild(header);
+        
+        let content = document.createElement('div');
+        content.id = 'debug-log-content';
+        logBox.appendChild(content);
+        document.body.appendChild(logBox);
+    }
+    const content = document.getElementById('debug-log-content');
+    const p = document.createElement('div');
+    p.style.color = isError ? '#f44' : '#0f0';
+    p.style.marginBottom = '4px';
+    p.textContent = `> ${msg}`;
+    content.appendChild(p);
+    logBox.scrollTop = logBox.scrollHeight;
+}
+
+showLog('Скрипт загружен. Инициализация...');
+
+// ==========================================
 // 1. НАСТРОЙКА SUPABASE
 // ==========================================
 const SUPABASE_URL = 'https://wsaykqhojwfhpqzxptke.supabase.co';
@@ -8,8 +39,12 @@ let supabaseClient = null;
 try {
     if (window.supabase) {
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        showLog('Supabase подключен');
     }
-} catch(e) { console.error('Ошибка Supabase:', e); }
+} catch(e) { 
+    console.error('Ошибка Supabase:', e); 
+    showLog('Ошибка Supabase: ' + e.message, true);
+}
 
 const tg = window.Telegram.WebApp;
 let MY_TG_ID = null;
@@ -22,6 +57,7 @@ if (tg) {
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
         MY_TG_ID = tg.initDataUnsafe.user.id;
         MY_NAME = tg.initDataUnsafe.user.first_name + (tg.initDataUnsafe.user.last_name ? ' ' + tg.initDataUnsafe.user.last_name : '');
+        showLog('Telegram ID: ' + MY_TG_ID);
     }
 }
 
@@ -33,11 +69,10 @@ function escapeHTML(str) {
 }
 
 // ==========================================
-// 2. API МОДУЛЬ (ANILIST С ЛОГАМИ)
+// 2. API МОДУЛЬ (ANILIST С ВИЗУАЛЬНЫМИ ЛОГАМИ)
 // ==========================================
 const API = {
     BASE_URL: 'https://graphql.anilist.co',
-    // Используем прокси, чтобы обойти возможные блокировки GitHub Pages
     PROXY_URL: 'https://corsproxy.io/?url=',
     
     _cache: new Map(),
@@ -46,47 +81,46 @@ const API = {
 
     async _fetch(query, variables = {}) {
         const cacheKey = JSON.stringify({ query, variables });
-        console.log(`[API] Подготовка запроса к AniList`);
+        showLog(`Запрос к AniList...`);
 
         if (this._cache.has(cacheKey)) {
             const cached = this._cache.get(cacheKey);
             if (Date.now() - cached.time < this._cacheTTL) {
-                console.log(`[API] ✅ Взято из кэша`);
+                showLog(`✅ Взято из кэша`);
                 return cached.data;
             }
             this._cache.delete(cacheKey);
         }
 
         const requestPromise = this._queue.then(async () => {
-            // Задержка 500мс, чтобы не превысить лимит AniList (30 запросов в минуту)
             await new Promise(r => setTimeout(r, 500));
             
             try {
                 const url = this.PROXY_URL + encodeURIComponent(this.BASE_URL);
-                console.log(`[API] Отправляем fetch на: ${url}`);
+                showLog(`Отправка fetch...`);
                 
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json', 
                         'Accept': 'application/json'
-                        // AniList иногда требует User-Agent, хотя и не так строго, как Shikimori
                     },
                     body: JSON.stringify({ query, variables })
                 });
 
-                console.log(`[API] Ответ получен! Статус: ${response.status}`);
+                showLog(`Ответ получен. Статус: ${response.status}`);
 
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 
                 const data = await response.json();
-                console.log(`[API] Данные распарсены:`, data);
+                showLog(`Данные распарсены (Ошибки: ${data.errors ? 'ДА' : 'НЕТ'})`);
 
                 if (data.errors) throw new Error(data.errors[0].message);
                 
                 this._cache.set(cacheKey, { data: data.data, time: Date.now() });
                 return data.data;
             } catch (e) {
+                showLog(`❌ ОШИБКА: ${e.message}`, true);
                 console.error('❌ [API] Ошибка запроса:', e);
                 return null;
             }
@@ -187,7 +221,7 @@ const API = {
             id: 'anilist_' + a.id,
             rawId: a.id,
             title: title,
-            year: a.seasonYear || '--',
+            year: '--',
             episodes: a.episodes || '?',
             images: { jpg: { image_url: poster } },
             description: a.description ? a.description.replace(/<[^>]*>/g, '') : 'Описание отсутствует.',
@@ -995,10 +1029,13 @@ let slideInterval;
 
 async function loadHomePage() {
     try {
+        showLog('Загрузка главной (баннер)...');
         const heroItems = await API.getRandom(5);
         heroData = heroItems.map(a => ({ id: a.id, title: a.title, img: a.images.jpg.image_url, score: a.score ? (a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year }));
         initHeroSlider();
+        showLog('Главная загружена');
     } catch (e) {
+        showLog('Ошибка загрузки главной: ' + e.message, true);
         console.error('Ошибка загрузки главной:', e);
     }
 }
@@ -1047,6 +1084,7 @@ function addSwipeSupport(element) {
 }
 
 document.addEventListener('DOMContentLoaded', () => { 
+    showLog('DOM загружен');
     loadHomePage();
     loadProfileData(); 
 });
