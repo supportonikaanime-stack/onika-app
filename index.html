@@ -16,7 +16,9 @@
         .screen.active { display: block; animation: fade 0.3s ease; }
         @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* ИСПРАВЛЕНИЕ: Добавлены стили для hero-slider, иначе слайды не видны */
         .hero-section { position: relative; height: 85vh; min-height: 500px; overflow: hidden; }
+        .hero-slider { position: relative; width: 100%; height: 100%; }
         .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; visibility: hidden; transition: 0.6s; display: flex; align-items: flex-end; }
         .hero-slide.active { opacity: 1; visibility: visible; z-index: 2; }
         .hero-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center top; z-index: 1; transform: scale(1); transition: transform 8s linear; }
@@ -47,12 +49,11 @@
         .horizontal-scroll::-webkit-scrollbar { display: none; }
         .grid-catalog { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 0 20px; }
 
-        .card { background: var(--card); border-radius: 12px; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+        .card { background: var(--card); border-radius: 12px; overflow: hidden; position: relative; display: flex; flex-direction: column; cursor: pointer; }
         .card:active { transform: scale(0.96); }
         .card-img { width: 100%; aspect-ratio: 2/3; object-fit: cover; background: #222; display: block; }
         .card-title { position: absolute; bottom: 0; left: 0; width: 100%; padding: 30px 10px 10px 10px; font-size: 13px; font-weight: 700; color: #fff; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, transparent 100%); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; z-index: 2; }
         .horizontal-scroll .card { min-width: 130px; width: 130px; height: 195px; }
-        .horizontal-scroll .card-img { height: 100%; }
 
         .tg-banner-section { padding: 10px 20px 20px; }
         .tg-banner { display: flex; align-items: center; background: linear-gradient(135deg, rgba(0,136,204,0.15), rgba(0,136,204,0.05)); border: 1px solid rgba(0,136,204,0.3); padding: 16px; border-radius: 16px; text-decoration: none !important; color: white !important; }
@@ -223,7 +224,6 @@
                 <button class="filter-btn" onclick="openFilterModal('year')">Год ⌄</button>
                 <button class="filter-btn" onclick="openFilterModal('status')">Статус ⌄</button>
                 <button class="filter-btn" onclick="openFilterModal('sort')">Сортировка ⌄</button>
-                <button class="filter-btn" onclick="forceReloadCatalog()" style="border-color: #ff2d78; color: #ff2d78;">🔄 Обновить</button>
             </div>
         </div>
         <div class="grid-catalog" id="catalog-grid"></div>
@@ -402,6 +402,6 @@
         <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon">👤</span><span class="nav-text">Профиль</span></div>
     </nav>
 
-    <script src="app.js?v=50"></script>
+    <script src="app.js?v=51"></script>
 </body>
 </html>
