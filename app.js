@@ -69,11 +69,11 @@ function escapeHTML(str) {
 }
 
 // ==========================================
-// 2. API МОДУЛЬ (ANILIST С ВИЗУАЛЬНЫМИ ЛОГАМИ)
+// 2. API МОДУЛЬ (ANILIST С НОВЫМ ПРОКСИ)
 // ==========================================
 const API = {
     BASE_URL: 'https://graphql.anilist.co',
-    PROXY_URL: 'https://corsproxy.io/?url=',
+    PROXY_URL: 'https://api.allorigins.win/raw?url=',
     
     _cache: new Map(),
     _cacheTTL: 15 * 60 * 1000,
