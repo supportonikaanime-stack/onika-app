@@ -33,14 +33,14 @@ function escapeHTML(str) {
 }
 
 // ==========================================
-// 2. API МОДУЛЬ (JIKAN - MyAnimeList)
+// 2. API МОДУЛЬ (JIKAN С ЖЕСТКОЙ ОЧЕРЕДЬЮ)
 // ==========================================
 const API = {
     BASE_URL: 'https://api.jikan.moe/v4',
     
     _cache: new Map(),
     _cacheTTL: 15 * 60 * 1000,
-    _queue: Promise.resolve(), // Очередь для соблюдения лимитов
+    _queue: Promise.resolve(),
 
     async _fetch(endpoint) {
         if (this._cache.has(endpoint)) {
@@ -49,11 +49,16 @@ const API = {
             this._cache.delete(endpoint);
         }
 
-        // Защита от лимитов (Jikan позволяет 3 запроса в секунду)
         const requestPromise = this._queue.then(async () => {
-            await new Promise(r => setTimeout(r, 400)); // Задержка 400мс
+            // Жесткая задержка 1.5 секунды, чтобы Jikan не выдал 429
+            await new Promise(r => setTimeout(r, 1500));
             try {
                 const response = await fetch(this.BASE_URL + endpoint);
+                if (response.status === 429) {
+                    console.warn('⚠️ Jikan 429. Ждем 3 секунды...');
+                    await new Promise(r => setTimeout(r, 3000));
+                    return this._fetch(endpoint); // Повтор
+                }
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 const data = await response.json();
                 this._cache.set(endpoint, { data: data, time: Date.now() });
@@ -510,7 +515,7 @@ function searchAnime() {
     searchDebounceTimer = setTimeout(() => {
         currentFilters.search = document.getElementById('search-input').value.trim(); 
         loadCatalog(true); 
-    }, 500);
+    }, 1000);
 }
 
 function openFilterModal(type) { 
@@ -916,7 +921,7 @@ function openAchievementsModal() {
 }
 
 // ==========================================
-// 11. ГЛАВНАЯ СТРАНИЦА
+// 11. ГЛАВНАЯ СТРАНИЦА (ЛЕНИВАЯ ЗАГРУЗКА)
 // ==========================================
 let heroData = []; 
 let currentSlide = 0; 
@@ -924,24 +929,13 @@ let slideInterval;
 
 async function loadHomePage() {
     try {
-        // Hero Banner
+        // Загружаем ТОЛЬКО баннер при старте (1 запрос)
         const heroItems = await API.getRandom(5);
         heroData = heroItems.map(a => ({ id: a.id, title: a.title, img: a.images.jpg.image_url, score: a.score ? (a.score / 10).toFixed(1) : '?', type: a.kind || 'TV', year: a.year }));
         initHeroSlider();
-
-        // Popular
-        const popular = await API.getCatalog(1, 6);
-        const popularContainer = document.getElementById('popular-list');
-        if (popularContainer) {
-            popularContainer.innerHTML = popular.map(anime => `<div class="card" onclick="openAnimeDetail('${anime.id}', 'home')"><img class="card-img" src="${escapeHTML(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
-        }
-
-        // Recommended
-        const recommended = await API.getCatalog(2, 4);
-        const recContainer = document.getElementById('recommended-list');
-        if (recContainer) {
-            recContainer.innerHTML = recommended.map(anime => `<div class="card" onclick="openAnimeDetail('${anime.id}', 'home')"><img class="card-img" src="${escapeHTML(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
-        }
+        
+        // Списки "Популярное" и "Рекомендации" больше не грузятся сразу!
+        // Они будут загружаться только при переходе на соответствующие вкладки.
     } catch (e) {
         console.error('Ошибка загрузки главной:', e);
     }
