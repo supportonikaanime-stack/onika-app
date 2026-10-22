@@ -69,8 +69,8 @@ function escapeHTML(str) {
 // ==========================================
 // 2. API МОДУЛЬ (SHIKIMORI ЧЕРЕЗ DENO)
 // ==========================================
+// Твой работающий прокси на Deno
 const DENO_PROXY = 'https://rough-ermine-6097.supportonikaanime-stack.deno.net/?target=';
-const CF_PROXY = 'https://onika-app.support-onikaanime.workers.dev/?target=';
 
 const API = {
     BASE_URL: 'https://shikimori.one/api/graphql',
@@ -87,40 +87,30 @@ const API = {
         }
 
         const requestPromise = this._queue.then(async () => {
+            // Задержка 300 мс, чтобы не превысить лимиты Shikimori
             await new Promise(r => setTimeout(r, 300));
             
             try {
-                // Пробуем Deno
-                let url = DENO_PROXY + encodeURIComponent(this.BASE_URL);
-                let response;
+                const url = DENO_PROXY + encodeURIComponent(this.BASE_URL);
+                showLog(`Отправка запроса к Shikimori...`);
                 
-                try {
-                    showLog('Пробуем Deno для Shikimori...');
-                    response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json', 
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({ query })
-                    });
-                    if (!response.ok) throw new Error('Deno HTTP ' + response.status);
-                } catch (e) {
-                    showLog('Deno упал, пробуем Cloudflare...', true);
-                    url = CF_PROXY + encodeURIComponent(this.BASE_URL);
-                    response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json', 
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({ query })
-                    });
-                    if (!response.ok) throw new Error('CF HTTP ' + response.status);
-                }
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ query })
+                });
 
+                showLog(`Ответ получен. Статус: ${response.status}`);
+
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                
                 const data = await response.json();
                 if (data.errors) throw new Error(data.errors[0]?.message || 'GraphQL error');
+                
+                showLog(`✅ Данные получены`);
                 if (useCache && data.data) this._cache.set(key, { data: data.data, time: Date.now() });
                 return data.data;
             } catch (e) {
