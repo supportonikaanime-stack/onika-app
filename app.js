@@ -42,8 +42,6 @@ function showLog(msg, isError = false) {
     console.log(isError ? 'ERROR: ' : 'LOG: ', msg);
 }
 
-showLog('Скрипт загружен. Инициализация...');
-
 // ==========================================
 // 1. НАСТРОЙКА SUPABASE
 // ==========================================
@@ -54,12 +52,8 @@ let supabaseClient = null;
 try {
     if (window.supabase) {
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        showLog('Supabase подключен');
     }
-} catch(e) { 
-    console.error('Ошибка Supabase:', e); 
-    showLog('Ошибка Supabase: ' + e.message, true);
-}
+} catch(e) { console.error('Ошибка Supabase:', e); }
 
 const tg = window.Telegram.WebApp;
 let MY_TG_ID = null;
@@ -72,7 +66,6 @@ if (tg) {
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
         MY_TG_ID = tg.initDataUnsafe.user.id;
         MY_NAME = tg.initDataUnsafe.user.first_name + (tg.initDataUnsafe.user.last_name ? ' ' + tg.initDataUnsafe.user.last_name : '');
-        showLog('TG ID: ' + MY_TG_ID);
     }
 }
 
@@ -112,9 +105,7 @@ const API_AniLibria = {
         return items.map(this.convert);
     },
     async searchAnime(q, page, limit) {
-        // Используем правильный эндпоинт для поиска
         const data = await this.fetch(`/app/search/releases?query=${encodeURIComponent(q)}&page=${page}&limit=${limit}`);
-        // Проверяем, что вернулось: массив или объект с data
         const items = Array.isArray(data) ? data : (data.data || []);
         return items.map(this.convert);
     },
@@ -141,12 +132,13 @@ const API_AniLibria = {
 
         const posterUrl = a.poster?.src || a.poster?.preview || '';
         
-        // ИСПРАВЛЕНИЕ: Берем рейтинг из statistics.rating, количество серий из episodes_total
-        let rawRating = a.statistics?.rating || 0;
+        // ИСПРАВЛЕНИЕ 1: Ищем рейтинг во всех возможных местах
+        let rawRating = a.statistics?.rating || a.age_rating?.value || 0;
         let safeScore = Number(rawRating);
         if (isNaN(safeScore)) safeScore = 0;
 
-        let epCount = a.episodes_total || '?';
+        // ИСПРАВЛЕНИЕ 2: Берем количество серий откуда угодно
+        let epCount = a.episodes_total || a.series_episodes_count || '?';
 
         return {
             id: 'anilibria_' + a.id, rawId: a.id,
@@ -663,16 +655,16 @@ function initCatalogFilters() {
     if (!genreContainer) return; 
     let html = `<div class="genre-pill active" onclick="setGenreFilter('', this)"><div class="dot"></div>Все</div>`; 
     GENRES.forEach(g => { 
-        html += `<div class="genre-pill" onclick="setGenreFilter('${g.id}', this)">${g.name}</div>`; 
+        html += `<div class="genre-pill" onclick="setGenreFilter('${g.name}', this)">${g.name}</div>`; 
     }); 
     genreContainer.innerHTML = html; 
 }
 
-function setGenreFilter(genreId, btn) { 
-    currentFilters.genre = genreId; 
+function setGenreFilter(genreName, btn) { 
+    currentFilters.genre = genreName; 
     document.querySelectorAll('#genre-filters .genre-pill').forEach(el => el.classList.remove('active')); 
     btn.classList.add('active'); 
-    if (genreId === '') btn.innerHTML = '<div class="dot"></div>Все'; 
+    if (genreName === '') btn.innerHTML = '<div class="dot"></div>Все'; 
     loadCatalog(true); 
 }
 
@@ -733,21 +725,55 @@ async function loadCatalog(reset = false) {
         let items = [];
         
         if (currentFilters.search) {
-            items = await API.searchAnime(currentFilters.search, catalogPage, 12);
+            items = await API.searchAnime(currentFilters.search, catalogPage, 50); // Берем больше для фильтрации
         } else {
-            items = await API.getCatalog(catalogPage, 12);
+            // ИСПРАВЛЕНИЕ 3: Запрашиваем больше данных (50), чтобы фильтровать локально
+            items = await API.getCatalog(catalogPage, 50); 
         }
-        
+
+        // ЛОКАЛЬНАЯ ФИЛЬТРАЦИЯ
+        let filteredItems = items;
+
+        // Фильтр по жанру
+        if (currentFilters.genre && currentFilters.genre !== '') {
+            filteredItems = filteredItems.filter(a => 
+                a.genres && a.genres.some(g => g.toLowerCase().includes(currentFilters.genre.toLowerCase()))
+            );
+        }
+
+        // Фильтр по году
+        if (currentFilters.year && currentFilters.year !== '') {
+            filteredItems = filteredItems.filter(a => String(a.year) === currentFilters.year);
+        }
+
+        // Фильтр по статусу
+        if (currentFilters.status && currentFilters.status !== '') {
+            let statusRu = currentFilters.status === 'ongoing' ? 'Онгоинг' : currentFilters.status === 'released' ? 'Завершено' : 'Анонс';
+            filteredItems = filteredItems.filter(a => a.status === statusRu);
+        }
+
+        // Сортировка
+        if (currentFilters.sort && currentFilters.sort !== 'popularity') {
+             if (currentFilters.sort === 'ranked') {
+                 filteredItems.sort((a, b) => b.score - a.score);
+             } else if (currentFilters.sort === 'aired_on') {
+                 filteredItems.sort((a, b) => String(b.year).localeCompare(String(a.year)));
+             }
+        }
+
+        // Обрезаем до 12 для отображения
+        const displayItems = filteredItems.slice(0, 12);
+
         if (reset) grid.innerHTML = '';
         
-        if (!items || items.length === 0) { 
+        if (displayItems.length === 0) { 
             if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Ничего не найдено</div>'; 
             hasMoreCatalog = false; 
             if (loadMoreBtn) loadMoreBtn.style.display = 'none'; 
             return; 
         }
         
-        items.forEach(anime => { 
+        displayItems.forEach(anime => { 
             const title = escapeHTML(anime.title); 
             const img = safeUrl(anime.images.jpg.image_url); 
             const score = anime.score ? Number(anime.score).toFixed(1) : '?'; 
@@ -755,7 +781,8 @@ async function loadCatalog(reset = false) {
             grid.insertAdjacentHTML('beforeend', cardHtml);
         });
         
-        if (items.length < 12) { 
+        // Логика кнопки "Загрузить еще" (учитывая, что мы загружаем по 50)
+        if (items.length < 50) { 
             hasMoreCatalog = false; 
             if (loadMoreBtn) loadMoreBtn.style.display = 'none'; 
         } else { 
