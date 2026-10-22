@@ -1,9 +1,9 @@
 // ==========================================
-// СИСТЕМА ВИЗУАЛЬНЫХ ЛОГОВ (Скрыта, открывается 5 кликами по верху)
+// СИСТЕМА ВИЗУАЛЬНЫХ ЛОГОВ
 // ==========================================
 let clickCount = 0;
 document.addEventListener('click', (e) => {
-    if (e.clientY < 50) {
+    if (e.clientY < 100) { 
         clickCount++;
         if (clickCount >= 5) {
             clickCount = 0;
@@ -81,8 +81,13 @@ function escapeHTML(str) {
     return str.toString().replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
+// ИСПРАВЛЕНИЕ: Функция теперь добавляет домен к относительным ссылкам
 function safeUrl(url) {
     if (!url) return '';
+    // Если ссылка относительная (начинается с /), добавляем домен
+    if (url.startsWith('/')) {
+        return 'https://anilibria.top' + url;
+    }
     try {
         const u = new URL(url);
         return (u.protocol === 'http:' || u.protocol === 'https:') ? url : '';
@@ -122,11 +127,7 @@ const API_AniLibria = {
     async getRandom(limit) {
         const data = await this.fetch(`/anime/releases/latest?page=${Math.floor(Math.random()*10)+1}&items_per_page=20`);
         const items = Array.isArray(data) ? data : (data.data || []);
-        // ИСПРАВЛЕНИЕ: Проверяем наличие картинки в любом из полей
-        return items.filter(a => (a.poster && (a.poster.src || a.poster.preview)) || (a.images && a.images.length > 0))
-                    .sort(()=>Math.random()-0.5)
-                    .slice(0, limit)
-                    .map(this.convert);
+        return items.filter(a => a.poster).sort(()=>Math.random()-0.5).slice(0, limit).map(this.convert);
     },
     convert(a) {
         let genresList = [];
@@ -138,14 +139,11 @@ const API_AniLibria = {
         if (a.status && a.status.value === 'ISSUE') statusText = 'Онгоинг';
         if (a.status && a.status.value === 'RELEASED') statusText = 'Завершено';
 
-        // Достаем картинку
-        let posterUrl = '';
-        if (a.poster) posterUrl = a.poster.src || a.poster.preview;
-        else if (a.images && a.images.length > 0) posterUrl = a.images[0].preview; // На случай другой структуры
+        const posterUrl = a.poster?.src || a.poster?.preview || '';
 
-        // ИСПРАВЛЕНИЕ: Безопасное извлечение рейтинга (может быть строкой или null)
-        let scoreNum = Number(a.age_rating?.value || a.statistics?.rating || a.score || 0);
-        if (isNaN(scoreNum)) scoreNum = 0;
+        let rawRating = a.age_rating?.value || 0;
+        let safeScore = Number(rawRating);
+        if (isNaN(safeScore)) safeScore = 0;
 
         return {
             id: 'anilibria_' + a.id, rawId: a.id,
@@ -155,7 +153,7 @@ const API_AniLibria = {
             images: { jpg: { image_url: posterUrl } },
             description: a.description || 'Описание отсутствует.',
             genres: genresList,
-            score: scoreNum, // Гарантированно число
+            score: safeScore, 
             status: statusText,
             kind: a.type?.value || 'TV'
         };
@@ -1137,8 +1135,7 @@ async function loadHomePage() {
         showLog('2. Данные получены. Отрисовка баннера...');
         heroData = heroItems.map(a => ({ 
             id: a.id, title: a.title, img: a.images.jpg.image_url, 
-            score: a.score ? Number(a.score).toFixed(1) : '?', // ИСПРАВЛЕНИЕ
-            type: a.kind || 'TV', year: a.year 
+            score: a.score ? Number(a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year 
         }));
         initHeroSlider();
 
