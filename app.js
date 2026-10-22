@@ -67,20 +67,18 @@ function escapeHTML(str) {
 }
 
 // ==========================================
-// 2. API МОДУЛЬ (ANILIBERTY)
+// 2. API МОДУЛЬ (ANILIST С ЖЕСТКОЙ ОЧЕРЕДЬЮ)
 // ==========================================
 const API = {
-    BASE_URL: 'https://api.anilibria.app/api/v1',
-    PROXY_URL: 'https://api.allorigins.win/raw?url=',
-    
+    BASE_URL: 'https://graphql.anilist.co',
     _cache: new Map(),
-    _cacheTTL: 15 * 60 * 1000,
+    _cacheTTL: 60 * 60 * 1000, // 1 час кэша
     _queue: Promise.resolve(),
 
-    async _fetch(endpoint) {
-        const cacheKey = endpoint;
-        showLog(`Запрос к AniLiberty: ${endpoint.substring(0, 30)}...`);
-
+    async _fetch(query, variables = {}) {
+        const cacheKey = JSON.stringify({ query, variables });
+        
+        // Проверяем локальный кэш
         if (this._cache.has(cacheKey)) {
             const cached = this._cache.get(cacheKey);
             if (Date.now() - cached.time < this._cacheTTL) {
@@ -91,27 +89,54 @@ const API = {
         }
 
         const requestPromise = this._queue.then(async () => {
-            await new Promise(r => setTimeout(r, 500));
+            // Жесткая задержка 2.5 секунды между запросами (лимит 30 в минуту)
+            await new Promise(r => setTimeout(r, 2500));
             
-            try {
-                const url = this.PROXY_URL + encodeURIComponent(this.BASE_URL + endpoint);
-                showLog(`Отправка fetch...`);
-                
-                const response = await fetch(url);
-                showLog(`Ответ получен. Статус: ${response.status}`);
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    showLog(`Отправка fetch (попытка ${attempt})...`);
+                    
+                    const response = await fetch(this.BASE_URL, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json', 
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ query, variables })
+                    });
 
-                if (!response.ok) throw new Error('HTTP ' + response.status);
-                
-                const data = await response.json();
-                showLog(`Данные получены`);
+                    showLog(`Ответ получен. Статус: ${response.status}`);
 
-                this._cache.set(cacheKey, { data: data, time: Date.now() });
-                return data;
-            } catch (e) {
-                showLog(`❌ ОШИБКА: ${e.message}`, true);
-                console.error('❌ [API] Ошибка запроса:', e);
-                return null;
+                    // Если превышен лимит, ждем и пробуем снова
+                    if (response.status === 429 || response.status === 403) {
+                        showLog(`⚠️ Лимит запросов. Ждем 5 сек...`, true);
+                        await new Promise(r => setTimeout(r, 5000));
+                        continue;
+                    }
+
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    
+                    const data = await response.json();
+                    
+                    if (data.errors) {
+                        if (data.errors[0].message.includes('temporarily disabled')) {
+                            showLog(`❌ API AniList отключен. Ждем...`, true);
+                            await new Promise(r => setTimeout(r, 5000));
+                            continue;
+                        }
+                        throw new Error(data.errors[0].message);
+                    }
+                    
+                    showLog(`✅ Данные получены`);
+                    this._cache.set(cacheKey, { data: data.data, time: Date.now() });
+                    return data.data;
+                } catch (e) {
+                    showLog(`❌ Ошибка (попытка ${attempt}): ${e.message}`, true);
+                    if (attempt === 3) return null;
+                    await new Promise(r => setTimeout(r, 3000));
+                }
             }
+            return null;
         });
 
         this._queue = requestPromise.catch(() => {});
@@ -119,62 +144,105 @@ const API = {
     },
 
     async getCatalog(page = 1, limit = 12) {
-        const data = await this._fetch(`/anime/releases/latest?page=${page}&items_per_page=${limit}`);
-        if (!data || !data.data) return [];
-        return data.data.map(a => this._convertAnime(a));
+        const query = `
+            query ($page: Int, $perPage: Int) {
+                Page(page: $page, perPage: $perPage) {
+                    media(type: ANIME, sort: POPULARITY_DESC) {
+                        id title { romaji english } coverImage { large } averageScore episodes status genres
+                    }
+                }
+            }
+        `;
+        const data = await this._fetch(query, { page, perPage: limit });
+        if (!data || !data.Page) return [];
+        return data.Page.media.map(a => this._convertAnime(a));
     },
 
     async searchAnime(queryStr, page = 1, limit = 12) {
         if (!queryStr || queryStr.length < 2) return [];
-        const data = await this._fetch(`/anime/releases/latest?search=${encodeURIComponent(queryStr)}&page=${page}&items_per_page=${limit}`);
-        if (!data || !data.data) return [];
-        return data.data.map(a => this._convertAnime(a));
+        const query = `
+            query ($page: Int, $perPage: Int, $search: String) {
+                Page(page: $page, perPage: $perPage) {
+                    media(type: ANIME, search: $search) {
+                        id title { romaji english } coverImage { large } averageScore episodes status genres
+                    }
+                }
+            }
+        `;
+        const data = await this._fetch(query, { page, perPage: limit, search: queryStr });
+        if (!data || !data.Page) return [];
+        return data.Page.media.map(a => this._convertAnime(a));
     },
 
     async getByGenre(genreId, page = 1, limit = 12) {
-        const data = await this._fetch(`/anime/releases/latest?genres=${genreId}&page=${page}&items_per_page=${limit}`);
-        if (!data || !data.data) return [];
-        return data.data.map(a => this._convertAnime(a));
+        const query = `
+            query ($page: Int, $perPage: Int, $genre: String) {
+                Page(page: $page, perPage: $perPage) {
+                    media(type: ANIME, genre: $genre, sort: POPULARITY_DESC) {
+                        id title { romaji english } coverImage { large } averageScore episodes status genres
+                    }
+                }
+            }
+        `;
+        const data = await this._fetch(query, { page, perPage: limit, genre: genreId });
+        if (!data || !data.Page) return [];
+        return data.Page.media.map(a => this._convertAnime(a));
     },
 
     async getAnimeDetails(id) {
-        const cleanId = id.toString().replace('anilibria_', '');
-        const data = await this._fetch(`/anime/releases/${cleanId}`);
-        if (!data || !data.data) return null;
-        return this._convertAnime(data.data, true);
+        const cleanId = parseInt(id.toString().replace('anilist_', ''));
+        const query = `
+            query ($id: Int) {
+                Media(id: $id, type: ANIME) {
+                    id title { romaji english } coverImage { extraLarge } bannerImage description averageScore episodes status genres
+                }
+            }
+        `;
+        const data = await this._fetch(query, { id: cleanId });
+        if (!data || !data.Media) return null;
+        return this._convertAnime(data.Media, true);
     },
 
     async getRandom(limit = 1) {
         const randomPage = Math.floor(Math.random() * 20) + 1;
-        const data = await this._fetch(`/anime/releases/latest?page=${randomPage}&items_per_page=20`);
-        if (!data || !data.data) return [];
-        const valid = data.data.filter(a => a.poster?.original).map(a => this._convertAnime(a));
+        const query = `
+            query ($page: Int) {
+                Page(page: $page, perPage: 10) {
+                    media(type: ANIME, sort: SCORE_DESC) {
+                        id title { romaji english } coverImage { large } averageScore episodes status genres
+                    }
+                }
+            }
+        `;
+        const data = await this._fetch(query, { page: randomPage });
+        if (!data || !data.Page) return [];
+        const valid = data.Page.media.filter(a => a.averageScore >= 60).map(a => this._convertAnime(a));
         return valid.sort(() => Math.random() - 0.5).slice(0, limit);
     },
 
     _convertAnime(a, full = false) {
-        let title = a.names?.ru || a.names?.en || 'Без названия';
-        let poster = a.poster?.original || a.poster?.preview || '';
+        let title = a.title.romaji || a.title.english || 'Без названия';
+        let poster = a.coverImage.large || a.coverImage.extraLarge || '';
+        const genres = a.genres || [];
         
-        const genres = (a.genres || []).map(g => g.name);
         let statusText = 'Неизвестно';
-        if (a.status?.code === 1) statusText = 'Онгоинг';
-        if (a.status?.code === 2) statusText = 'Завершено';
-        if (a.status?.code === 3) statusText = 'Анонс';
+        if (a.status === 'RELEASING') statusText = 'Онгоинг';
+        if (a.status === 'FINISHED') statusText = 'Завершено';
+        if (a.status === 'NOT_YET_RELEASED') statusText = 'Анонс';
 
         return {
-            id: 'anilibria_' + a.id,
+            id: 'anilist_' + a.id,
             rawId: a.id,
             title: title,
-            year: a.season?.year || '--',
-            episodes: a.type?.episodes || a.type?.length || '?',
+            year: '--',
+            episodes: a.episodes || '?',
             images: { jpg: { image_url: poster } },
-            description: a.description || 'Описание отсутствует.',
+            description: a.description ? a.description.replace(/<[^>]*>/g, '') : 'Описание отсутствует.',
             genres: genres,
-            score: a.statistics?.rating || 0,
+            score: a.averageScore ? (a.averageScore / 10) : 0,
             status: statusText,
-            kind: a.type?.full_string || 'TV',
-            source: 'AniLiberty'
+            kind: a.format || 'TV',
+            source: 'AniList'
         };
     }
 };
@@ -198,14 +266,14 @@ let previousScreen = 'catalog';
 let searchDebounceTimer;
 
 const GENRES = [
-    { id: '1', name: 'Экшен' }, { id: '22', name: 'Романтика' }, 
-    { id: '4', name: 'Комедия' }, { id: '10', name: 'Фэнтези' }, 
-    { id: '8', name: 'Драма' }, { id: '2', name: 'Приключения' }, 
-    { id: '24', name: 'Фантастика' }
+    { id: 'Action', name: 'Экшен' }, { id: 'Romance', name: 'Романтика' }, 
+    { id: 'Comedy', name: 'Комедия' }, { id: 'Fantasy', name: 'Фэнтези' }, 
+    { id: 'Drama', name: 'Драма' }, { id: 'Adventure', name: 'Приключения' }, 
+    { id: 'Sci-Fi', name: 'Фантастика' }
 ];
 const YEARS = [{ id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' }, { id: '2021', name: '2021' }, { id: '2020', name: '2020' }];
-const STATUSES = [{ id: 'ongoing', name: 'Онгоинг' }, { id: 'released', name: 'Завершено' }, { id: 'anons', name: 'Анонс' }];
-const SORTS = [{ id: 'popularity', name: 'По популярности' }, { id: 'ranked', name: 'По рейтингу' }, { id: 'aired_on', name: 'Новинки' }];
+const STATUSES = [{ id: 'RELEASING', name: 'Онгоинг' }, { id: 'FINISHED', name: 'Завершено' }, { id: 'NOT_YET_RELEASED', name: 'Анонс' }];
+const SORTS = [{ id: 'POPULARITY_DESC', name: 'По популярности' }, { id: 'SCORE_DESC', name: 'По рейтингу' }, { id: 'START_DATE_DESC', name: 'Новинки' }];
 
 // ==========================================
 // 4. НАВИГАЦИЯ
