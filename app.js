@@ -67,10 +67,10 @@ function escapeHTML(str) {
 }
 
 // ==========================================
-// 2. API МОДУЛЬ (SHIKIMORI ЧЕРЕЗ DENO)
+// 2. API МОДУЛЬ (SHIKIMORI ЧЕРЕЗ CLOUDFLARE)
 // ==========================================
-// Твой работающий прокси на Deno
-const DENO_PROXY = 'https://rough-ermine-6097.supportonikaanime-stack.deno.net/?target=';
+// Используем Cloudflare как основной прокси для Shikimori
+const CF_PROXY = 'https://onika-app.support-onikaanime.workers.dev/?target=';
 
 const API = {
     BASE_URL: 'https://shikimori.one/api/graphql',
@@ -87,12 +87,11 @@ const API = {
         }
 
         const requestPromise = this._queue.then(async () => {
-            // Задержка 300 мс, чтобы не превысить лимиты Shikimori
             await new Promise(r => setTimeout(r, 300));
             
             try {
-                const url = DENO_PROXY + encodeURIComponent(this.BASE_URL);
-                showLog(`Отправка запроса к Shikimori...`);
+                const url = CF_PROXY + encodeURIComponent(this.BASE_URL);
+                showLog(`Отправка к Shikimori (CF)...`);
                 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -103,7 +102,7 @@ const API = {
                     body: JSON.stringify({ query })
                 });
 
-                showLog(`Ответ получен. Статус: ${response.status}`);
+                showLog(`Статус: ${response.status}`);
 
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 
