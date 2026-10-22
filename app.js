@@ -67,7 +67,7 @@ function escapeHTML(str) {
 }
 
 // ==========================================
-// 2. МУЛЬТИ-API МОДУЛЬ (С FALLBACK)
+// 2. МУЛЬТИ-API МОДУЛЬ (С DENO И CF)
 // ==========================================
 const DENO_PROXY = 'https://rough-ermine-6097.supportonikaanime-stack.deno.net/?target=';
 const CF_PROXY = 'https://onika-app.support-onikaanime.workers.dev/?target=';
@@ -75,11 +75,8 @@ const CF_PROXY = 'https://onika-app.support-onikaanime.workers.dev/?target=';
 // --- API ANILIBRIA ---
 const API_AniLibria = {
     BASE_URL: 'https://anilibria.top/api/v1',
-    
     async fetch(endpoint) {
         const fullUrl = this.BASE_URL + endpoint;
-        
-        // Пробуем Deno
         try {
             showLog('Пробуем Deno Proxy...');
             const res = await fetch(DENO_PROXY + fullUrl);
@@ -96,7 +93,6 @@ const API_AniLibria = {
             }
         }
     },
-
     async getCatalog(page, limit) {
         const data = await this.fetch(`/anime/releases/latest?page=${page}&items_per_page=${limit}`);
         return data.data ? data.data.map(this.convert) : [];
