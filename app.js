@@ -1,16 +1,30 @@
 // ==========================================
-// СИСТЕМА ВИЗУАЛЬНЫХ ЛОГОВ
+// СИСТЕМА ВИЗУАЛЬНЫХ ЛОГОВ (Скрыта по умолчанию, 5 кликов по верху для открытия)
 // ==========================================
+let clickCount = 0;
+document.addEventListener('click', (e) => {
+    if (e.clientY < 50) { // Верхняя зона экрана
+        clickCount++;
+        if (clickCount >= 5) {
+            clickCount = 0;
+            let logBox = document.getElementById('debug-log-box');
+            if (logBox) {
+                logBox.style.display = logBox.style.display === 'none' ? 'flex' : 'none';
+            }
+        }
+    }
+});
+
 function showLog(msg, isError = false) {
     let logBox = document.getElementById('debug-log-box');
     if (!logBox) {
         logBox = document.createElement('div');
         logBox.id = 'debug-log-box';
-        logBox.style.cssText = 'position:fixed;bottom:80px;left:10px;right:10px;max-height:150px;background:rgba(0,0,0,0.95);color:#0f0;font-family:monospace;font-size:10px;padding:10px;border-radius:10px;z-index:99999;overflow-y:auto;border:1px solid #333;box-shadow:0 0 10px rgba(0,0,0,0.5);display:flex;flex-direction:column;';
+        logBox.style.cssText = 'position:fixed;bottom:80px;left:10px;right:10px;max-height:150px;background:rgba(0,0,0,0.95);color:#0f0;font-family:monospace;font-size:10px;padding:10px;border-radius:10px;z-index:99999;overflow-y:auto;border:1px solid #333;box-shadow:0 0 10px rgba(0,0,0,0.5);display:none;flex-direction:column;';
         
         let header = document.createElement('div');
         header.style.cssText = 'display:flex; justify-content:space-between; margin-bottom:5px; border-bottom:1px solid #333; padding-bottom:5px;';
-        header.innerHTML = '<b>ЛОГИ</b> <span style="color:#f44; cursor:pointer; padding:0 5px;" onclick="document.getElementById(\'debug-log-box\').style.display=\'none\'">[X]</span>';
+        header.innerHTML = '<b>ЛОГИ</b> <span style="color:#f44; cursor:pointer; padding:0 5px;" onclick="this.parentElement.parentElement.style.display=\'none\'">[X]</span>';
         logBox.appendChild(header);
         
         let content = document.createElement('div');
@@ -25,6 +39,7 @@ function showLog(msg, isError = false) {
     p.textContent = `> ${msg}`;
     content.appendChild(p);
     logBox.scrollTop = logBox.scrollHeight;
+    console.log(isError ? 'ERROR: ' : 'LOG: ', msg);
 }
 
 showLog('Скрипт загружен. Инициализация...');
@@ -64,6 +79,15 @@ if (tg) {
 function escapeHTML(str) {
     if (!str) return '';
     return str.toString().replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+}
+
+// Безопасный парсинг URL (защита от XSS в атрибутах src/href)
+function safeUrl(url) {
+    if (!url) return '';
+    try {
+        const u = new URL(url);
+        return (u.protocol === 'http:' || u.protocol === 'https:') ? url : '';
+    } catch { return ''; }
 }
 
 // ==========================================
@@ -221,7 +245,6 @@ const API = {
         this._cache.clear();
         localStorage.setItem('onika_api_source', src);
         showToast('Источник: ' + src);
-        // Перезагружаем текущий экран
         if(document.getElementById('screen-home').classList.contains('active')) loadHomePage();
         if(document.getElementById('screen-catalog').classList.contains('active')) loadCatalog(true);
         initApiSettings(); 
@@ -243,7 +266,7 @@ const API = {
             this._cache.set(key, { data, time: Date.now() });
             return data;
         } catch(e) {
-            console.error(e);
+            console.error('API Error:', e);
             showLog('Ошибка API: ' + e.message, true);
             return [];
         }
@@ -338,7 +361,7 @@ async function syncProfileToDB() {
 
 function copyMyId() {
     if (!MY_TG_ID) return;
-    navigator.clipboard.writeText(MY_TG_ID).then(() => { showToast('📋 ID скопирован!'); }).catch(() => { showToast('Не удалось скопировать', 'error'); });
+    navigator.clipboard.writeText(MY_TG_ID).then(() => { showToast('📋 ID скопирован!'); }).catch(() => { showToast('Не удалось скопировать'); });
 }
 
 function loadProfileData() {
@@ -347,9 +370,9 @@ function loadProfileData() {
     
     if (avatarEl && MY_TG_ID) { 
         if (customAvatar) {
-            avatarEl.innerHTML = `<img src="${customAvatar}">`; 
+            avatarEl.innerHTML = `<img src="${safeUrl(customAvatar)}">`; 
         } else if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.photo_url) {
-            avatarEl.innerHTML = `<img src="${tg.initDataUnsafe.user.photo_url}">`; 
+            avatarEl.innerHTML = `<img src="${safeUrl(tg.initDataUnsafe.user.photo_url)}">`; 
         } else {
             avatarEl.innerHTML = `<span>${escapeHTML(MY_NAME[0].toUpperCase())}</span>`; 
         }
@@ -419,7 +442,7 @@ async function loadFriends() {
             if (inUsers && inUsers.length > 0) {
                 html += '<h3 style="padding: 0 20px 10px; font-size: 16px; color: #ffd700;">🔔 Заявки в друзья</h3>';
                 inUsers.forEach(u => {
-                    html += `<div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);"><div class="friend-avatar">${u.avatar_url ? `<img src="${escapeHTML(u.avatar_url)}">` : escapeHTML(u.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(u.name)}</h3><p>ID: ${escapeHTML(u.tg_id)}</p></div><div style="display: flex; gap: 5px; margin-left: auto;"><button onclick="acceptFriend(${u.tg_id})" style="background: #2ecc71; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✓</button><button onclick="rejectFriend(${u.tg_id})" style="background: #e74c3c; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✕</button></div></div>`;
+                    html += `<div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);"><div class="friend-avatar">${u.avatar_url ? `<img src="${safeUrl(u.avatar_url)}">` : escapeHTML(u.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(u.name)}</h3><p>ID: ${escapeHTML(u.tg_id)}</p></div><div style="display: flex; gap: 5px; margin-left: auto;"><button onclick="acceptFriend(${u.tg_id})" style="background: #2ecc71; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✓</button><button onclick="rejectFriend(${u.tg_id})" style="background: #e74c3c; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✕</button></div></div>`;
                 });
             }
         }
@@ -434,7 +457,7 @@ async function loadFriends() {
             
             if (accUsers && accUsers.length > 0) {
                 accUsers.forEach(friend => {
-                    html += `<div class="friend-card" onclick="openFriendProfile(${friend.tg_id}, '${escapeHTML(friend.name).replace(/'/g, "\\'")}')"><div class="friend-avatar">${friend.avatar_url ? `<img src="${escapeHTML(friend.avatar_url)}">` : escapeHTML(friend.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(friend.name)}</h3><p>ID: ${escapeHTML(friend.tg_id)} • Ур. ${Math.floor(friend.xp / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
+                    html += `<div class="friend-card" onclick="openFriendProfile(${friend.tg_id}, '${escapeHTML(friend.name).replace(/'/g, "\\'")}')"><div class="friend-avatar">${friend.avatar_url ? `<img src="${safeUrl(friend.avatar_url)}">` : escapeHTML(friend.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(friend.name)}</h3><p>ID: ${escapeHTML(friend.tg_id)} • Ур. ${Math.floor(friend.xp / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
                 });
             }
         }
@@ -465,7 +488,7 @@ async function searchFriend() {
         const { data: friendCheck } = await supabaseClient.from('friends').select('*').eq('user_id', MY_TG_ID).eq('friend_id', id);
         if (friendCheck && friendCheck.length > 0) { resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Заявка уже отправлена или вы друзья</div>'; return; }
 
-        resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${userData.avatar_url ? `<img src="${escapeHTML(userData.avatar_url)}">` : escapeHTML(userData.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(userData.name)}</h3><p>ID: ${escapeHTML(userData.tg_id)}</p></div><button onclick="sendFriendRequest(${userData.tg_id})" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Заявка</button></div>`;
+        resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${userData.avatar_url ? `<img src="${safeUrl(userData.avatar_url)}">` : escapeHTML(userData.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(userData.name)}</h3><p>ID: ${escapeHTML(userData.tg_id)}</p></div><button onclick="sendFriendRequest(${userData.tg_id})" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Заявка</button></div>`;
     } catch (e) { console.error(e); resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Ошибка поиска</div>'; }
 }
 
@@ -477,7 +500,7 @@ async function sendFriendRequest(friendId) {
         document.getElementById('friend-search-input').value = '';
         showToast('📩 Заявка отправлена!');
         loadFriends();
-    } catch (e) { console.error(e); showToast('Ошибка отправки', 'error'); }
+    } catch (e) { console.error(e); showToast('Ошибка отправки'); }
 }
 
 async function acceptFriend(userId) {
@@ -487,7 +510,7 @@ async function acceptFriend(userId) {
         showToast('🤝 Заявка принята!');
         loadFriends();
         await supabaseClient.from('friends').insert({ user_id: MY_TG_ID, friend_id: userId, status: 'accepted' });
-    } catch (e) { console.error(e); showToast('Ошибка', 'error'); }
+    } catch (e) { console.error(e); showToast('Ошибка'); }
 }
 
 async function rejectFriend(userId) {
@@ -506,7 +529,7 @@ async function removeFriend(friendId) {
         await supabaseClient.from('friends').delete().eq('user_id', friendId).eq('friend_id', MY_TG_ID);
         showToast('Друг удален');
         switchTab('friends');
-    } catch (e) { console.error(e); showToast('Ошибка удаления', 'error'); }
+    } catch (e) { console.error(e); showToast('Ошибка удаления'); }
 }
 
 async function openFriendProfile(id, name) {
@@ -530,7 +553,7 @@ async function openFriendProfile(id, name) {
             <div class="user-card">
                 <div class="avatar-container">
                     <div class="avatar" style="background: linear-gradient(135deg, #5b5bff, #b44aff); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff; overflow: hidden;">
-                        ${friend.avatar_url ? `<img src="${escapeHTML(friend.avatar_url)}" style="width: 100%; height: 100%; object-fit: cover;">` : escapeHTML(friend.name[0].toUpperCase())}
+                        ${friend.avatar_url ? `<img src="${safeUrl(friend.avatar_url)}" style="width: 100%; height: 100%; object-fit: cover;">` : escapeHTML(friend.name[0].toUpperCase())}
                     </div>
                 </div>
                 <div class="user-details">
@@ -691,7 +714,7 @@ async function loadCatalog(reset = false) {
         if (reset) grid.innerHTML = '';
         
         if (!items || items.length === 0) { 
-            if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Ничего не найдено</div>'; 
+            if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Ничего не найдено (Проблема с API)</div>'; 
             hasMoreCatalog = false; 
             if (loadMoreBtn) loadMoreBtn.style.display = 'none'; 
             return; 
@@ -699,7 +722,7 @@ async function loadCatalog(reset = false) {
         
         items.forEach(anime => { 
             const title = escapeHTML(anime.title); 
-            const img = escapeHTML(anime.images.jpg.image_url); 
+            const img = safeUrl(anime.images.jpg.image_url); 
             const score = anime.score ? (anime.score).toFixed(1) : '?'; 
             const cardHtml = `<div class="catalog-card" onclick="openAnimeDetail('${anime.id}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`; 
             grid.insertAdjacentHTML('beforeend', cardHtml);
@@ -713,7 +736,7 @@ async function loadCatalog(reset = false) {
         }
     } catch (e) { 
         console.error(e);
-        if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>'; 
+        if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки каталога</div>'; 
     } finally { 
         isCatalogLoading = false; 
     }
@@ -723,11 +746,6 @@ function loadMoreCatalog() {
     if (!hasMoreCatalog || isCatalogLoading) return; 
     catalogPage++; 
     loadCatalog(false); 
-}
-
-function forceReloadCatalog() { 
-    document.getElementById('catalog-grid').innerHTML = ''; 
-    loadCatalog(true); 
 }
 
 async function openAnimeDetail(id, fromScreen = 'catalog') {
@@ -743,7 +761,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         const title = escapeHTML(anime.title);
         const desc = escapeHTML(anime.description);
         const score = anime.score ? (anime.score).toFixed(1) : '?';
-        const poster = escapeHTML(anime.images.jpg.image_url);
+        const poster = safeUrl(anime.images.jpg.image_url);
         
         let statusColor = '#2ecc71'; 
         if (anime.status === 'Онгоинг') statusColor = '#3498db';
@@ -832,7 +850,7 @@ async function openRandomAnime() {
         if (items && items.length > 0) openAnimeDetail(items[0].id, 'catalog'); 
     } catch (e) { 
         console.error(e);
-        showToast('Ошибка поиска', 'error'); 
+        showToast('Ошибка поиска'); 
     } 
 }
 
@@ -875,7 +893,7 @@ function renderMyList() {
         grid.innerHTML = '';
         validItems.forEach(anime => {
             const title = escapeHTML(anime.title); 
-            const img = escapeHTML(anime.images.jpg.image_url); 
+            const img = safeUrl(anime.images.jpg.image_url); 
             const score = anime.score ? (anime.score).toFixed(1) : '?';
             const favEntry = favs.find(a => a.id === anime.id); 
             const currentStatus = favEntry ? favEntry.status : '';
@@ -992,8 +1010,12 @@ function uploadCustomAvatar(input) {
                 canvas.width = width; 
                 canvas.height = height; 
                 ctx.drawImage(img, 0, 0, width, height); 
-                localStorage.setItem('onika_custom_avatar', canvas.toDataURL('image/jpeg', 0.8)); 
-                loadProfileData(); 
+                try {
+                    localStorage.setItem('onika_custom_avatar', canvas.toDataURL('image/jpeg', 0.8)); 
+                    loadProfileData(); 
+                } catch(err) {
+                    showToast('Ошибка: слишком большая картинка'); 
+                }
             }; 
             img.src = e.target.result; 
         }; 
@@ -1078,31 +1100,45 @@ let slideInterval;
 
 async function loadHomePage() {
     try {
-        showLog('1. Загрузка баннера...');
-        const heroItems = await API.getRandom(5);
-        showLog('2. Данные получены. Отрисовка...');
-        heroData = heroItems.map(a => ({ id: a.id, title: a.title, img: a.images.jpg.image_url, score: a.score ? (a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year }));
-        initHeroSlider();
-        showLog('3. Баннер загружен!');
+        showLog('1. Параллельная загрузка данных главной...');
+        
+        // Загружаем всё параллельно без задержек
+        const [heroItems, popularItems, recItems] = await Promise.all([
+            API.getRandom(5),
+            API.getCatalog(1, 6),
+            API.getCatalog(2, 4)
+        ]);
 
-        setTimeout(async () => {
-            try {
-                showLog('4. Загрузка рекомендаций...');
-                const recItems = await API.getCatalog(1, 4);
-                const recContainer = document.getElementById('recommended-list');
-                if (recContainer && recItems.length > 0) {
-                    recContainer.innerHTML = recItems.map(anime => `
-                        <div class="card" onclick="openAnimeDetail('${anime.id}', 'home')">
-                            <img class="card-img" src="${escapeHTML(anime.images.jpg.image_url)}" loading="lazy">
-                            <div class="card-title">${escapeHTML(anime.title)}</div>
-                        </div>
-                    `).join('');
-                    showLog('5. ✅ Рекомендации загружены');
-                }
-            } catch (e) {
-                showLog('Ошибка рекомендаций: ' + e.message, true);
-            }
-        }, 3000);
+        showLog('2. Данные получены. Отрисовка баннера...');
+        heroData = heroItems.map(a => ({ 
+            id: a.id, title: a.title, img: a.images.jpg.image_url, 
+            score: a.score ? (a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year 
+        }));
+        initHeroSlider();
+
+        showLog('3. Отрисовка популярного...');
+        const popularContainer = document.getElementById('popular-list');
+        if (popularContainer && popularItems.length > 0) {
+            popularContainer.innerHTML = popularItems.map(anime => `
+                <div class="card" onclick="openAnimeDetail('${anime.id}', 'home')">
+                    <img class="card-img" src="${safeUrl(anime.images.jpg.image_url)}" loading="lazy">
+                    <div class="card-title">${escapeHTML(anime.title)}</div>
+                </div>
+            `).join('');
+        }
+
+        showLog('4. Отрисовка рекомендаций...');
+        const recContainer = document.getElementById('recommended-list');
+        if (recContainer && recItems.length > 0) {
+            recContainer.innerHTML = recItems.map(anime => `
+                <div class="card" onclick="openAnimeDetail('${anime.id}', 'home')">
+                    <img class="card-img" src="${safeUrl(anime.images.jpg.image_url)}" loading="lazy">
+                    <div class="card-title">${escapeHTML(anime.title)}</div>
+                </div>
+            `).join('');
+        }
+        
+        showLog('5. ✅ Главная загружена!');
 
     } catch (e) {
         showLog('Ошибка главной: ' + e.message, true);
@@ -1120,7 +1156,7 @@ function initHeroSlider() {
         const isFaved = favedList.includes(anime.id); 
         const heartClass = isFaved ? 'faved' : ''; 
         const heartIcon = isFaved ? '❤️' : '🤍'; 
-        sliderHTML += `<div class="hero-slide ${index === 0 ? 'active' : ''}"><div class="hero-bg" style="background-image: url('${escapeHTML(anime.img)}')"></div><div class="hero-gradient"></div><div class="hero-content"><div class="hero-badges"><span class="badge star">⭐ ${anime.score}</span><span class="badge">${escapeHTML(anime.type)}</span><span class="badge">${escapeHTML(anime.year)}</span></div><h1 class="hero-title">${escapeHTML(anime.title)}</h1><div class="hero-actions"><button class="btn-primary" onclick="openAnimeDetail('${anime.id}', 'home')">▶ Смотреть</button><button class="btn-icon-heart ${heartClass}" onclick="openStatusModal('${anime.id}', '${escapeHTML(anime.title).replace(/'/g, "\\'")}')">${heartIcon}</button></div></div></div>`; 
+        sliderHTML += `<div class="hero-slide ${index === 0 ? 'active' : ''}"><div class="hero-bg" style="background-image: url('${safeUrl(anime.img)}')"></div><div class="hero-gradient"></div><div class="hero-content"><div class="hero-badges"><span class="badge star">⭐ ${anime.score}</span><span class="badge">${escapeHTML(anime.type)}</span><span class="badge">${escapeHTML(anime.year)}</span></div><h1 class="hero-title">${escapeHTML(anime.title)}</h1><div class="hero-actions"><button class="btn-primary" onclick="openAnimeDetail('${anime.id}', 'home')">▶ Смотреть</button><button class="btn-icon-heart ${heartClass}" onclick="openStatusModal('${anime.id}', '${escapeHTML(anime.title).replace(/'/g, "\\'")}')">${heartIcon}</button></div></div></div>`; 
         dotsHTML += `<div class="hero-dot ${index === 0 ? 'active' : ''}" onclick="goToSlide(${index})"></div>`; 
     }); 
     slider.innerHTML = sliderHTML; 
