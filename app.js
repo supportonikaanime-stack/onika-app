@@ -73,7 +73,7 @@ const WORKER_URL = 'https://onika-app.support-onikaanime.workers.dev/?target=';
 
 // --- API ANILIBRIA ---
 const API_AniLibria = {
-    BASE_URL: 'https://api.anilibria.app/api/v1',
+    BASE_URL: 'https://anilibria.top/api/v1',
     async fetch(endpoint) {
         const fullUrl = this.BASE_URL + endpoint;
         // Отправляем как есть, без двойного кодирования
