@@ -1,16 +1,16 @@
 // ==========================================
-// СИСТЕМА ВИЗУАЛЬНЫХ ЛОГОВ (ЧЕРНЫЙ ЯЩИК)
+// СИСТЕМА ВИЗУАЛЬНЫХ ЛОГОВ
 // ==========================================
 function showLog(msg, isError = false) {
     let logBox = document.getElementById('debug-log-box');
     if (!logBox) {
         logBox = document.createElement('div');
         logBox.id = 'debug-log-box';
-        logBox.style.cssText = 'position:fixed;bottom:80px;left:10px;right:10px;max-height:200px;background:rgba(0,0,0,0.95);color:#0f0;font-family:monospace;font-size:11px;padding:10px;border-radius:10px;z-index:99999;overflow-y:auto;border:1px solid #333;box-shadow:0 0 10px rgba(0,0,0,0.5);display:flex;flex-direction:column;';
+        logBox.style.cssText = 'position:fixed;bottom:80px;left:10px;right:10px;max-height:150px;background:rgba(0,0,0,0.95);color:#0f0;font-family:monospace;font-size:10px;padding:10px;border-radius:10px;z-index:99999;overflow-y:auto;border:1px solid #333;box-shadow:0 0 10px rgba(0,0,0,0.5);display:flex;flex-direction:column;';
         
         let header = document.createElement('div');
         header.style.cssText = 'display:flex; justify-content:space-between; margin-bottom:5px; border-bottom:1px solid #333; padding-bottom:5px;';
-        header.innerHTML = '<b>ЛОГИ СЕТИ</b> <span style="color:#f44; cursor:pointer; padding:0 5px;" onclick="document.getElementById(\'debug-log-box\').style.display=\'none\'">[X] Закрыть</span>';
+        header.innerHTML = '<b>ЛОГИ</b> <span style="color:#f44; cursor:pointer; padding:0 5px;" onclick="document.getElementById(\'debug-log-box\').style.display=\'none\'">[X]</span>';
         logBox.appendChild(header);
         
         let content = document.createElement('div');
@@ -21,7 +21,7 @@ function showLog(msg, isError = false) {
     const content = document.getElementById('debug-log-content');
     const p = document.createElement('div');
     p.style.color = isError ? '#f44' : '#0f0';
-    p.style.marginBottom = '4px';
+    p.style.marginBottom = '2px';
     p.textContent = `> ${msg}`;
     content.appendChild(p);
     logBox.scrollTop = logBox.scrollHeight;
@@ -57,31 +57,29 @@ if (tg) {
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
         MY_TG_ID = tg.initDataUnsafe.user.id;
         MY_NAME = tg.initDataUnsafe.user.first_name + (tg.initDataUnsafe.user.last_name ? ' ' + tg.initDataUnsafe.user.last_name : '');
-        showLog('Telegram ID: ' + MY_TG_ID);
+        showLog('TG ID: ' + MY_TG_ID);
     }
 }
 
 function escapeHTML(str) {
     if (!str) return '';
-    return str.toString().replace(/[&<>'"]/g, 
-        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-    );
+    return str.toString().replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
 // ==========================================
-// 2. API МОДУЛЬ (ANILIST С НОВЫМ ПРОКСИ)
+// 2. API МОДУЛЬ (ANILIBERTY)
 // ==========================================
 const API = {
-    BASE_URL: 'https://graphql.anilist.co',
+    BASE_URL: 'https://api.anilibria.app/api/v1',
     PROXY_URL: 'https://api.allorigins.win/raw?url=',
     
     _cache: new Map(),
     _cacheTTL: 15 * 60 * 1000,
     _queue: Promise.resolve(),
 
-    async _fetch(query, variables = {}) {
-        const cacheKey = JSON.stringify({ query, variables });
-        showLog(`Запрос к AniList...`);
+    async _fetch(endpoint) {
+        const cacheKey = endpoint;
+        showLog(`Запрос к AniLiberty: ${endpoint.substring(0, 30)}...`);
 
         if (this._cache.has(cacheKey)) {
             const cached = this._cache.get(cacheKey);
@@ -96,29 +94,19 @@ const API = {
             await new Promise(r => setTimeout(r, 500));
             
             try {
-                const url = this.PROXY_URL + encodeURIComponent(this.BASE_URL);
+                const url = this.PROXY_URL + encodeURIComponent(this.BASE_URL + endpoint);
                 showLog(`Отправка fetch...`);
                 
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json', 
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ query, variables })
-                });
-
+                const response = await fetch(url);
                 showLog(`Ответ получен. Статус: ${response.status}`);
 
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 
                 const data = await response.json();
-                showLog(`Данные распарсены (Ошибки: ${data.errors ? 'ДА' : 'НЕТ'})`);
+                showLog(`Данные получены`);
 
-                if (data.errors) throw new Error(data.errors[0].message);
-                
-                this._cache.set(cacheKey, { data: data.data, time: Date.now() });
-                return data.data;
+                this._cache.set(cacheKey, { data: data, time: Date.now() });
+                return data;
             } catch (e) {
                 showLog(`❌ ОШИБКА: ${e.message}`, true);
                 console.error('❌ [API] Ошибка запроса:', e);
@@ -131,105 +119,62 @@ const API = {
     },
 
     async getCatalog(page = 1, limit = 12) {
-        const query = `
-            query ($page: Int, $perPage: Int) {
-                Page(page: $page, perPage: $perPage) {
-                    media(type: ANIME, sort: POPULARITY_DESC) {
-                        id title { romaji english } coverImage { large } averageScore episodes status genres
-                    }
-                }
-            }
-        `;
-        const data = await this._fetch(query, { page, perPage: limit });
-        if (!data || !data.Page) return [];
-        return data.Page.media.map(a => this._convertAnime(a));
+        const data = await this._fetch(`/anime/releases/latest?page=${page}&items_per_page=${limit}`);
+        if (!data || !data.data) return [];
+        return data.data.map(a => this._convertAnime(a));
     },
 
     async searchAnime(queryStr, page = 1, limit = 12) {
         if (!queryStr || queryStr.length < 2) return [];
-        const query = `
-            query ($page: Int, $perPage: Int, $search: String) {
-                Page(page: $page, perPage: $perPage) {
-                    media(type: ANIME, search: $search) {
-                        id title { romaji english } coverImage { large } averageScore episodes status genres
-                    }
-                }
-            }
-        `;
-        const data = await this._fetch(query, { page, perPage: limit, search: queryStr });
-        if (!data || !data.Page) return [];
-        return data.Page.media.map(a => this._convertAnime(a));
+        const data = await this._fetch(`/anime/releases/latest?search=${encodeURIComponent(queryStr)}&page=${page}&items_per_page=${limit}`);
+        if (!data || !data.data) return [];
+        return data.data.map(a => this._convertAnime(a));
     },
 
     async getByGenre(genreId, page = 1, limit = 12) {
-        const query = `
-            query ($page: Int, $perPage: Int, $genre: String) {
-                Page(page: $page, perPage: $perPage) {
-                    media(type: ANIME, genre: $genre, sort: POPULARITY_DESC) {
-                        id title { romaji english } coverImage { large } averageScore episodes status genres
-                    }
-                }
-            }
-        `;
-        const data = await this._fetch(query, { page, perPage: limit, genre: genreId });
-        if (!data || !data.Page) return [];
-        return data.Page.media.map(a => this._convertAnime(a));
+        const data = await this._fetch(`/anime/releases/latest?genres=${genreId}&page=${page}&items_per_page=${limit}`);
+        if (!data || !data.data) return [];
+        return data.data.map(a => this._convertAnime(a));
     },
 
     async getAnimeDetails(id) {
-        const cleanId = parseInt(id.toString().replace('anilist_', ''));
-        const query = `
-            query ($id: Int) {
-                Media(id: $id, type: ANIME) {
-                    id title { romaji english } coverImage { extraLarge } bannerImage description averageScore episodes status genres
-                }
-            }
-        `;
-        const data = await this._fetch(query, { id: cleanId });
-        if (!data || !data.Media) return null;
-        return this._convertAnime(data.Media, true);
+        const cleanId = id.toString().replace('anilibria_', '');
+        const data = await this._fetch(`/anime/releases/${cleanId}`);
+        if (!data || !data.data) return null;
+        return this._convertAnime(data.data, true);
     },
 
     async getRandom(limit = 1) {
-        const randomPage = Math.floor(Math.random() * 50) + 1;
-        const query = `
-            query ($page: Int) {
-                Page(page: $page, perPage: 25) {
-                    media(type: ANIME, sort: SCORE_DESC) {
-                        id title { romaji english } coverImage { large } averageScore episodes status genres
-                    }
-                }
-            }
-        `;
-        const data = await this._fetch(query, { page: randomPage });
-        if (!data || !data.Page) return [];
-        const valid = data.Page.media.filter(a => a.averageScore >= 60).map(a => this._convertAnime(a));
+        const randomPage = Math.floor(Math.random() * 20) + 1;
+        const data = await this._fetch(`/anime/releases/latest?page=${randomPage}&items_per_page=20`);
+        if (!data || !data.data) return [];
+        const valid = data.data.filter(a => a.poster?.original).map(a => this._convertAnime(a));
         return valid.sort(() => Math.random() - 0.5).slice(0, limit);
     },
 
     _convertAnime(a, full = false) {
-        let title = a.title.romaji || a.title.english || 'Без названия';
-        let poster = a.coverImage.large || a.coverImage.extraLarge || '';
-        const genres = a.genres || [];
+        let title = a.names?.ru || a.names?.en || 'Без названия';
+        let poster = a.poster?.original || a.poster?.preview || '';
         
+        const genres = (a.genres || []).map(g => g.name);
         let statusText = 'Неизвестно';
-        if (a.status === 'RELEASING') statusText = 'Онгоинг';
-        if (a.status === 'FINISHED') statusText = 'Завершено';
-        if (a.status === 'NOT_YET_RELEASED') statusText = 'Анонс';
+        if (a.status?.code === 1) statusText = 'Онгоинг';
+        if (a.status?.code === 2) statusText = 'Завершено';
+        if (a.status?.code === 3) statusText = 'Анонс';
 
         return {
-            id: 'anilist_' + a.id,
+            id: 'anilibria_' + a.id,
             rawId: a.id,
             title: title,
-            year: '--',
-            episodes: a.episodes || '?',
+            year: a.season?.year || '--',
+            episodes: a.type?.episodes || a.type?.length || '?',
             images: { jpg: { image_url: poster } },
-            description: a.description ? a.description.replace(/<[^>]*>/g, '') : 'Описание отсутствует.',
+            description: a.description || 'Описание отсутствует.',
             genres: genres,
-            score: a.averageScore ? (a.averageScore / 10) : 0,
+            score: a.statistics?.rating || 0,
             status: statusText,
-            kind: a.format || 'TV',
-            source: 'AniList'
+            kind: a.type?.full_string || 'TV',
+            source: 'AniLiberty'
         };
     }
 };
@@ -253,14 +198,14 @@ let previousScreen = 'catalog';
 let searchDebounceTimer;
 
 const GENRES = [
-    { id: 'Action', name: 'Экшен' }, { id: 'Romance', name: 'Романтика' }, 
-    { id: 'Comedy', name: 'Комедия' }, { id: 'Fantasy', name: 'Фэнтези' }, 
-    { id: 'Drama', name: 'Драма' }, { id: 'Adventure', name: 'Приключения' }, 
-    { id: 'Sci-Fi', name: 'Фантастика' }
+    { id: '1', name: 'Экшен' }, { id: '22', name: 'Романтика' }, 
+    { id: '4', name: 'Комедия' }, { id: '10', name: 'Фэнтези' }, 
+    { id: '8', name: 'Драма' }, { id: '2', name: 'Приключения' }, 
+    { id: '24', name: 'Фантастика' }
 ];
 const YEARS = [{ id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' }, { id: '2021', name: '2021' }, { id: '2020', name: '2020' }];
-const STATUSES = [{ id: 'RELEASING', name: 'Онгоинг' }, { id: 'FINISHED', name: 'Завершено' }, { id: 'NOT_YET_RELEASED', name: 'Анонс' }];
-const SORTS = [{ id: 'POPULARITY_DESC', name: 'По популярности' }, { id: 'SCORE_DESC', name: 'По рейтингу' }, { id: 'START_DATE_DESC', name: 'Новинки' }];
+const STATUSES = [{ id: 'ongoing', name: 'Онгоинг' }, { id: 'released', name: 'Завершено' }, { id: 'anons', name: 'Анонс' }];
+const SORTS = [{ id: 'popularity', name: 'По популярности' }, { id: 'ranked', name: 'По рейтингу' }, { id: 'aired_on', name: 'Новинки' }];
 
 // ==========================================
 // 4. НАВИГАЦИЯ
