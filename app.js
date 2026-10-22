@@ -67,7 +67,7 @@ function escapeHTML(str) {
 }
 
 // ==========================================
-// 2. МУЛЬТИ-API МОДУЛЬ (ИСПРАВЛЕННЫЙ)
+// 2. МУЛЬТИ-API МОДУЛЬ
 // ==========================================
 const WORKER_URL = 'https://onika-app.support-onikaanime.workers.dev/?target=';
 
@@ -76,9 +76,8 @@ const API_AniLibria = {
     BASE_URL: 'https://api.anilibria.app/api/v1',
     async fetch(endpoint) {
         const fullUrl = this.BASE_URL + endpoint;
-        // Двойное кодирование, чтобы ? и & не ломали URL параметра target
-        const encodedUrl = encodeURIComponent(fullUrl);
-        const res = await fetch(WORKER_URL + encodedUrl);
+        // Отправляем как есть, без двойного кодирования
+        const res = await fetch(WORKER_URL + fullUrl);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
     },
@@ -168,8 +167,7 @@ const API_AniList = {
 const API_Shikimori = {
     BASE_URL: 'https://shikimori.one/api/graphql',
     async fetch(query) {
-        // Тут тоже нужно двойное кодирование для GraphQL (хотя это POST, но на всякий случай)
-        const res = await fetch(WORKER_URL + encodeURIComponent(this.BASE_URL), {
+        const res = await fetch(WORKER_URL + this.BASE_URL, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query })
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -685,8 +683,6 @@ async function loadCatalog(reset = false) {
         
         if (currentFilters.search) {
             items = await API.searchAnime(currentFilters.search, catalogPage, 12);
-        } else if (currentFilters.genre) {
-            items = await API.getCatalog(catalogPage, 12);
         } else {
             items = await API.getCatalog(catalogPage, 12);
         }
@@ -1019,7 +1015,7 @@ function switchProfileTab(tab) {
         if(btnSettings) btnSettings.classList.add('active'); 
         if(contentProfile) contentProfile.style.display = 'none'; 
         if(contentSettings) contentSettings.style.display = 'block'; 
-        initApiSettings(); // Инициализация настроек API
+        initApiSettings(); 
     } 
 }
 
