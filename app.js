@@ -1,9 +1,9 @@
 // ==========================================
-// СИСТЕМА ВИЗУАЛЬНЫХ ЛОГОВ (Скрыта по умолчанию, 5 кликов по верху для открытия)
+// СИСТЕМА ВИЗУАЛЬНЫХ ЛОГОВ (Скрыта, открывается 5 кликами по верху)
 // ==========================================
 let clickCount = 0;
 document.addEventListener('click', (e) => {
-    if (e.clientY < 50) { // Верхняя зона экрана
+    if (e.clientY < 50) {
         clickCount++;
         if (clickCount >= 5) {
             clickCount = 0;
@@ -81,7 +81,6 @@ function escapeHTML(str) {
     return str.toString().replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
-// Безопасный парсинг URL (защита от XSS в атрибутах src/href)
 function safeUrl(url) {
     if (!url) return '';
     try {
@@ -91,11 +90,11 @@ function safeUrl(url) {
 }
 
 // ==========================================
-// 2. МУЛЬТИ-API МОДУЛЬ (RELAXDEV PROXY)
+// 2. МУЛЬТИ-API МОДУЛЬ
 // ==========================================
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 
-// --- API ANILIBRIA ---
+// --- API ANILIBRIA (Исправлено под новую структуру JSON) ---
 const API_AniLibria = {
     BASE_URL: 'https://anilibria.top/api/v1',
     async fetch(endpoint) {
@@ -106,32 +105,53 @@ const API_AniLibria = {
     },
     async getCatalog(page, limit) {
         const data = await this.fetch(`/anime/releases/latest?page=${page}&items_per_page=${limit}`);
-        return data.data ? data.data.map(this.convert) : [];
+        // Если ответ сразу массив, или если он обернут в data
+        const items = Array.isArray(data) ? data : (data.data || []);
+        return items.map(this.convert);
     },
     async searchAnime(q, page, limit) {
         const data = await this.fetch(`/anime/releases/latest?search=${encodeURIComponent(q)}&page=${page}&items_per_page=${limit}`);
-        return data.data ? data.data.map(this.convert) : [];
+        const items = Array.isArray(data) ? data : (data.data || []);
+        return items.map(this.convert);
     },
     async getDetails(id) {
         const cleanId = id.replace('anilibria_', '');
         const data = await this.fetch(`/anime/releases/${cleanId}`);
-        return data.data ? this.convert(data.data) : null;
+        // Детали могут быть как объектом, так и в data
+        const item = data.data ? data.data : data;
+        return item ? this.convert(item) : null;
     },
     async getRandom(limit) {
         const data = await this.fetch(`/anime/releases/latest?page=${Math.floor(Math.random()*10)+1}&items_per_page=20`);
-        return data.data ? data.data.filter(a=>a.poster?.original).sort(()=>Math.random()-0.5).slice(0, limit).map(this.convert) : [];
+        const items = Array.isArray(data) ? data : (data.data || []);
+        return items.filter(a => a.poster).sort(()=>Math.random()-0.5).slice(0, limit).map(this.convert);
     },
     convert(a) {
+        // Безопасная обработка жанров
+        let genresList = [];
+        if (Array.isArray(a.genres)) {
+            genresList = a.genres.map(g => g.name || '');
+        }
+
+        // Безопасная обработка статуса
+        let statusText = 'Анонс';
+        if (a.status && a.status.value === 'ISSUE') statusText = 'Онгоинг';
+        if (a.status && a.status.value === 'RELEASED') statusText = 'Завершено';
+
+        // Достаем картинку (на скрине она в poster.src)
+        const posterUrl = a.poster?.src || a.poster?.preview || '';
+
         return {
             id: 'anilibria_' + a.id, rawId: a.id,
             title: a.name?.main || a.name?.english || 'Без названия',
-            year: a.year || '--', episodes: a.type?.episodes || '?',
-            images: { jpg: { image_url: a.poster?.original || '' } },
+            year: a.year || '--', 
+            episodes: a.series_episodes_count || '?', 
+            images: { jpg: { image_url: posterUrl } },
             description: a.description || 'Описание отсутствует.',
-            genres: (a.genres || []).map(g => g.name),
-            score: a.statistics?.rating || 0,
-            status: a.status?.code === 1 ? 'Онгоинг' : a.status?.code === 2 ? 'Завершено' : 'Анонс',
-            kind: a.type?.full_string || 'TV'
+            genres: genresList,
+            score: a.age_rating?.value || 0, 
+            status: statusText,
+            kind: a.type?.value || 'TV'
         };
     }
 };
@@ -714,7 +734,7 @@ async function loadCatalog(reset = false) {
         if (reset) grid.innerHTML = '';
         
         if (!items || items.length === 0) { 
-            if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Ничего не найдено (Проблема с API)</div>'; 
+            if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Ничего не найдено</div>'; 
             hasMoreCatalog = false; 
             if (loadMoreBtn) loadMoreBtn.style.display = 'none'; 
             return; 
@@ -1102,7 +1122,6 @@ async function loadHomePage() {
     try {
         showLog('1. Параллельная загрузка данных главной...');
         
-        // Загружаем всё параллельно без задержек
         const [heroItems, popularItems, recItems] = await Promise.all([
             API.getRandom(5),
             API.getCatalog(1, 6),
