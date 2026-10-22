@@ -81,10 +81,8 @@ function escapeHTML(str) {
     return str.toString().replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
-// ИСПРАВЛЕНИЕ: Функция теперь добавляет домен к относительным ссылкам
 function safeUrl(url) {
     if (!url) return '';
-    // Если ссылка относительная (начинается с /), добавляем домен
     if (url.startsWith('/')) {
         return 'https://anilibria.top' + url;
     }
@@ -114,7 +112,9 @@ const API_AniLibria = {
         return items.map(this.convert);
     },
     async searchAnime(q, page, limit) {
-        const data = await this.fetch(`/anime/releases/latest?search=${encodeURIComponent(q)}&page=${page}&items_per_page=${limit}`);
+        // Используем правильный эндпоинт для поиска
+        const data = await this.fetch(`/app/search/releases?query=${encodeURIComponent(q)}&page=${page}&limit=${limit}`);
+        // Проверяем, что вернулось: массив или объект с data
         const items = Array.isArray(data) ? data : (data.data || []);
         return items.map(this.convert);
     },
@@ -140,16 +140,19 @@ const API_AniLibria = {
         if (a.status && a.status.value === 'RELEASED') statusText = 'Завершено';
 
         const posterUrl = a.poster?.src || a.poster?.preview || '';
-
-        let rawRating = a.age_rating?.value || 0;
+        
+        // ИСПРАВЛЕНИЕ: Берем рейтинг из statistics.rating, количество серий из episodes_total
+        let rawRating = a.statistics?.rating || 0;
         let safeScore = Number(rawRating);
         if (isNaN(safeScore)) safeScore = 0;
+
+        let epCount = a.episodes_total || '?';
 
         return {
             id: 'anilibria_' + a.id, rawId: a.id,
             title: a.name?.main || a.name?.english || 'Без названия',
             year: a.year || '--', 
-            episodes: a.series_episodes_count || '?', 
+            episodes: epCount, 
             images: { jpg: { image_url: posterUrl } },
             description: a.description || 'Описание отсутствует.',
             genres: genresList,
