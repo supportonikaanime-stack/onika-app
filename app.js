@@ -67,7 +67,7 @@ function escapeHTML(str) {
 }
 
 // ==========================================
-// 2. МУЛЬТИ-API МОДУЛЬ
+// 2. МУЛЬТИ-API МОДУЛЬ (ИСПРАВЛЕННЫЙ)
 // ==========================================
 const WORKER_URL = 'https://onika-app.support-onikaanime.workers.dev/?target=';
 
@@ -75,7 +75,10 @@ const WORKER_URL = 'https://onika-app.support-onikaanime.workers.dev/?target=';
 const API_AniLibria = {
     BASE_URL: 'https://api.anilibria.app/api/v1',
     async fetch(endpoint) {
-        const res = await fetch(WORKER_URL + encodeURIComponent(this.BASE_URL + endpoint));
+        const fullUrl = this.BASE_URL + endpoint;
+        // Двойное кодирование, чтобы ? и & не ломали URL параметра target
+        const encodedUrl = encodeURIComponent(fullUrl);
+        const res = await fetch(WORKER_URL + encodedUrl);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
     },
@@ -165,6 +168,7 @@ const API_AniList = {
 const API_Shikimori = {
     BASE_URL: 'https://shikimori.one/api/graphql',
     async fetch(query) {
+        // Тут тоже нужно двойное кодирование для GraphQL (хотя это POST, но на всякий случай)
         const res = await fetch(WORKER_URL + encodeURIComponent(this.BASE_URL), {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query })
         });
@@ -682,7 +686,6 @@ async function loadCatalog(reset = false) {
         if (currentFilters.search) {
             items = await API.searchAnime(currentFilters.search, catalogPage, 12);
         } else if (currentFilters.genre) {
-            // В AniLibria жанры пока не поддерживаются так же просто, но мы оставили кнопки
             items = await API.getCatalog(catalogPage, 12);
         } else {
             items = await API.getCatalog(catalogPage, 12);
@@ -1078,19 +1081,24 @@ let slideInterval;
 
 async function loadHomePage() {
     try {
-        showLog('Загрузка главной (баннер)...');
+        showLog('1. Начинаем загрузку баннера...');
         const heroItems = await API.getRandom(5);
+        
+        showLog('2. Данные от API получены. Формируем баннер...');
         heroData = heroItems.map(a => ({ id: a.id, title: a.title, img: a.images.jpg.image_url, score: a.score ? (a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year }));
+        
+        showLog('3. Отрисовываем слайдер...');
         initHeroSlider();
-        showLog('Баннер загружен');
+        showLog('4. Баннер загружен!');
 
-        showLog('Ожидание 3 секунды перед загрузкой рекомендаций...');
+        showLog('5. Ждем 3 сек перед рекомендациями...');
         setTimeout(async () => {
             try {
-                showLog('Загрузка рекомендаций...');
+                showLog('6. Загрузка рекомендаций...');
                 const recItems = await API.getCatalog(1, 4);
-                const recContainer = document.getElementById('recommended-list');
+                showLog('7. Рекомендации получены. Вставляем в HTML...');
                 
+                const recContainer = document.getElementById('recommended-list');
                 if (recContainer && recItems.length > 0) {
                     recContainer.innerHTML = recItems.map(anime => `
                         <div class="card" onclick="openAnimeDetail('${anime.id}', 'home')">
@@ -1098,7 +1106,9 @@ async function loadHomePage() {
                             <div class="card-title">${escapeHTML(anime.title)}</div>
                         </div>
                     `).join('');
-                    showLog('✅ Рекомендации загружены');
+                    showLog('8. ✅ Рекомендации успешно загружены');
+                } else {
+                    showLog('8. ⚠️ Рекомендации пусты или не найден контейнер', true);
                 }
             } catch (e) {
                 showLog('Ошибка загрузки рекомендаций: ' + e.message, true);
@@ -1106,7 +1116,7 @@ async function loadHomePage() {
         }, 3000);
 
     } catch (e) {
-        showLog('Ошибка загрузки главной: ' + e.message, true);
+        showLog('КРИТИЧЕСКАЯ Ошибка загрузки главной: ' + e.message, true);
         console.error('Ошибка загрузки главной:', e);
     }
 }
