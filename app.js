@@ -67,20 +67,36 @@ function escapeHTML(str) {
 }
 
 // ==========================================
-// 2. МУЛЬТИ-API МОДУЛЬ
+// 2. МУЛЬТИ-API МОДУЛЬ (С FALLBACK)
 // ==========================================
-const WORKER_URL = 'https://onika-app.support-onikaanime.workers.dev/?target=';
+const DENO_PROXY = 'https://rough-ermine-6097.supportonikaanime-stack.deno.net/?target=';
+const CF_PROXY = 'https://onika-app.support-onikaanime.workers.dev/?target=';
 
 // --- API ANILIBRIA ---
 const API_AniLibria = {
     BASE_URL: 'https://anilibria.top/api/v1',
+    
     async fetch(endpoint) {
         const fullUrl = this.BASE_URL + endpoint;
-        // Отправляем как есть, без двойного кодирования
-        const res = await fetch(WORKER_URL + fullUrl);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
+        
+        // Пробуем Deno
+        try {
+            showLog('Пробуем Deno Proxy...');
+            const res = await fetch(DENO_PROXY + fullUrl);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return await res.json();
+        } catch (e) {
+            showLog('Deno упал, пробуем Cloudflare...', true);
+            try {
+                const res = await fetch(CF_PROXY + fullUrl);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return await res.json();
+            } catch (e2) {
+                throw new Error('Все прокси упали: ' + e.message);
+            }
+        }
     },
+
     async getCatalog(page, limit) {
         const data = await this.fetch(`/anime/releases/latest?page=${page}&items_per_page=${limit}`);
         return data.data ? data.data.map(this.convert) : [];
@@ -163,55 +179,6 @@ const API_AniList = {
     }
 };
 
-// --- API SHIKIMORI (через прокси) ---
-const API_Shikimori = {
-    BASE_URL: 'https://shikimori.one/api/graphql',
-    async fetch(query) {
-        const res = await fetch(WORKER_URL + this.BASE_URL, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query })
-        });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const d = await res.json();
-        if (d.errors) throw new Error(d.errors[0].message);
-        return d.data;
-    },
-    async getCatalog(page, limit) {
-        const q = `{animes(page:${page},limit:${limit},order:popularity){id name russian score episodes status poster{originalUrl} genres{name}}}`;
-        const d = await this.fetch(q);
-        return d.animes.map(this.convert);
-    },
-    async searchAnime(search, page, limit) {
-        const q = `{animes(search:"${search}",page:${page},limit:${limit}){id name russian score episodes status poster{originalUrl} genres{name}}}`;
-        const d = await this.fetch(q);
-        return d.animes.map(this.convert);
-    },
-    async getDetails(id) {
-        const cleanId = id.replace('shikimori_', '');
-        const q = `{anime(id:${cleanId}){id name russian description score episodes status poster{originalUrl} genres{name}}}`;
-        const d = await this.fetch(q);
-        return d.anime ? this.convert(d.anime) : null;
-    },
-    async getRandom(limit) {
-        const p = Math.floor(Math.random()*50)+1;
-        const q = `{animes(page:${p},limit:20,order:ranked){id name russian score episodes status poster{originalUrl} genres{name}}}`;
-        const d = await this.fetch(q);
-        return d.animes.filter(a=>a.score>=6).sort(()=>Math.random()-0.5).slice(0,limit).map(this.convert);
-    },
-    convert(a) {
-        return {
-            id: 'shikimori_' + a.id, rawId: a.id,
-            title: a.russian || a.name || 'Без названия',
-            year: '--', episodes: a.episodes || '?',
-            images: { jpg: { image_url: a.poster?.originalUrl || '' } },
-            description: a.description || 'Описание отсутствует.',
-            genres: (a.genres || []).map(g=>g.name),
-            score: a.score || 0,
-            status: a.status === 'ongoing' ? 'Онгоинг' : a.status === 'released' ? 'Завершено' : 'Анонс',
-            kind: 'TV'
-        };
-    }
-};
-
 const API = {
     currentSource: localStorage.getItem('onika_api_source') || 'anilibria',
     _cache: new Map(),
@@ -228,7 +195,6 @@ const API = {
 
     getApi() {
         if (this.currentSource === 'anilist') return API_AniList;
-        if (this.currentSource === 'shikimori') return API_Shikimori;
         return API_AniLibria;
     },
 
@@ -1043,8 +1009,7 @@ function initApiSettings() {
     
     const sources = [
         { id: 'anilibria', name: 'AniLibria (Рус)' },
-        { id: 'anilist', name: 'AniList (Eng)' },
-        { id: 'shikimori', name: 'Shikimori (Рус)' }
+        { id: 'anilist', name: 'AniList (Eng)' }
     ];
 
     let html = '<div style="padding: 20px;">';
@@ -1077,23 +1042,17 @@ let slideInterval;
 
 async function loadHomePage() {
     try {
-        showLog('1. Начинаем загрузку баннера...');
+        showLog('1. Загрузка баннера...');
         const heroItems = await API.getRandom(5);
-        
-        showLog('2. Данные от API получены. Формируем баннер...');
+        showLog('2. Данные получены. Отрисовка...');
         heroData = heroItems.map(a => ({ id: a.id, title: a.title, img: a.images.jpg.image_url, score: a.score ? (a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year }));
-        
-        showLog('3. Отрисовываем слайдер...');
         initHeroSlider();
-        showLog('4. Баннер загружен!');
+        showLog('3. Баннер загружен!');
 
-        showLog('5. Ждем 3 сек перед рекомендациями...');
         setTimeout(async () => {
             try {
-                showLog('6. Загрузка рекомендаций...');
+                showLog('4. Загрузка рекомендаций...');
                 const recItems = await API.getCatalog(1, 4);
-                showLog('7. Рекомендации получены. Вставляем в HTML...');
-                
                 const recContainer = document.getElementById('recommended-list');
                 if (recContainer && recItems.length > 0) {
                     recContainer.innerHTML = recItems.map(anime => `
@@ -1102,18 +1061,15 @@ async function loadHomePage() {
                             <div class="card-title">${escapeHTML(anime.title)}</div>
                         </div>
                     `).join('');
-                    showLog('8. ✅ Рекомендации успешно загружены');
-                } else {
-                    showLog('8. ⚠️ Рекомендации пусты или не найден контейнер', true);
+                    showLog('5. ✅ Рекомендации загружены');
                 }
             } catch (e) {
-                showLog('Ошибка загрузки рекомендаций: ' + e.message, true);
+                showLog('Ошибка рекомендаций: ' + e.message, true);
             }
         }, 3000);
 
     } catch (e) {
-        showLog('КРИТИЧЕСКАЯ Ошибка загрузки главной: ' + e.message, true);
-        console.error('Ошибка загрузки главной:', e);
+        showLog('Ошибка главной: ' + e.message, true);
     }
 }
 
