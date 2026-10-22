@@ -94,7 +94,7 @@ function safeUrl(url) {
 // ==========================================
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 
-// --- API ANILIBRIA (Исправлено под новую структуру JSON) ---
+// --- API ANILIBRIA ---
 const API_AniLibria = {
     BASE_URL: 'https://anilibria.top/api/v1',
     async fetch(endpoint) {
@@ -105,7 +105,6 @@ const API_AniLibria = {
     },
     async getCatalog(page, limit) {
         const data = await this.fetch(`/anime/releases/latest?page=${page}&items_per_page=${limit}`);
-        // Если ответ сразу массив, или если он обернут в data
         const items = Array.isArray(data) ? data : (data.data || []);
         return items.map(this.convert);
     },
@@ -117,29 +116,36 @@ const API_AniLibria = {
     async getDetails(id) {
         const cleanId = id.replace('anilibria_', '');
         const data = await this.fetch(`/anime/releases/${cleanId}`);
-        // Детали могут быть как объектом, так и в data
         const item = data.data ? data.data : data;
         return item ? this.convert(item) : null;
     },
     async getRandom(limit) {
         const data = await this.fetch(`/anime/releases/latest?page=${Math.floor(Math.random()*10)+1}&items_per_page=20`);
         const items = Array.isArray(data) ? data : (data.data || []);
-        return items.filter(a => a.poster).sort(()=>Math.random()-0.5).slice(0, limit).map(this.convert);
+        // ИСПРАВЛЕНИЕ: Проверяем наличие картинки в любом из полей
+        return items.filter(a => (a.poster && (a.poster.src || a.poster.preview)) || (a.images && a.images.length > 0))
+                    .sort(()=>Math.random()-0.5)
+                    .slice(0, limit)
+                    .map(this.convert);
     },
     convert(a) {
-        // Безопасная обработка жанров
         let genresList = [];
         if (Array.isArray(a.genres)) {
             genresList = a.genres.map(g => g.name || '');
         }
 
-        // Безопасная обработка статуса
         let statusText = 'Анонс';
         if (a.status && a.status.value === 'ISSUE') statusText = 'Онгоинг';
         if (a.status && a.status.value === 'RELEASED') statusText = 'Завершено';
 
-        // Достаем картинку (на скрине она в poster.src)
-        const posterUrl = a.poster?.src || a.poster?.preview || '';
+        // Достаем картинку
+        let posterUrl = '';
+        if (a.poster) posterUrl = a.poster.src || a.poster.preview;
+        else if (a.images && a.images.length > 0) posterUrl = a.images[0].preview; // На случай другой структуры
+
+        // ИСПРАВЛЕНИЕ: Безопасное извлечение рейтинга (может быть строкой или null)
+        let scoreNum = Number(a.age_rating?.value || a.statistics?.rating || a.score || 0);
+        if (isNaN(scoreNum)) scoreNum = 0;
 
         return {
             id: 'anilibria_' + a.id, rawId: a.id,
@@ -149,7 +155,7 @@ const API_AniLibria = {
             images: { jpg: { image_url: posterUrl } },
             description: a.description || 'Описание отсутствует.',
             genres: genresList,
-            score: a.age_rating?.value || 0, 
+            score: scoreNum, // Гарантированно число
             status: statusText,
             kind: a.type?.value || 'TV'
         };
@@ -743,7 +749,7 @@ async function loadCatalog(reset = false) {
         items.forEach(anime => { 
             const title = escapeHTML(anime.title); 
             const img = safeUrl(anime.images.jpg.image_url); 
-            const score = anime.score ? (anime.score).toFixed(1) : '?'; 
+            const score = anime.score ? Number(anime.score).toFixed(1) : '?'; 
             const cardHtml = `<div class="catalog-card" onclick="openAnimeDetail('${anime.id}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`; 
             grid.insertAdjacentHTML('beforeend', cardHtml);
         });
@@ -780,7 +786,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         
         const title = escapeHTML(anime.title);
         const desc = escapeHTML(anime.description);
-        const score = anime.score ? (anime.score).toFixed(1) : '?';
+        const score = anime.score ? Number(anime.score).toFixed(1) : '?';
         const poster = safeUrl(anime.images.jpg.image_url);
         
         let statusColor = '#2ecc71'; 
@@ -914,7 +920,7 @@ function renderMyList() {
         validItems.forEach(anime => {
             const title = escapeHTML(anime.title); 
             const img = safeUrl(anime.images.jpg.image_url); 
-            const score = anime.score ? (anime.score).toFixed(1) : '?';
+            const score = anime.score ? Number(anime.score).toFixed(1) : '?';
             const favEntry = favs.find(a => a.id === anime.id); 
             const currentStatus = favEntry ? favEntry.status : '';
             let statusIcon = '📚'; 
@@ -1131,7 +1137,8 @@ async function loadHomePage() {
         showLog('2. Данные получены. Отрисовка баннера...');
         heroData = heroItems.map(a => ({ 
             id: a.id, title: a.title, img: a.images.jpg.image_url, 
-            score: a.score ? (a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year 
+            score: a.score ? Number(a.score).toFixed(1) : '?', // ИСПРАВЛЕНИЕ
+            type: a.kind || 'TV', year: a.year 
         }));
         initHeroSlider();
 
