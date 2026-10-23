@@ -143,7 +143,6 @@ const API_Shikimori = {
     }
 };
 
-// Глобальный API
 const API = {
     _cache: new Map(),
 
@@ -241,9 +240,9 @@ async function syncProfileToDB() {
         await supabaseClient.from('users').upsert({
             tg_id: MY_TG_ID, 
             name: MY_NAME, 
-            avatar_url: MY_PHOTO_URL, // Отправляем в БД ссылку из Telegram
+            avatar_url: MY_PHOTO_URL,
             xp: stats.xp,
-            coins: stats.coins, // Сохраняем монеты
+            coins: stats.coins,
             episodes_watched: stats.episodesWatched, 
             minutes_watched: stats.minutesWatched, 
             days_streak: stats.daysStreak,
@@ -257,10 +256,14 @@ function copyMyId() {
     navigator.clipboard.writeText(MY_TG_ID).then(() => { showToast('📋 ID скопирован!'); }).catch(() => {});
 }
 
+// Функция для заглушки баннера
+function openBannerMenu() {
+    showToast('🖼️ Система баннеров в разработке!');
+}
+
 function loadProfileData() {
     const avatarEl = document.getElementById('tg-avatar'); 
     
-    // ИСПРАВЛЕНИЕ: Берем аватарку ТОЛЬКО из Telegram
     if (avatarEl && MY_TG_ID) { 
         if (MY_PHOTO_URL) {
             avatarEl.innerHTML = `<img src="${safeUrl(MY_PHOTO_URL)}" style="width:100%; height:100%; object-fit:cover;">`; 
@@ -290,8 +293,6 @@ function loadProfileData() {
     setElText('user-xp-current', xpCurrentLevel); 
     setElText('user-xp-next', xpForNextLevel); 
     setElWidth('user-xp-bar', progressPercent + '%'); 
-    
-    // Вывод монет
     setElText('user-coins', stats.coins);
 
     setElText('ach-points', stats.unlockedAchievements.length * 10); 
@@ -304,9 +305,15 @@ function loadProfileData() {
     setElWidth('modal-xp-bar', progressPercent + '%'); 
     setElText('modal-ach-earned', stats.unlockedAchievements.length); 
     
+    // Исправлено: Теперь выводится реальная награда следующего достижения
     const nextAch = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id)); 
-    if (nextAch) setElText('next-ach-name', nextAch.name); 
-    else setElText('next-ach-name', 'Все выполнено!'); 
+    if (nextAch) {
+        setElText('next-ach-name', nextAch.name); 
+        setElText('next-ach-reward', nextAch.reward);
+    } else {
+        setElText('next-ach-name', 'Все выполнено!'); 
+        setElText('next-ach-reward', '0');
+    }
 
     syncProfileToDB();
 }
@@ -336,7 +343,9 @@ async function loadFriends() {
             if (inUsers && inUsers.length > 0) {
                 html += '<h3 style="padding: 0 20px 10px; font-size: 16px; color: #ffd700;">🔔 Заявки в друзья</h3>';
                 inUsers.forEach(u => {
-                    html += `<div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);"><div class="friend-avatar">${u.avatar_url ? `<img src="${safeUrl(u.avatar_url)}">` : escapeHTML(u.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(u.name)}</h3><p>ID: ${escapeHTML(u.tg_id)}</p></div><div style="display: flex; gap: 5px; margin-left: auto;"><button onclick="acceptFriend(${u.tg_id})" style="background: #2ecc71; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✓</button><button onclick="rejectFriend(${u.tg_id})" style="background: #e74c3c; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✕</button></div></div>`;
+                    // ИСПРАВЛЕНО: Добавлена проверка на битые ссылки (onerror)
+                    const avatarUrl = u.avatar_url ? safeUrl(u.avatar_url) : '';
+                    html += `<div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${escapeHTML(u.name[0].toUpperCase())}';">` : escapeHTML(u.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(u.name)}</h3><p>ID: ${escapeHTML(u.tg_id)}</p></div><div style="display: flex; gap: 5px; margin-left: auto;"><button onclick="acceptFriend(${u.tg_id})" style="background: #2ecc71; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✓</button><button onclick="rejectFriend(${u.tg_id})" style="background: #e74c3c; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✕</button></div></div>`;
                 });
             }
         }
@@ -351,7 +360,8 @@ async function loadFriends() {
             
             if (accUsers && accUsers.length > 0) {
                 accUsers.forEach(friend => {
-                    html += `<div class="friend-card" onclick="openFriendProfile(${friend.tg_id}, '${escapeHTML(friend.name).replace(/'/g, "\\'")}')"><div class="friend-avatar">${friend.avatar_url ? `<img src="${safeUrl(friend.avatar_url)}">` : escapeHTML(friend.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(friend.name)}</h3><p>ID: ${escapeHTML(friend.tg_id)} • Ур. ${Math.floor(friend.xp / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
+                    const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
+                    html += `<div class="friend-card" onclick="openFriendProfile(${friend.tg_id}, '${escapeHTML(friend.name).replace(/'/g, "\\'")}')"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${escapeHTML(friend.name[0].toUpperCase())}';">` : escapeHTML(friend.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(friend.name)}</h3><p>ID: ${escapeHTML(friend.tg_id)} • Ур. ${Math.floor(friend.xp / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
                 });
             }
         }
@@ -382,7 +392,8 @@ async function searchFriend() {
         const { data: friendCheck } = await supabaseClient.from('friends').select('*').eq('user_id', MY_TG_ID).eq('friend_id', id);
         if (friendCheck && friendCheck.length > 0) { resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Заявка уже отправлена или вы друзья</div>'; return; }
 
-        resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${userData.avatar_url ? `<img src="${safeUrl(userData.avatar_url)}">` : escapeHTML(userData.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(userData.name)}</h3><p>ID: ${escapeHTML(userData.tg_id)}</p></div><button onclick="sendFriendRequest(${userData.tg_id})" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Заявка</button></div>`;
+        const avatarUrl = userData.avatar_url ? safeUrl(userData.avatar_url) : '';
+        resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${escapeHTML(userData.name[0].toUpperCase())}';">` : escapeHTML(userData.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(userData.name)}</h3><p>ID: ${escapeHTML(userData.tg_id)}</p></div><button onclick="sendFriendRequest(${userData.tg_id})" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Заявка</button></div>`;
     } catch (e) { console.error(e); resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Ошибка поиска</div>'; }
 }
 
@@ -437,22 +448,38 @@ async function openFriendProfile(id, name) {
 
         const lvl = Math.floor(friend.xp / 100) + 1;
         const rank = LEVEL_TITLES[Math.min(lvl - 1, 99)];
+        const coins = friend.coins || 0;
+        
+        // Для профиля друга считаем кол-во достижений (заглушка, если их нет в БД, берем 1)
+        // На самом деле, чтобы видеть достижения друга, нам нужно их хранить в БД. 
+        // Пока делаем визуальную заглушку на основе его уровня.
+        const friendAchCount = Math.min(Math.floor(lvl / 2) + 1, 50); 
         
         let lastWatchedHtml = '';
         if (friend.last_watched) {
             lastWatchedHtml = `<div style="margin-top: 15px; padding: 15px; background: rgba(91,91,255,0.1); border-radius: 12px; border: 1px solid rgba(91,91,255,0.2);"><div style="font-size: 12px; color: #888; margin-bottom: 5px;">Последнее аниме:</div><div style="font-size: 16px; font-weight: bold; color: #fff;">ID: ${escapeHTML(friend.last_watched)}</div></div>`;
         }
 
+        const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
+        const avatarHtml = avatarUrl 
+            ? `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.parentElement.innerHTML='${escapeHTML(friend.name[0].toUpperCase())}';">` 
+            : escapeHTML(friend.name[0].toUpperCase());
+
         container.innerHTML = `
             <div class="user-card">
                 <div class="avatar-container">
                     <div class="avatar" style="background: linear-gradient(135deg, #5b5bff, #b44aff); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff; overflow: hidden;">
-                        ${friend.avatar_url ? `<img src="${safeUrl(friend.avatar_url)}" style="width: 100%; height: 100%; object-fit: cover;">` : escapeHTML(friend.name[0].toUpperCase())}
+                        ${avatarHtml}
                     </div>
                 </div>
                 <div class="user-details">
                     <h2>${escapeHTML(friend.name)}</h2>
+                    <div class="coin-balance" style="margin-bottom: 15px;">
+                        <span>🪙</span>
+                        <span>${coins}</span>
+                    </div>
                     <div style="background: rgba(91,91,255,0.1); border: 1px solid rgba(91,91,255,0.3); border-radius: 12px; padding: 6px 15px; display: inline-block; margin: 5px 0 15px;"><span style="color: #888; font-size: 12px;">ID:</span> <span style="color: #fff; font-weight: bold;">${escapeHTML(friend.tg_id)}</span></div>
+                    
                     <div class="level-row">
                         <div class="level-badge"><span>${lvl}</span></div>
                         <div class="level-info">
@@ -463,6 +490,17 @@ async function openFriendProfile(id, name) {
                     </div>
                 </div>
             </div>
+
+            <div class="achievements-card" style="margin-top: 15px; cursor: default;">
+                <div class="ach-header">
+                    <div class="ach-icon-big">🏆</div>
+                    <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p>${friendAchCount * 10} очков</p></div>
+                    <div class="ach-total">${friendAchCount}/50</div>
+                </div>
+                <div class="ach-progress-wrap"><div class="ach-progress-bar" style="width: ${(friendAchCount / 50) * 100}%;"></div></div>
+                <div style="text-align: center; color: #888; font-size: 12px; margin-top: 10px;">Просмотр достижений друзей скоро появится</div>
+            </div>
+
             ${lastWatchedHtml}
             <button onclick="removeFriend(${friend.tg_id})" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">🗑️ Удалить из друзей</button>
         `;
@@ -830,6 +868,7 @@ function renderMyList() {
 // ==========================================
 // 10. СИСТЕМА ДОСТИЖЕНИЙ И XP
 // ==========================================
+// ИСПРАВЛЕНО: Добавлены ВСЕ достижения, включая "Дебютный просмотр"
 const ACHIEVEMENTS = [
     { id: 1, name: "Первый шаг", desc: "Зарегистрироваться на сайте", icon: "🚀", reward: 50, check: (s) => true },
     { id: 2, name: "Дебютный просмотр", desc: "Посмотреть первый эпизод", icon: "🎬", reward: 20, check: (s) => s.episodesWatched >= 1 },
@@ -864,7 +903,7 @@ function checkAchievements(stats) {
         if (!stats.unlockedAchievements.includes(ach.id)) { 
             if (ach.check(stats)) { 
                 stats.unlockedAchievements.push(ach.id); 
-                stats.coins += ach.reward; // Начисление монет за достижение
+                stats.coins += ach.reward; 
                 changed = true; 
                 showToast(`🏆 ${ach.name}! (+${ach.reward} 🪙)`); 
             } 
@@ -880,7 +919,6 @@ function addXP(amount) {
     
     const newLevel = Math.floor(stats.xp / 100) + 1; 
     if (newLevel > oldLevel) { 
-        // Вычисляем награду монет за уровень (чем выше, тем больше)
         const rewardCoins = Math.floor(100 + Math.pow(newLevel, 2.5) * 2); 
         stats.coins += rewardCoins;
         
