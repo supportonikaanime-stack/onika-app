@@ -690,7 +690,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         const stats = getStats(); const favEntry = (stats.favedAnime || []).find(a => a.id === anime.id); const isFaved = !!favEntry;
         window._tempAnimeData = anime; 
         
-        // ИСПРАВЛЕНО: Используем SVG для кнопки Избранное
         const heartSvg = `<svg style="width: 26px; height: 26px;"><use href="#oa-favorite"></use></svg>`;
 
         container.innerHTML = `
@@ -703,7 +702,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                     </button>
                 </div>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;">${escapeHTML(g)}</span>`).join('')}</div>
-                <div style="margin-bottom: 20px;"><h3 style="font-size: 16px; margin-bottom: 10px; color: #fff;">📖 Описание</h3><p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p><button id="desc-btn" onclick="toggleDescription()" style="background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button></div>
+                <div style="margin-bottom: 20px;"><h3 style="font-size: 16px; margin-bottom: 10px; color: #fff; display: flex; align-items: center; gap: 8px;"><svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-book"></use></svg> Описание</h3><p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p><button id="desc-btn" onclick="toggleDescription()" style="background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button></div>
             </div>`;
     } catch (e) { container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка</div>'; }
 }
@@ -831,7 +830,7 @@ function openAchievementsModal() {
     const stats = getStats(); const container = document.getElementById('achievements-list-container'); let html = ''; 
     ACHIEVEMENTS.forEach(ach => { 
         const isDone = stats.unlockedAchievements.includes(ach.id); 
-        html += `<div class="ach-list-item ${isDone ? 'completed' : ''}"><div class="ach-list-icon"><svg><use href="#${ach.icon}"></use></svg></div><div class="ach-list-info"><h4>${ach.name}</h4><p>${ach.desc}</p></div><div style="color:#ffd700; font-weight:bold; margin-left: 10px;">+${ach.reward} <svg style="width:12px;height:12px;display:inline;vertical-align:middle;"><use href="#oa-coins"></use></svg></div>${isDone ? '<div style="color:#ffd700; font-weight:bold; margin-left: 10px;"><svg style="width:16px;height:16px;"><use href="#oa-check"></use></svg></div>' : ''}</div>`; 
+        html += `<div class="ach-list-item ${isDone ? 'completed' : ''}"><div class="ach-list-icon"><svg><use href="#${ach.icon}"></use></svg></div><div class="ach-list-info"><h4>${ach.name}</h4><p>${ach.desc}</p></div><div style="color:#ffd700; font-weight:bold; margin-left: 10px; display: flex; align-items: center; gap: 4px;">+${ach.reward} <svg style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;"><use href="#oa-coin"></use></svg></div>${isDone ? '<div style="color:#ffd700; font-weight:bold; margin-left: 10px;"><svg style="width:16px;height:16px;"><use href="#oa-check"></use></svg></div>' : ''}</div>`; 
     }); 
     container.innerHTML = html; document.getElementById('achievementsModal').classList.add('active'); 
 }
