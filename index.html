@@ -34,8 +34,10 @@
         .hero-actions { display: flex; gap: 12px; align-items: center; }
         .btn-primary { flex: 1; background: var(--primary); color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 8px 25px rgba(91,91,255,0.4); cursor: pointer; }
         .btn-primary:active { transform: scale(0.96); }
-        .btn-icon-heart { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 56px; height: 56px; border-radius: 14px; font-size: 22px; display: flex; justify-content: center; align-items: center; cursor: pointer;}
-        .btn-icon-heart.faved { background: rgba(255,45,120,0.2); border-color: rgba(255,45,120,0.5); }
+        .btn-icon-heart { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 56px; height: 56px; border-radius: 14px; display: flex; justify-content: center; align-items: center; cursor: pointer;}
+        .btn-icon-heart svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .btn-icon-heart.faved { background: rgba(255,45,120,0.2); border-color: rgba(255,45,120,0.5); color: #ff2d78; }
+        .btn-icon-heart.faved svg { fill: #ff2d78; }
         
         .hero-dots { position: absolute; bottom: 20px; right: 20px; display: flex; gap: 6px; z-index: 10; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 20px; backdrop-filter: blur(5px); }
         .hero-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.3); transition: 0.3s; }
@@ -71,8 +73,9 @@
         .catalog-card-img { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; background: #222; }
         .catalog-card-title { position: absolute; bottom: 0; left: 0; width: 100%; padding: 30px 10px 10px 10px; font-size: 13px; font-weight: 700; color: #fff; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, transparent 100%); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .filter-option-btn { background: #1a1a20; border: 1px solid rgba(255,255,255,0.05); color: #fff; padding: 15px; border-radius: 12px; text-align: left; font-size: 15px; cursor: pointer; transition: 0.2s; }
+        .filter-option-btn { background: #1a1a20; border: 1px solid rgba(255,255,255,0.05); color: #fff; padding: 15px; border-radius: 12px; text-align: left; font-size: 15px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
         .filter-option-btn.active { background: rgba(91,91,255,0.2); border-color: #5b5bff; }
+        .filter-option-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
         .detail-poster { width: 140px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .detail-title { font-size: 24px; font-weight: 800; margin-bottom: 10px; line-height: 1.2; }
@@ -135,6 +138,7 @@
             font-size: 16px;
             backdrop-filter: blur(5px);
         }
+        .coin-balance svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         
         .level-row { display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 12px; text-align: left; cursor: pointer; transition: 0.2s; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1); }
         .level-row:active { transform: scale(0.98); }
@@ -149,20 +153,23 @@
         .profile-tabs { display: flex; background: #14141f; border-radius: 15px; padding: 5px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.05); }
         .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: #888; font-size: 14px; font-weight: 600; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: 0.2s; }
         .tab-btn.active { background: #2a2a3e; color: #fff; }
+        .tab-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         
         .achievements-card, .settings-card { background: #14141f; border-radius: 20px; padding: 20px; margin-top: 15px; border: 1px solid rgba(255, 215, 0, 0.2); position: relative; cursor: pointer; transition: 0.2s; }
         .achievements-card:active { transform: scale(0.98); }
         .settings-card { border-color: rgba(255,255,255,0.05); cursor: default; }
         
         .ach-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
-        .ach-icon-big { width: 60px; height: 60px; background: rgba(255, 215, 0, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; color: #ffd700; }
+        .ach-icon-big { width: 60px; height: 60px; background: rgba(255, 215, 0, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #ffd700; }
+        .ach-icon-big svg { width: 32px; height: 32px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         .ach-info h3 { font-size: 14px; color: #ffd700; margin-bottom: 4px; letter-spacing: 1px; }
         .ach-info p { font-size: 13px; color: #888; }
         .ach-total { margin-left: auto; font-size: 16px; font-weight: bold; color: #fff; }
         .ach-progress-wrap { width: 100%; height: 4px; background: #333; border-radius: 2px; margin-bottom: 20px; }
         .ach-progress-bar { height: 100%; background: #ffd700; border-radius: 2px; }
         .ach-next { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
-        .ach-next-icon { font-size: 24px; }
+        .ach-next-icon { color: #ffd700; }
+        .ach-next-icon svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         .ach-next-info { flex: 1; }
         .ach-next-info h4 { font-size: 14px; color: #fff; margin-bottom: 2px; }
         .ach-next-info p { font-size: 11px; color: #888; }
@@ -184,6 +191,7 @@
             align-items: center;
             margin-bottom: 10px;
         }
+        .settings-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; margin-right: 10px; }
 
         /* Модалка магазина */
         .shop-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px; }
@@ -198,9 +206,12 @@
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
         .modal-overlay.active { display: flex; animation: fade 0.3s ease; }
         .modal-content { background: #14141f; border-radius: 24px; width: 100%; max-width: 400px; padding: 30px 20px; border: 1px solid rgba(255,255,255,0.1); position: relative; text-align: center; max-height: 80vh; overflow-y: auto; }
-        .modal-close { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; font-size: 16px; cursor: pointer; z-index: 10; }
+        .modal-close { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; }
+        .modal-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
         
-        .modal-icon-large { font-size: 60px; margin-bottom: 15px; }
+        .modal-icon-large { display: flex; justify-content: center; margin-bottom: 15px; color: var(--primary); }
+        .modal-icon-large svg { width: 64px; height: 64px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+        
         .modal-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 5px; }
         .modal-subtitle { font-size: 14px; color: #888; margin-bottom: 20px; word-wrap: break-word; line-height: 1.4; }
         .modal-xp-bar { width: 100%; height: 10px; background: #333; border-radius: 5px; overflow: hidden; margin-bottom: 10px; }
@@ -210,36 +221,56 @@
         
         .ach-list-item { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); text-align: left; opacity: 0.5; }
         .ach-list-item.completed { opacity: 1; border-color: rgba(255, 215, 0, 0.3); background: rgba(255, 215, 0, 0.05); }
-        .ach-list-icon { font-size: 24px; width: 40px; height: 40px; background: rgba(0,0,0,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-        .ach-list-item.completed .ach-list-icon { background: rgba(255, 215, 0, 0.2); }
+        .ach-list-icon { width: 40px; height: 40px; background: rgba(0,0,0,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; }
+        .ach-list-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .ach-list-item.completed .ach-list-icon { background: rgba(255, 215, 0, 0.2); color: #ffd700; }
         .ach-list-info { flex: 1; }
         .ach-list-info h4 { font-size: 14px; color: #fff; margin-bottom: 2px; }
         .ach-list-info p { font-size: 11px; color: #aaa; }
         
         .level-up-popup { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #1a1a2e, #5b5bff); padding: 15px 30px; border-radius: 50px; display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 30px rgba(91, 91, 255, 0.5); z-index: 20000; transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); width: 90%; max-width: 350px; }
         .level-up-popup.show { top: 20px; }
-        .level-up-popup .icon { font-size: 30px; flex-shrink: 0; }
+        .level-up-popup .icon { color: #ffd700; flex-shrink: 0; }
+        .level-up-popup .icon svg { width: 32px; height: 32px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         .level-up-popup .text { flex: 1; min-width: 0; }
         .level-up-popup .text h4 { color: #fff; font-size: 16px; margin-bottom: 2px; }
         .level-up-popup .text p { color: rgba(255,255,255,0.8); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .level-up-popup .coins { font-size: 16px; font-weight: bold; color: #ffd700; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 8px; }
 
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-h); background: rgba(10,10,15,0.95); backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-around; align-items: center; z-index: 9999; padding-bottom: env(safe-area-inset-bottom); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); cursor: pointer; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); cursor: pointer; transition: 0.2s; }
         .nav-item.active { color: var(--primary); }
-        .nav-icon { font-size: 22px; margin-bottom: 4px; }
+        .nav-icon { width: 24px; height: 24px; margin-bottom: 4px; }
+        .nav-icon svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         .nav-text { font-size: 11px; font-weight: 500; }
     </style>
 </head>
 <body>
 
+    <!-- SVG СПРАЙТ -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+      <symbol id="oa-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
+      <symbol id="oa-catalog" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></symbol>
+      <symbol id="oa-favorite" viewBox="0 0 24 24"><path d="M20.8 8.8c0 5.2-8.8 11-8.8 11s-8.8-5.8-8.8-11a4.8 4.8 0 0 1 8.8-2.6 4.8 4.8 0 0 1 8.8 2.6Z"/></symbol>
+      <symbol id="oa-profile" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2z"/></symbol>
+      <symbol id="oa-friends" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20v-1.5a6.5 6.5 0 0 1 13 0V20z"/><path d="M16 5a3.5 3.5 0 0 1 0 6.8M18 14a5.5 5.5 0 0 1 3.5 5.1V20h-3"/></symbol>
+      <symbol id="oa-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.2 16.2 4.3 4.3"/></symbol>
+      <symbol id="oa-coins" viewBox="0 0 24 24"><ellipse cx="10" cy="6" rx="7" ry="3"/><path d="M3 6v5c0 1.7 3.1 3 7 3 1.1 0 2.1-.1 3-.3M3 11v5c0 1.7 3.1 3 7 3"/><path d="M17 11v9m4-9v9m-4-9c0-1.1.9-2 2-2s2 .9 2 2m-4 9h4"/></symbol>
+      <symbol id="oa-settings" viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19.4 15 .1.1a1.8 1.8 0 1 1-2.5 2.5l-.1-.1a1.8 1.8 0 0 0-3 .9v.2a1.8 1.8 0 1 1-3.6 0v-.2a1.8 1.8 0 0 0-3-.9l-.1.1a1.8 1.8 0 1 1-2.5-2.5l.1-.1a1.8 1.8 0 0 0-.9-3h-.2a1.8 1.8 0 1 1 0-3.6h.2a1.8 1.8 0 0 0 .9-3l-.1-.1a1.8 1.8 0 1 1 2.5-2.5l.1.1a1.8 1.8 0 0 0 3-.9v-.2a1.8 1.8 0 1 1 3.6 0v.2a1.8 1.8 0 0 0 3 .9l.1-.1a1.8 1.8 0 1 1 2.5 2.5l-.1.1a1.8 1.8 0 0 0 .9 3h.2a1.8 1.8 0 1 1 0 3.6h-.2a1.8 1.8 0 0 0-.9 3Z"/></symbol>
+      <symbol id="oa-shop" viewBox="0 0 24 24"><path d="M4 9h16l-1 12H5z"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/><path d="M9 13v1m6-1v1"/></symbol>
+      <symbol id="oa-level" viewBox="0 0 24 24"><path d="M4 20V14h4v6m4 0V9h4v11m4 0V4h4v16"/><path d="m4 10 5-4 4 2 7-6"/></symbol>
+      <symbol id="oa-achievement" viewBox="0 0 24 24"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/><path d="m8.5 18.5-.8 3 4.3-2.3 4.3 2.3-.8-3"/></symbol>
+      <symbol id="oa-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
+      <symbol id="oa-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    </svg>
+
     <div class="level-up-popup" id="levelUpPopup">
-        <div class="icon">🎉</div>
+        <div class="icon"><svg><use href="#oa-level"></use></svg></div>
         <div class="text">
             <h4>Новый уровень: <span id="popup-level">2</span></h4>
             <p>Звание: <span id="popup-rank">Любопытный зритель</span></p>
         </div>
-        <div class="coins">+<span id="popup-coins">100</span> 🪙</div>
+        <div class="coins">+<span id="popup-coins">100</span> <svg style="width:14px;height:14px;display:inline;vertical-align:middle;"><use href="#oa-coins"></use></svg></div>
     </div>
 
     <div id="screen-home" class="screen active">
@@ -269,12 +300,12 @@
     <div id="screen-catalog" class="screen">
         <div style="padding: 20px 20px 10px 20px;">
             <div style="display: flex; align-items: center; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 0 15px; margin-bottom: 15px;">
-                <span style="color: #888; font-size: 18px;">🔍</span>
+                <span style="color: #888; display: flex; align-items: center;"><svg style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-search"></use></svg></span>
                 <input type="text" id="search-input" placeholder="Найти аниме..." oninput="searchAnime()" style="flex: 1; background: transparent; border: none; padding: 14px 10px; color: #fff; font-size: 15px; outline: none;">
             </div>
             <div onclick="openRandomAnime()" style="display: flex; align-items: center; justify-content: space-between; background: #14141f; border-radius: 16px; padding: 16px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;">
                 <div style="display: flex; align-items: center; gap: 15px;">
-                    <div style="width: 45px; height: 45px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px;">🎲</div>
+                    <div style="width: 45px; height: 45px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #a29bfe;"><svg style="width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-level"></use></svg></div>
                     <div>
                         <div style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 2px;">Случайное аниме</div>
                         <div style="font-size: 12px; color: #888;">Доверься судьбе</div>
@@ -360,7 +391,7 @@
                         <h2 id="tg-name">Гость</h2>
                         
                         <div class="coin-balance">
-                            <span>🪙</span>
+                            <svg><use href="#oa-coins"></use></svg>
                             <span id="user-coins">0</span>
                         </div>
 
@@ -383,21 +414,21 @@
             </div>
 
             <div class="profile-tabs">
-                <button class="tab-btn active" id="tab-btn-profile" onclick="switchProfileTab('profile')">👤 Профиль</button>
-                <button class="tab-btn" id="tab-btn-settings" onclick="switchProfileTab('settings')">⚙️ Настройки</button>
+                <button class="tab-btn active" id="tab-btn-profile" onclick="switchProfileTab('profile')"><svg><use href="#oa-profile"></use></svg> Профиль</button>
+                <button class="tab-btn" id="tab-btn-settings" onclick="switchProfileTab('settings')"><svg><use href="#oa-settings"></use></svg> Настройки</button>
             </div>
 
             <div class="achievements-card" id="profile-content-tab" onclick="openAchievementsModal()">
                 <div class="ach-header">
-                    <div class="ach-icon-big">🏆</div>
+                    <div class="ach-icon-big"><svg><use href="#oa-achievement"></use></svg></div>
                     <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p><span id="ach-points">0</span> очков</p></div>
                     <div class="ach-total"><span id="ach-earned">0</span>/50</div>
                 </div>
                 <div class="ach-progress-wrap"><div class="ach-progress-bar" id="ach-bar" style="width: 0%;"></div></div>
                 <div class="ach-next">
-                    <div class="ach-next-icon">🔥</div>
+                    <div class="ach-next-icon"><svg><use href="#oa-level"></use></svg></div>
                     <div class="ach-next-info"><h4>Дальше: <span id="next-ach-name">Первый шаг</span></h4><p>Продолжайте смотреть</p></div>
-                    <div class="ach-reward">+<span id="next-ach-reward">50</span> 🪙</div>
+                    <div class="ach-reward">+<span id="next-ach-reward">50</span> <svg style="width:14px;height:14px;display:inline;vertical-align:middle;"><use href="#oa-coins"></use></svg></div>
                 </div>
             </div>
 
@@ -405,11 +436,11 @@
                 <div style="padding: 20px;">
                     <h3 style="margin-bottom: 15px; color: #fff;">Настройки</h3>
                     <button class="settings-btn" onclick="openShopModal()">
-                        <span>🛍️ Магазин баннеров</span>
+                        <span style="display:flex; align-items:center;"><svg><use href="#oa-shop"></use></svg> Магазин баннеров</span>
                         <span style="color: #888;">›</span>
                     </button>
                     <button class="settings-btn" onclick="resetBanner()">
-                        <span>🚫 Снять баннер</span>
+                        <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять баннер</span>
                         <span style="color: #888;">›</span>
                     </button>
                 </div>
@@ -420,8 +451,8 @@
 
     <div class="modal-overlay" id="levelModal" onclick="closeModal('levelModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal('levelModal')">✕</button>
-            <div class="modal-icon-large">🚀</div>
+            <button class="modal-close" onclick="closeModal('levelModal')"><svg><use href="#oa-close"></use></svg></button>
+            <div class="modal-icon-large"><svg><use href="#oa-level"></use></svg></div>
             <div class="modal-title">Уровень <span id="modal-level-num">1</span></div>
             <div class="modal-subtitle">Звание: <span style="color: #b44aff; font-weight: bold;" id="modal-rank">Первый эпизод</span></div>
             <div class="modal-xp-bar"><div class="modal-xp-fill" id="modal-xp-bar" style="width: 20%;"></div></div>
@@ -432,8 +463,8 @@
 
     <div class="modal-overlay" id="achievementsModal" onclick="closeModal('achievementsModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal('achievementsModal')">✕</button>
-            <div class="modal-icon-large">🏆</div>
+            <button class="modal-close" onclick="closeModal('achievementsModal')"><svg><use href="#oa-close"></use></svg></button>
+            <div class="modal-icon-large"><svg><use href="#oa-achievement"></use></svg></div>
             <div class="modal-title">Достижения</div>
             <div class="modal-subtitle">Получено: <span id="modal-ach-earned">0</span> из 50</div>
             <div id="achievements-list-container" style="margin-top: 15px;"></div>
@@ -442,7 +473,7 @@
 
     <div class="modal-overlay" id="filterModal" onclick="closeModal('filterModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal('filterModal')">✕</button>
+            <button class="modal-close" onclick="closeModal('filterModal')"><svg><use href="#oa-close"></use></svg></button>
             <h2 class="modal-title" id="filter-modal-title">Выберите</h2>
             <div id="filter-options-container" style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;"></div>
         </div>
@@ -450,7 +481,7 @@
 
     <div class="modal-overlay" id="statusModal" onclick="closeModal('statusModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal('statusModal')">✕</button>
+            <button class="modal-close" onclick="closeModal('statusModal')"><svg><use href="#oa-close"></use></svg></button>
             <div class="modal-title">Добавить в список</div>
             <div class="modal-subtitle" id="status-anime-title">Название аниме</div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -458,8 +489,8 @@
                 <button class="filter-option-btn" onclick="setAnimeStatus('planned')">📅 В планах</button>
                 <button class="filter-option-btn" onclick="setAnimeStatus('completed')">✅ Просмотрено</button>
                 <button class="filter-option-btn" onclick="setAnimeStatus('dropped')">🚫 Заброшено</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('favorite')" style="color: #ff2d78;">❤️ Любимое</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('')" style="color: #888;">🗑️ Пусто (Удалить)</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('favorite')" style="color: #ff2d78;"><svg><use href="#oa-favorite"></use></svg> Любимое</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('')" style="color: #888;"><svg><use href="#oa-close"></use></svg> Удалить</button>
             </div>
         </div>
     </div>
@@ -467,22 +498,37 @@
     <!-- Модалка магазина -->
     <div class="modal-overlay" id="shopModal" onclick="closeModal('shopModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal('shopModal')">✕</button>
-            <div class="modal-icon-large">🛍️</div>
+            <button class="modal-close" onclick="closeModal('shopModal')"><svg><use href="#oa-close"></use></svg></button>
+            <div class="modal-icon-large"><svg><use href="#oa-shop"></use></svg></div>
             <div class="modal-title">Магазин баннеров</div>
-            <div class="modal-subtitle">Твой баланс: <span id="shop-coins" style="color: #ffd700; font-weight: bold;">0</span> 🪙</div>
+            <div class="modal-subtitle">Твой баланс: <span id="shop-coins" style="color: #ffd700; font-weight: bold;">0</span> <svg style="width:14px;height:14px;display:inline;vertical-align:middle;"><use href="#oa-coins"></use></svg></div>
             <div id="shop-items-container" class="shop-grid"></div>
         </div>
     </div>
 
     <nav class="bottom-nav">
-        <div class="nav-item active" onclick="switchTab('home', this)"><span class="nav-icon">🏠</span><span class="nav-text">Главная</span></div>
-        <div class="nav-item" onclick="switchTab('catalog', this)"><span class="nav-icon">🔍</span><span class="nav-text">Каталог</span></div>
-        <div class="nav-item" onclick="switchTab('my', this)"><span class="nav-icon">📚</span><span class="nav-text">Моё</span></div>
-        <div class="nav-item" onclick="switchTab('friends', this)"><span class="nav-icon">👥</span><span class="nav-text">Друзья</span></div>
-        <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon">👤</span><span class="nav-text">Профиль</span></div>
+        <div class="nav-item active" onclick="switchTab('home', this)">
+            <span class="nav-icon"><svg><use href="#oa-home"></use></svg></span>
+            <span class="nav-text">Главная</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('catalog', this)">
+            <span class="nav-icon"><svg><use href="#oa-catalog"></use></svg></span>
+            <span class="nav-text">Каталог</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('my', this)">
+            <span class="nav-icon"><svg><use href="#oa-favorite"></use></svg></span>
+            <span class="nav-text">Моё</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('friends', this)">
+            <span class="nav-icon"><svg><use href="#oa-friends"></use></svg></span>
+            <span class="nav-text">Друзья</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('profile', this)">
+            <span class="nav-icon"><svg><use href="#oa-profile"></use></svg></span>
+            <span class="nav-text">Профиль</span>
+        </div>
     </nav>
 
-    <script src="app.js?v=105"></script>
+    <script src="app.js?v=110"></script>
 </body>
 </html>
