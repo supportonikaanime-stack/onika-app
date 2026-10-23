@@ -16,24 +16,6 @@
         .screen.active { display: block; animation: fade 0.3s ease; }
         @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Кнопка теперь имеет z-index 9999999, чтобы перекрыть слайдер (z-index: 2) */
-        .lang-btn-floating {
-            position: fixed;
-            top: 25px; 
-            right: 15px;
-            z-index: 9999999;
-            background: transparent;
-            border: none;
-            font-size: 28px;
-            cursor: pointer;
-            filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.9));
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
         .hero-section { position: relative; height: 85vh; min-height: 500px; overflow: hidden; }
         .hero-slider { position: relative; width: 100%; height: 100%; }
         .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; visibility: hidden; transition: 0.6s; display: flex; align-items: flex-end; }
@@ -197,8 +179,6 @@
     </div>
 
     <div id="screen-home" class="screen active">
-        <button class="lang-btn-floating" id="global-lang-btn" onclick="API.setLang(API.currentLang === 'ru' ? 'en' : 'ru')">🇷🇺</button>
-
         <section class="hero-section" id="heroSection">
             <div class="hero-slider" id="heroSlider"></div>
             <div class="hero-dots" id="heroDots"></div>
@@ -420,6 +400,6 @@
         <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon">👤</span><span class="nav-text" data-i18n="nav_profile">Профиль</span></div>
     </nav>
 
-    <script src="app.js?v=75"></script>
+    <script src="app.js?v=76"></script>
 </body>
 </html>
