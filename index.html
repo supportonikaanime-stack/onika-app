@@ -35,7 +35,6 @@
         .btn-primary { flex: 1; background: var(--primary); color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 8px 25px rgba(91,91,255,0.4); cursor: pointer; }
         .btn-primary:active { transform: scale(0.96); }
         
-        /* ИСПРАВЛЕНО: Жесткие размеры для SVG в кнопке избранного */
         .btn-icon-heart { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 56px; height: 56px; border-radius: 14px; display: flex; justify-content: center; align-items: center; cursor: pointer; flex-shrink: 0; }
         .btn-icon-heart svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         .btn-icon-heart.faved { background: rgba(255,45,120,0.2); border-color: rgba(255,45,120,0.5); color: #ff2d78; }
@@ -99,7 +98,6 @@
         .profile-header h1 { font-size: 32px; font-weight: 800; color: #fff; }
         .profile-container { padding: 0 15px; }
         
-        /* БАННЕР ПРОФИЛЯ */
         .user-card { 
             background: #14141f; 
             border-radius: 20px; 
@@ -267,11 +265,20 @@
       <symbol id="oa-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
       <symbol id="oa-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
       
-      <!-- НОВЫЕ ИКОНКИ ДЛЯ СТАТУСОВ -->
+      <!-- НОВЫЕ ИКОНКИ -->
       <symbol id="oa-eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
       <symbol id="oa-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
       <symbol id="oa-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
       <symbol id="oa-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></symbol>
+      
+      <!-- ИКОНКА КНИГИ ДЛЯ ОПИСАНИЯ -->
+      <symbol id="oa-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+      
+      <!-- ИКОНКА КУБИКА ДЛЯ РАНДОМА -->
+      <symbol id="oa-dice" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="8" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="8" cy="16" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="1.5" fill="currentColor" stroke="none"/></symbol>
+
+      <!-- НОВАЯ ИКОНКА МОНЕТЫ -->
+      <symbol id="oa-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v12m-3-9h6m-6 6h6"/></symbol>
     </svg>
 
     <div class="level-up-popup" id="levelUpPopup">
@@ -280,7 +287,7 @@
             <h4>Новый уровень: <span id="popup-level">2</span></h4>
             <p>Звание: <span id="popup-rank">Любопытный зритель</span></p>
         </div>
-        <div class="coins">+<span id="popup-coins">100</span> <svg><use href="#oa-coins"></use></svg></div>
+        <div class="coins">+<span id="popup-coins">100</span> <svg><use href="#oa-coin"></use></svg></div>
     </div>
 
     <div id="screen-home" class="screen active">
@@ -315,7 +322,7 @@
             </div>
             <div onclick="openRandomAnime()" style="display: flex; align-items: center; justify-content: space-between; background: #14141f; border-radius: 16px; padding: 16px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;">
                 <div style="display: flex; align-items: center; gap: 15px;">
-                    <div style="width: 45px; height: 45px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #a29bfe;"><svg style="width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-level"></use></svg></div>
+                    <div style="width: 45px; height: 45px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #a29bfe;"><svg style="width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-dice"></use></svg></div>
                     <div>
                         <div style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 2px;">Случайное аниме</div>
                         <div style="font-size: 12px; color: #888;">Доверься судьбе</div>
@@ -401,7 +408,7 @@
                         <h2 id="tg-name">Гость</h2>
                         
                         <div class="coin-balance">
-                            <svg><use href="#oa-coins"></use></svg>
+                            <svg><use href="#oa-coin"></use></svg>
                             <span id="user-coins">0</span>
                         </div>
 
@@ -438,7 +445,7 @@
                 <div class="ach-next">
                     <div class="ach-next-icon"><svg><use href="#oa-level"></use></svg></div>
                     <div class="ach-next-info"><h4>Дальше: <span id="next-ach-name">Первый шаг</span></h4><p>Продолжайте смотреть</p></div>
-                    <div class="ach-reward">+<span id="next-ach-reward">50</span> <svg><use href="#oa-coins"></use></svg></div>
+                    <div class="ach-reward">+<span id="next-ach-reward">50</span> <svg><use href="#oa-coin"></use></svg></div>
                 </div>
             </div>
 
@@ -489,7 +496,6 @@
         </div>
     </div>
 
-    <!-- ИСПРАВЛЕНО: Модалка статуса с SVG иконками -->
     <div class="modal-overlay" id="statusModal" onclick="closeModal('statusModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('statusModal')"><svg><use href="#oa-close"></use></svg></button>
@@ -506,13 +512,12 @@
         </div>
     </div>
 
-    <!-- Модалка магазина -->
     <div class="modal-overlay" id="shopModal" onclick="closeModal('shopModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('shopModal')"><svg><use href="#oa-close"></use></svg></button>
             <div class="modal-icon-large"><svg><use href="#oa-shop"></use></svg></div>
             <div class="modal-title">Магазин баннеров</div>
-            <div class="modal-subtitle">Твой баланс: <span id="shop-coins" style="color: #ffd700; font-weight: bold;">0</span> <svg style="width:14px;height:14px;display:inline;vertical-align:middle;"><use href="#oa-coins"></use></svg></div>
+            <div class="modal-subtitle">Твой баланс: <span id="shop-coins" style="color: #ffd700; font-weight: bold;">0</span> <svg style="width:14px;height:14px;display:inline;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.8;"><use href="#oa-coin"></use></svg></div>
             <div id="shop-items-container" class="shop-grid"></div>
         </div>
     </div>
@@ -540,6 +545,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=111"></script>
+    <script src="app.js?v=112"></script>
 </body>
 </html>
