@@ -75,10 +75,7 @@ function escapeHTML(str) {
 function safeUrl(url) {
     if (!url) return '';
     if (url.startsWith('/')) {
-        if (url.includes('/system/') || url.includes('/assets/')) {
-            return 'https://shikimori.io' + url;
-        }
-        return 'https://anilibria.top' + url;
+        return 'https://shikimori.io' + url;
     }
     try {
         const u = new URL(url);
@@ -87,124 +84,9 @@ function safeUrl(url) {
 }
 
 // ==========================================
-// СЛОВАРИ ЛОКАЛИЗАЦИИ
-// ==========================================
-const TRANSLATIONS = {
-    ru: {
-        nav_home: "Главная", nav_catalog: "Каталог", nav_my: "Моё", nav_friends: "Друзья", nav_profile: "Профиль",
-        home_popular: "🔥 Популярное сейчас", home_recs: "✨ Рекомендации для вас", home_tg_title: "Наш Telegram-канал", home_tg_sub: "Новости, розыгрыши и анонсы",
-        cat_search: "Найти аниме...", cat_random: "Случайное аниме", cat_random_sub: "Доверься судьбе",
-        cat_year: "Год", cat_status: "Статус", cat_sort: "Сортировка", cat_load_more: "Загрузить еще", cat_not_found: "Ничего не найдено",
-        my_all: "Все", my_watching: "Смотрю", my_planned: "В планах", my_completed: "Просмотрено", my_dropped: "Заброшено", my_favorite: "Любимое", my_empty: "Тут пусто",
-        fr_search_placeholder: "Введите Telegram ID друга...", fr_find: "Найти", fr_my_friends: "Мои друзья", fr_no_friends: "Пока никого нет", fr_requests: "🔔 Заявки в друзья", fr_req_btn: "Заявка", fr_remove: "🗑️ Удалить из друзей", fr_last_watch: "Последнее аниме:", fr_id: "ID:",
-        prof_level: "УРОВЕНЬ", prof_episodes: "серий", prof_minutes: "просмотра", prof_days: "день подряд", prof_profile_tab: "👤 Профиль", prof_settings_tab: "⚙️ Настройки", prof_ach: "ДОСТИЖЕНИЯ", prof_points: "очков", prof_next: "Дальше:", prof_continue: "Продолжайте смотреть",
-        set_lang: "Язык интерфейса и базы", set_lang_desc: "Выбор языка меняет базу данных: Русский использует Shikimori, Английский использует AniList.",
-        btn_watch: "▶ Смотреть", btn_read_more: "Читать полностью ▼", btn_read_less: "Свернуть ▲", btn_back: "← Назад",
-        status_ongoing: "Онгоинг", status_released: "Завершено", status_anons: "Анонс",
-        toast_status_updated: "Статус обновлен!", toast_removed: "Удалено из списка", toast_id_copied: "📋 ID скопирован!", toast_friend_req: "📩 Заявка отправлена!", toast_friend_acc: "🤝 Заявка принята!", toast_friend_rej: "Заявка отклонена", toast_friend_del: "Друг удален", toast_random: "🎲 Ищем случайное аниме...", toast_search_err: "Ошибка поиска",
-        modal_add_list: "Добавить в список", modal_watch: "👀 Смотрю", modal_plan: "📅 В планах", modal_comp: "✅ Просмотрено", modal_drop: "🚫 Заброшено", modal_fav: "❤️ Любимое", modal_clear: "🗑️ Пусто (Удалить)",
-        modal_filter_any: "Любой", modal_filter_year: "Год выхода", modal_filter_status: "Статус", modal_filter_sort: "Сортировка",
-        sort_pop: "По популярности", sort_rank: "По рейтингу", sort_new: "Новинки", filter_anime: "Аниме", filter_manga: "Манга",
-        ach_earned: "Получено:", ach_of: "из", level_up: "Новый уровень:", rank: "Звание:", how_farm_xp: "Как фармить XP:", xp_watch: "🎬 Просмотр серии: +20 XP", xp_fav: "❤️ Добавить в избранное: +10 XP", xp_daily: "📅 Ежедневный вход: +50 XP", ep_episode: "эп.", ep_voice: "Озвучка:", ep_player: "Плеер:", voice_title: "Выбор озвучки", player_title: "Выбор плеера", eps_title: "Выбор серии",
-        lang_ru: "🇷🇺 Русский (Shikimori)", lang_en: "🇬🇧 English (AniList)",
-        api_error: "Ошибка API", loading: "Загрузка...", error_net: "Ошибка сети", error_load: "Ошибка загрузки", error_db: "База данных не подключена", user_not_found: "Пользователь не найден", req_already_sent: "Заявка уже отправлена или вы друзья", this_is_you: "Это ваш ID", enter_id: "Введите ID", modal_desc: "Описание",
-        // Жанры
-        genre_action: "Экшен", genre_romance: "Романтика", genre_comedy: "Комедия", genre_fantasy: "Фэнтези", genre_drama: "Драма", genre_adventure: "Приключения", genre_scifi: "Фантастика"
-    },
-    en: {
-        nav_home: "Home", nav_catalog: "Catalog", nav_my: "My List", nav_friends: "Friends", nav_profile: "Profile",
-        home_popular: "🔥 Popular Now", home_recs: "✨ Recommendations", home_tg_title: "Our Telegram Channel", home_tg_sub: "News, giveaways and announcements",
-        cat_search: "Search anime...", cat_random: "Random Anime", cat_random_sub: "Trust the fate",
-        cat_year: "Year", cat_status: "Status", cat_sort: "Sort", cat_load_more: "Load More", cat_not_found: "Nothing found",
-        my_all: "All", my_watching: "Watching", my_planned: "Planned", my_completed: "Completed", my_dropped: "Dropped", my_favorite: "Favorite", my_empty: "Empty here",
-        fr_search_placeholder: "Enter friend's Telegram ID...", fr_find: "Find", fr_my_friends: "My Friends", fr_no_friends: "No one yet", fr_requests: "🔔 Friend Requests", fr_req_btn: "Request", fr_remove: "🗑️ Remove Friend", fr_last_watch: "Last anime:", fr_id: "ID:",
-        prof_level: "LEVEL", prof_episodes: "episodes", prof_minutes: "watched", prof_days: "days streak", prof_profile_tab: "👤 Profile", prof_settings_tab: "⚙️ Settings", prof_ach: "ACHIEVEMENTS", prof_points: "points", prof_next: "Next:", prof_continue: "Keep watching",
-        set_lang: "Interface & DB Language", set_lang_desc: "Language choice changes the database: Russian uses Shikimori, English uses AniList.",
-        btn_watch: "▶ Watch", btn_read_more: "Read more ▼", btn_read_less: "Collapse ▲", btn_back: "← Back",
-        status_ongoing: "Ongoing", status_released: "Finished", status_anons: "Announced",
-        toast_status_updated: "Status updated!", toast_removed: "Removed from list", toast_id_copied: "📋 ID copied!", toast_friend_req: "📩 Request sent!", toast_friend_acc: "🤝 Request accepted!", toast_friend_rej: "Request rejected", toast_friend_del: "Friend removed", toast_random: "🎲 Finding random anime...", toast_search_err: "Search error",
-        modal_add_list: "Add to list", modal_watch: "👀 Watching", modal_plan: "📅 Planned", modal_comp: "✅ Completed", modal_drop: "🚫 Dropped", modal_fav: "❤️ Favorite", modal_clear: "🗑️ Clear (Remove)",
-        modal_filter_any: "Any", modal_filter_year: "Release Year", modal_filter_status: "Status", modal_filter_sort: "Sort",
-        sort_pop: "By Popularity", sort_rank: "By Rating", sort_new: "New Releases", filter_anime: "Anime", filter_manga: "Manga",
-        ach_earned: "Earned:", ach_of: "of", level_up: "New Level:", rank: "Rank:", how_farm_xp: "How to farm XP:", xp_watch: "🎬 Watch episode: +20 XP", xp_fav: "❤️ Add to favorites: +10 XP", xp_daily: "📅 Daily login: +50 XP", ep_episode: "ep.", ep_voice: "Voice:", ep_player: "Player:", voice_title: "Select Voice", player_title: "Select Player", eps_title: "Select Episode",
-        lang_ru: "🇷🇺 Русский (Shikimori)", lang_en: "🇬🇧 English (AniList)",
-        api_error: "API Error", loading: "Loading...", error_net: "Network Error", error_load: "Load Error", error_db: "Database not connected", user_not_found: "User not found", req_already_sent: "Request already sent or you are friends", this_is_you: "This is your ID", enter_id: "Enter ID", modal_desc: "Description",
-        // Жанры
-        genre_action: "Action", genre_romance: "Romance", genre_comedy: "Comedy", genre_fantasy: "Fantasy", genre_drama: "Drama", genre_adventure: "Adventure", genre_scifi: "Sci-Fi"
-    }
-};
-
-let currentLang = localStorage.getItem('onika_lang') || 'ru';
-
-function t(key) {
-    return TRANSLATIONS[currentLang][key] || key;
-}
-
-function translatePage() {
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        el.textContent = t(key);
-    });
-    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-        const key = el.getAttribute('data-i18n-placeholder');
-        el.placeholder = t(key);
-    });
-}
-
-// ==========================================
-// 2. API МОДУЛИ
+// 2. API МОДУЛЬ (Только Shikimori)
 // ==========================================
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
-
-const API_AniList = {
-    BASE_URL: 'https://graphql.anilist.co',
-    async fetch(query, vars) {
-        const res = await fetch(this.BASE_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ query, variables: vars })
-        });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        if (data.errors) throw new Error(data.errors[0].message);
-        return data.data;
-    },
-    async getCatalog(page, limit) {
-        const q = `query($p:Int,$l:Int){Page(page:$p,perPage:$l){media(type:ANIME,sort:POPULARITY_DESC){id title{english romaji} coverImage{large} averageScore episodes status genres}}}`;
-        const d = await this.fetch(q, {p:page, l:limit});
-        return d.Page.media.map(this.convert);
-    },
-    async searchAnime(search, page, limit) {
-        const q = `query($p:Int,$l:Int,$s:String){Page(page:$p,perPage:$l){media(type:ANIME,search:$s){id title{english romaji} coverImage{large} averageScore episodes status genres}}}`;
-        const d = await this.fetch(q, {p:page, l:limit, s:search});
-        return d.Page.media.map(this.convert);
-    },
-    async getDetails(id) {
-        const cleanId = parseInt(id.replace('anilist_', ''));
-        const q = `query($id:Int){Media(id:$id,type:ANIME){id title{english romaji} coverImage{extraLarge} description averageScore episodes status genres}}`;
-        const d = await this.fetch(q, {id: cleanId});
-        return d.Media ? this.convert(d.Media) : null;
-    },
-    async getRandom(limit) {
-        const p = Math.floor(Math.random()*50)+1;
-        const q = `query($p:Int){Page(page:$p,perPage:25){media(type:ANIME,sort:SCORE_DESC){id title{english romaji} coverImage{large} averageScore episodes status genres}}}`;
-        const d = await this.fetch(q, {p});
-        return d.Page.media.filter(a=>a.averageScore>=60).sort(()=>Math.random()-0.5).slice(0,limit).map(this.convert);
-    },
-    convert(a) {
-        return {
-            id: 'anilist_' + a.id, rawId: a.id,
-            title: a.title.english || a.title.romaji || 'Unknown',
-            year: '--',
-            episodes: a.episodes || '?',
-            images: { jpg: { image_url: a.coverImage.large || a.coverImage.extraLarge || '' } },
-            description: a.description ? a.description.replace(/<[^>]*>/g, '') : 'No description.',
-            genres: a.genres || [], score: a.averageScore ? a.averageScore/10 : 0,
-            status: a.status === 'RELEASING' ? 'Ongoing' : a.status === 'FINISHED' ? 'Finished' : 'Announced',
-            kind: 'TV'
-        };
-    }
-};
 
 const API_Shikimori = {
     BASE_URL: 'https://shikimori.io/api/graphql',
@@ -261,55 +143,15 @@ const API_Shikimori = {
 
 // Глобальный API
 const API = {
-    currentLang: currentLang,
     _cache: new Map(),
-    
-    setLang(lang) {
-        if (this.currentLang === lang) return;
-        
-        this.currentLang = lang;
-        currentLang = lang;
-        this._cache.clear();
-        localStorage.setItem('onika_lang', lang);
-        
-        if (MY_TG_ID && supabaseClient) {
-            supabaseClient.from('users').upsert({ tg_id: MY_TG_ID, lang: lang }, { onConflict: 'tg_id' }).catch(()=>{});
-        }
-
-        translatePage();
-        showToast(lang === 'ru' ? 'Язык: Русский' : 'Language: English');
-        
-        // Перерисовываем настройки, чтобы галочка встала на место
-        if (document.getElementById('tab-btn-settings').classList.contains('active')) {
-            initApiSettings();
-        }
-
-        // Мгновенно перезагружаем экраны
-        if (document.getElementById('screen-home').classList.contains('active')) {
-            loadHomePage();
-        } 
-        if (document.getElementById('screen-catalog').classList.contains('active')) {
-            // Принудительно сбрасываем фильтры и перезагружаем
-            currentFilters = { search: '', genre: '', year: '', status: '', sort: 'POPULARITY_DESC' };
-            initCatalogFilters();
-            loadCatalog(true);
-        }
-        if (document.getElementById('screen-my').classList.contains('active')) {
-            renderMyList();
-        }
-    },
-
-    getApi() {
-        return this.currentLang === 'en' ? API_AniList : API_Shikimori;
-    },
 
     async _cachedFetch(method, ...args) {
-        const key = this.currentLang + '_' + method + '_' + JSON.stringify(args);
+        const key = method + '_' + JSON.stringify(args);
         if (this._cache.has(key) && Date.now() - this._cache.get(key).time < 15*60*1000) {
             return this._cache.get(key).data;
         }
         try {
-            const data = await this.getApi()[method](...args);
+            const data = await API_Shikimori[method](...args);
             this._cache.set(key, { data, time: Date.now() });
             return data;
         } catch(e) {
@@ -343,19 +185,10 @@ let currentMyListFilter = 'all';
 let previousScreen = 'catalog'; 
 let searchDebounceTimer;
 
-// ИСПРАВЛЕНИЕ: Перевели жанры
-const GENRES = [
-    { id: '1', key: 'genre_action' }, 
-    { id: '22', key: 'genre_romance' }, 
-    { id: '4', key: 'genre_comedy' }, 
-    { id: '10', key: 'genre_fantasy' }, 
-    { id: '8', key: 'genre_drama' }, 
-    { id: '2', key: 'genre_adventure' }, 
-    { id: '24', key: 'genre_scifi' }
-];
+const GENRES = [{ id: '1', name: 'Экшен' }, { id: '22', name: 'Романтика' }, { id: '4', name: 'Комедия' }, { id: '10', name: 'Фэнтези' }, { id: '8', name: 'Драма' }, { id: '2', name: 'Приключения' }, { id: '24', name: 'Фантастика' }];
 const YEARS = [{ id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' }, { id: '2021', name: '2021' }, { id: '2020', name: '2020' }];
-const STATUSES = [{ id: 'ongoing', name: 'status_ongoing' }, { id: 'released', name: 'status_released' }, { id: 'anons', name: 'status_anons' }];
-const SORTS = [{ id: 'popularity', name: 'sort_pop' }, { id: 'ranked', name: 'sort_rank' }, { id: 'aired_on', name: 'sort_new' }];
+const STATUSES = [{ id: 'ongoing', name: 'Онгоинг' }, { id: 'released', name: 'Завершено' }, { id: 'anons', name: 'Анонс' }];
+const SORTS = [{ id: 'popularity', name: 'По популярности' }, { id: 'ranked', name: 'По рейтингу' }, { id: 'aired_on', name: 'Новинки' }];
 
 // ==========================================
 // 4. НАВИГАЦИЯ
@@ -384,9 +217,9 @@ function switchTab(tabName, element) {
         loadCatalog(true);
     }
     if (tabName === 'my') renderMyList();
-    if (tabName === 'voice') { document.getElementById('voice-title').textContent = t('voice_title'); renderVoiceSelection(); }
-    if (tabName === 'player') document.getElementById('player-title').textContent = t('player_title');
-    if (tabName === 'episodes') document.getElementById('eps-title').textContent = t('eps_title');
+    if (tabName === 'voice') { document.getElementById('voice-title').textContent = 'Выбор озвучки'; renderVoiceSelection(); }
+    if (tabName === 'player') document.getElementById('player-title').textContent = 'Выбор плеера';
+    if (tabName === 'episodes') document.getElementById('eps-title').textContent = 'Выбор серии';
     if (tabName === 'friends') loadFriends();
 }
 
@@ -412,7 +245,6 @@ async function syncProfileToDB() {
             episodes_watched: stats.episodesWatched, 
             minutes_watched: stats.minutesWatched, 
             days_streak: stats.daysStreak,
-            lang: currentLang,
             last_watched: stats.favedAnime.length > 0 ? stats.favedAnime[stats.favedAnime.length - 1].id : null
         }, { onConflict: 'tg_id' });
     } catch (e) { console.error('Ошибка синхронизации:', e); }
@@ -420,7 +252,7 @@ async function syncProfileToDB() {
 
 function copyMyId() {
     if (!MY_TG_ID) return;
-    navigator.clipboard.writeText(MY_TG_ID).then(() => { showToast(t('toast_id_copied')); }).catch(() => {});
+    navigator.clipboard.writeText(MY_TG_ID).then(() => { showToast('📋 ID скопирован!'); }).catch(() => {});
 }
 
 function loadProfileData() {
@@ -458,9 +290,8 @@ function loadProfileData() {
     setElText('user-xp-current', xpCurrentLevel); 
     setElText('user-xp-next', xpForNextLevel); 
     setElWidth('user-xp-bar', progressPercent + '%'); 
-    setElText('stat-episodes', stats.episodesWatched); 
-    setElHTML('stat-minutes', `${stats.minutesWatched} <span style="font-size: 14px; font-weight: normal;">${t('prof_minutes')}</span>`); 
-    setElText('stat-days', stats.daysStreak); 
+    
+    // Убрали серии/минуты/дни (элементы удалены из HTML, но на всякий случай не трогаем)
     setElText('ach-points', stats.unlockedAchievements.length * 10); 
     setElText('ach-earned', stats.unlockedAchievements.length); 
     setElWidth('ach-bar', (stats.unlockedAchievements.length / 50) * 100 + '%'); 
@@ -485,7 +316,7 @@ async function loadFriends() {
     const listContainer = document.getElementById('friends-list-container');
     if (!listContainer || !supabaseClient || !MY_TG_ID) return;
     
-    listContainer.innerHTML = `<div style="padding: 20px; text-align: center; color: #888;">${t('loading')}</div>`;
+    listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">Загрузка...</div>';
 
     try {
         const { data: incoming, error: inErr } = await supabaseClient.from('friends').select('user_id').eq('friend_id', MY_TG_ID).eq('status', 'pending');
@@ -501,24 +332,24 @@ async function loadFriends() {
             const { data: inUsers } = await supabaseClient.from('users').select('*').in('tg_id', inIds);
             
             if (inUsers && inUsers.length > 0) {
-                html += `<h3 style="padding: 0 20px 10px; font-size: 16px; color: #ffd700;">${t('fr_requests')}</h3>`;
+                html += '<h3 style="padding: 0 20px 10px; font-size: 16px; color: #ffd700;">🔔 Заявки в друзья</h3>';
                 inUsers.forEach(u => {
-                    html += `<div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);"><div class="friend-avatar">${u.avatar_url ? `<img src="${safeUrl(u.avatar_url)}">` : escapeHTML(u.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(u.name)}</h3><p>${t('fr_id')} ${escapeHTML(u.tg_id)}</p></div><div style="display: flex; gap: 5px; margin-left: auto;"><button onclick="acceptFriend(${u.tg_id})" style="background: #2ecc71; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✓</button><button onclick="rejectFriend(${u.tg_id})" style="background: #e74c3c; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✕</button></div></div>`;
+                    html += `<div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);"><div class="friend-avatar">${u.avatar_url ? `<img src="${safeUrl(u.avatar_url)}">` : escapeHTML(u.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(u.name)}</h3><p>ID: ${escapeHTML(u.tg_id)}</p></div><div style="display: flex; gap: 5px; margin-left: auto;"><button onclick="acceptFriend(${u.tg_id})" style="background: #2ecc71; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✓</button><button onclick="rejectFriend(${u.tg_id})" style="background: #e74c3c; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✕</button></div></div>`;
                 });
             }
         }
 
-        html += `<h3 style="padding: 10px 20px 10px; font-size: 16px; color: #fff;">${t('fr_my_friends')}</h3>`;
+        html += '<h3 style="padding: 10px 20px 10px; font-size: 16px; color: #fff;">Мои друзья</h3>';
         
         if (!accepted || accepted.length === 0) {
-            html += `<div style="padding: 0 20px; color: #888; font-size: 14px;">${t('fr_no_friends')}</div>`;
+            html += '<div style="padding: 0 20px; color: #888; font-size: 14px;">Пока никого нет</div>';
         } else {
             const accIds = accepted.map(f => f.friend_id);
             const { data: accUsers } = await supabaseClient.from('users').select('*').in('tg_id', accIds);
             
             if (accUsers && accUsers.length > 0) {
                 accUsers.forEach(friend => {
-                    html += `<div class="friend-card" onclick="openFriendProfile(${friend.tg_id}, '${escapeHTML(friend.name).replace(/'/g, "\\'")}')"><div class="friend-avatar">${friend.avatar_url ? `<img src="${safeUrl(friend.avatar_url)}">` : escapeHTML(friend.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(friend.name)}</h3><p>${t('fr_id')} ${escapeHTML(friend.tg_id)} • Lvl. ${Math.floor(friend.xp / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
+                    html += `<div class="friend-card" onclick="openFriendProfile(${friend.tg_id}, '${escapeHTML(friend.name).replace(/'/g, "\\'")}')"><div class="friend-avatar">${friend.avatar_url ? `<img src="${safeUrl(friend.avatar_url)}">` : escapeHTML(friend.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(friend.name)}</h3><p>ID: ${escapeHTML(friend.tg_id)} • Ур. ${Math.floor(friend.xp / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
                 });
             }
         }
@@ -527,7 +358,7 @@ async function loadFriends() {
 
     } catch (e) {
         console.error(e);
-        listContainer.innerHTML = `<div style="padding: 20px; text-align: center; color: #ff4444;">${t('error_load')}</div>`;
+        listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка загрузки друзей</div>';
     }
 }
 
@@ -536,21 +367,21 @@ async function searchFriend() {
     const id = input.value.trim();
     const resultContainer = document.getElementById('search-result-container');
     
-    if (!id) { resultContainer.innerHTML = `<div style="color: #ff4444; text-align: center; font-size: 14px;">${t('enter_id')}</div>`; return; }
-    if (!supabaseClient) { resultContainer.innerHTML = `<div style="color: #ff4444; text-align: center; font-size: 14px;">${t('error_db')}</div>`; return; }
-    if (id === MY_TG_ID.toString()) { resultContainer.innerHTML = `<div style="color: #888; text-align: center; font-size: 14px;">${t('this_is_you')}</div>`; return; }
+    if (!id) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Введите ID</div>'; return; }
+    if (!supabaseClient) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">База данных не подключена</div>'; return; }
+    if (id === MY_TG_ID.toString()) { resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Это ваш ID</div>'; return; }
 
-    resultContainer.innerHTML = `<div style="color: #888; text-align: center; font-size: 14px;">${t('loading')}</div>`;
+    resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Поиск...</div>';
     
     try {
         const { data: userData, error } = await supabaseClient.from('users').select('*').eq('tg_id', id).single();
-        if (error || !userData) { resultContainer.innerHTML = `<div style="color: #ff4444; text-align: center; font-size: 14px;">${t('user_not_found')}</div>`; return; }
+        if (error || !userData) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Пользователь не найден</div>'; return; }
 
         const { data: friendCheck } = await supabaseClient.from('friends').select('*').eq('user_id', MY_TG_ID).eq('friend_id', id);
-        if (friendCheck && friendCheck.length > 0) { resultContainer.innerHTML = `<div style="color: #888; text-align: center; font-size: 14px;">${t('req_already_sent')}</div>`; return; }
+        if (friendCheck && friendCheck.length > 0) { resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Заявка уже отправлена или вы друзья</div>'; return; }
 
-        resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${userData.avatar_url ? `<img src="${safeUrl(userData.avatar_url)}">` : escapeHTML(userData.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(userData.name)}</h3><p>${t('fr_id')} ${escapeHTML(userData.tg_id)}</p></div><button onclick="sendFriendRequest(${userData.tg_id})" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">${t('fr_req_btn')}</button></div>`;
-    } catch (e) { console.error(e); resultContainer.innerHTML = `<div style="color: #ff4444; text-align: center; font-size: 14px;">${t('error_load')}</div>`; }
+        resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${userData.avatar_url ? `<img src="${safeUrl(userData.avatar_url)}">` : escapeHTML(userData.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(userData.name)}</h3><p>ID: ${escapeHTML(userData.tg_id)}</p></div><button onclick="sendFriendRequest(${userData.tg_id})" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Заявка</button></div>`;
+    } catch (e) { console.error(e); resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Ошибка поиска</div>'; }
 }
 
 async function sendFriendRequest(friendId) {
@@ -559,7 +390,7 @@ async function sendFriendRequest(friendId) {
         await supabaseClient.from('friends').insert({ user_id: MY_TG_ID, friend_id: friendId, status: 'pending' });
         document.getElementById('search-result-container').innerHTML = '';
         document.getElementById('friend-search-input').value = '';
-        showToast(t('toast_friend_req'));
+        showToast('📩 Заявка отправлена!');
         loadFriends();
     } catch (e) { console.error(e); }
 }
@@ -568,7 +399,7 @@ async function acceptFriend(userId) {
     if (!MY_TG_ID || !supabaseClient) return;
     try {
         await supabaseClient.from('friends').update({ status: 'accepted' }).eq('user_id', userId).eq('friend_id', MY_TG_ID);
-        showToast(t('toast_friend_acc'));
+        showToast('🤝 Заявка принята!');
         loadFriends();
         await supabaseClient.from('friends').insert({ user_id: MY_TG_ID, friend_id: userId, status: 'accepted' });
     } catch (e) { console.error(e); }
@@ -578,7 +409,7 @@ async function rejectFriend(userId) {
     if (!MY_TG_ID || !supabaseClient) return;
     try {
         await supabaseClient.from('friends').delete().eq('user_id', userId).eq('friend_id', MY_TG_ID);
-        showToast(t('toast_friend_rej'));
+        showToast('Заявка отклонена');
         loadFriends();
     } catch (e) { console.error(e); }
 }
@@ -588,7 +419,7 @@ async function removeFriend(friendId) {
     try {
         await supabaseClient.from('friends').delete().eq('user_id', MY_TG_ID).eq('friend_id', friendId);
         await supabaseClient.from('friends').delete().eq('user_id', friendId).eq('friend_id', MY_TG_ID);
-        showToast(t('toast_friend_del'));
+        showToast('Друг удален');
         switchTab('friends');
     } catch (e) { console.error(e); }
 }
@@ -596,7 +427,7 @@ async function removeFriend(friendId) {
 async function openFriendProfile(id, name) {
     switchTab('friend-profile');
     const container = document.getElementById('friend-profile-content');
-    container.innerHTML = `<div style="text-align: center; padding: 40px; color: #888;">${t('loading')}</div>`;
+    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
 
     try {
         const { data: friend, error } = await supabaseClient.from('users').select('*').eq('tg_id', id).single();
@@ -607,7 +438,7 @@ async function openFriendProfile(id, name) {
         
         let lastWatchedHtml = '';
         if (friend.last_watched) {
-            lastWatchedHtml = `<div style="margin-top: 15px; padding: 15px; background: rgba(91,91,255,0.1); border-radius: 12px; border: 1px solid rgba(91,91,255,0.2);"><div style="font-size: 12px; color: #888; margin-bottom: 5px;">${t('fr_last_watch')}</div><div style="font-size: 16px; font-weight: bold; color: #fff;">${t('fr_id')} ${escapeHTML(friend.last_watched)}</div></div>`;
+            lastWatchedHtml = `<div style="margin-top: 15px; padding: 15px; background: rgba(91,91,255,0.1); border-radius: 12px; border: 1px solid rgba(91,91,255,0.2);"><div style="font-size: 12px; color: #888; margin-bottom: 5px;">Последнее аниме:</div><div style="font-size: 16px; font-weight: bold; color: #fff;">ID: ${escapeHTML(friend.last_watched)}</div></div>`;
         }
 
         container.innerHTML = `
@@ -619,28 +450,21 @@ async function openFriendProfile(id, name) {
                 </div>
                 <div class="user-details">
                     <h2>${escapeHTML(friend.name)}</h2>
-                    <div style="background: rgba(91,91,255,0.1); border: 1px solid rgba(91,91,255,0.3); border-radius: 12px; padding: 6px 15px; display: inline-block; margin: 5px 0 15px;"><span style="color: #888; font-size: 12px;">${t('fr_id')}</span> <span style="color: #fff; font-weight: bold;">${escapeHTML(friend.tg_id)}</span></div>
+                    <div style="background: rgba(91,91,255,0.1); border: 1px solid rgba(91,91,255,0.3); border-radius: 12px; padding: 6px 15px; display: inline-block; margin: 5px 0 15px;"><span style="color: #888; font-size: 12px;">ID:</span> <span style="color: #fff; font-weight: bold;">${escapeHTML(friend.tg_id)}</span></div>
                     <div class="level-row">
                         <div class="level-badge"><span>${lvl}</span></div>
                         <div class="level-info">
-                            <div class="level-title">${t('prof_level')} ${lvl} <span class="rank">${rank}</span></div>
+                            <div class="level-title">УРОВЕНЬ ${lvl} <span class="rank">${rank}</span></div>
                             <div class="xp-bar-container"><div class="xp-bar-fill" style="width: ${friend.xp % 100}%;"></div></div>
                             <div class="xp-text">${friend.xp % 100} / ${lvl * 100} XP</div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="stats-card">
-                <div class="stat-item"><div class="stat-value">${friend.episodes_watched || 0}</div><div class="stat-label">${t('prof_episodes')}</div></div>
-                <div class="stat-divider"></div>
-                <div class="stat-item"><div class="stat-value">${friend.minutes_watched || 0} <span style="font-size: 14px; font-weight: normal;">${t('prof_minutes')}</span></div></div>
-                <div class="stat-divider"></div>
-                <div class="stat-item"><div class="stat-value">${friend.days_streak || 1}</div><div class="stat-label">${t('prof_days')}</div></div>
-            </div>
             ${lastWatchedHtml}
-            <button onclick="removeFriend(${friend.tg_id})" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">${t('fr_remove')}</button>
+            <button onclick="removeFriend(${friend.tg_id})" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">🗑️ Удалить из друзей</button>
         `;
-    } catch (e) { container.innerHTML = `<div style="text-align: center; padding: 40px; color: #ff4444;">${t('error_load')}</div>`; }
+    } catch (e) { container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки профиля</div>'; }
 }
 
 // ==========================================
@@ -686,7 +510,7 @@ function playEpisode(epNum) {
     stats.episodesWatched += 1; 
     stats.minutesWatched += 24; 
     saveStats(stats); 
-    if (tg) tg.showAlert(`🎬 ${t('btn_watch')}:\n${currentAnimeForPlayer.title}\n${selectedVoice}\n${selectedPlayer}\n#${epNum}\n\n(+20 XP)`); 
+    if (tg) tg.showAlert(`🎬 Просмотр:\n${currentAnimeForPlayer.title}\n${selectedVoice}\n${selectedPlayer}\nСерия: ${epNum}\n\n(+20 XP)`); 
 }
 
 // ==========================================
@@ -695,9 +519,9 @@ function playEpisode(epNum) {
 function initCatalogFilters() { 
     const genreContainer = document.getElementById('genre-filters'); 
     if (!genreContainer) return; 
-    let html = `<div class="genre-pill active" onclick="setGenreFilter('', this)"><div class="dot"></div>${t('modal_filter_any')}</div>`; 
+    let html = `<div class="genre-pill active" onclick="setGenreFilter('', this)"><div class="dot"></div>Все</div>`; 
     GENRES.forEach(g => { 
-        html += `<div class="genre-pill" onclick="setGenreFilter('${t(g.key)}', this)">${t(g.key)}</div>`; 
+        html += `<div class="genre-pill" onclick="setGenreFilter('${g.name}', this)">${g.name}</div>`; 
     }); 
     genreContainer.innerHTML = html; 
 }
@@ -706,7 +530,7 @@ function setGenreFilter(genreName, btn) {
     currentFilters.genre = genreName; 
     document.querySelectorAll('#genre-filters .genre-pill').forEach(el => el.classList.remove('active')); 
     btn.classList.add('active'); 
-    if (genreName === '') btn.innerHTML = `<div class="dot"></div>${t('modal_filter_any')}`; 
+    if (genreName === '') btn.innerHTML = '<div class="dot"></div>Все'; 
     loadCatalog(true); 
 }
 
@@ -724,12 +548,12 @@ function openFilterModal(type) {
     const container = document.getElementById('filter-options-container'); 
     let options = []; 
     let currentVal = currentFilters[type]; 
-    if (type === 'year') { options = YEARS; title.textContent = t('modal_filter_year'); } 
-    if (type === 'status') { options = STATUSES; title.textContent = t('modal_filter_status'); } 
-    if (type === 'sort') { options = SORTS; title.textContent = t('modal_filter_sort'); } 
-    let html = `<button class="filter-option-btn ${currentVal === '' ? 'active' : ''}" onclick="applyFilter('${type}', '')">${t('modal_filter_any')}</button>`; 
+    if (type === 'year') { options = YEARS; title.textContent = 'Год выхода'; } 
+    if (type === 'status') { options = STATUSES; title.textContent = 'Статус'; } 
+    if (type === 'sort') { options = SORTS; title.textContent = 'Сортировка'; } 
+    let html = `<button class="filter-option-btn ${currentVal === '' ? 'active' : ''}" onclick="applyFilter('${type}', '')">Любой</button>`; 
     options.forEach(opt => { 
-        html += `<button class="filter-option-btn ${currentVal === opt.id ? 'active' : ''}" onclick="applyFilter('${type}', '${opt.id}')">${t(opt.name)}</button>`; 
+        html += `<button class="filter-option-btn ${currentVal === opt.id ? 'active' : ''}" onclick="applyFilter('${type}', '${opt.id}')">${opt.name}</button>`; 
     }); 
     container.innerHTML = html; 
     modal.classList.add('active'); 
@@ -740,12 +564,12 @@ function applyFilter(type, value) {
     closeModal('filterModal'); 
     const btnIndex = type === 'year' ? 0 : type === 'status' ? 1 : 2; 
     const btns = document.querySelectorAll('#dropdown-filters .filter-btn'); 
-    let optName = t('modal_filter_any'); 
+    let optName = 'Любой'; 
     if (value) { 
         const list = type === 'year' ? YEARS : type === 'status' ? STATUSES : SORTS; 
-        optName = t(list.find(o => o.id === value)?.name) || t('modal_filter_any'); 
+        optName = list.find(o => o.id === value)?.name || 'Любой'; 
     } else { 
-        optName = type === 'year' ? t('cat_year') : type === 'status' ? t('cat_status') : t('cat_sort'); 
+        optName = type === 'year' ? 'Год' : type === 'status' ? 'Статус' : 'Сортировка'; 
     } 
     btns[btnIndex].innerHTML = `${optName} ⌄`; 
     loadCatalog(true); 
@@ -758,7 +582,7 @@ async function loadCatalog(reset = false) {
     const loadMoreBtn = document.getElementById('load-more-btn');
     
     if (reset) { 
-        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">${t('loading')}</div>`; 
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Загрузка...</div>'; 
         hasMoreCatalog = true; 
         catalogPage = 1; 
     }
@@ -785,7 +609,7 @@ async function loadCatalog(reset = false) {
         }
 
         if (currentFilters.status && currentFilters.status !== '') {
-            let statusRu = currentFilters.status === 'ongoing' ? (currentLang === 'ru' ? 'Онгоинг' : 'Ongoing') : currentFilters.status === 'released' ? (currentLang === 'ru' ? 'Завершено' : 'Finished') : (currentLang === 'ru' ? 'Анонс' : 'Announced');
+            let statusRu = currentFilters.status === 'ongoing' ? 'Онгоинг' : currentFilters.status === 'released' ? 'Завершено' : 'Анонс';
             filteredItems = filteredItems.filter(a => a.status === statusRu);
         }
 
@@ -802,7 +626,7 @@ async function loadCatalog(reset = false) {
         if (reset) grid.innerHTML = '';
         
         if (displayItems.length === 0) { 
-            if (reset) grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">${t('cat_not_found')}</div>`; 
+            if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Ничего не найдено</div>'; 
             hasMoreCatalog = false; 
             if (loadMoreBtn) loadMoreBtn.style.display = 'none'; 
             return; 
@@ -824,7 +648,7 @@ async function loadCatalog(reset = false) {
         }
     } catch (e) { 
         console.error(e);
-        if (reset) grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ff4444;">${t('error_load')}</div>`; 
+        if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>'; 
     } finally { 
         isCatalogLoading = false; 
     }
@@ -840,7 +664,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
     previousScreen = fromScreen;
     switchTab('detail');
     const container = document.getElementById('detail-content');
-    container.innerHTML = `<div style="text-align: center; padding: 40px; color: #888;">${t('loading')}</div>`;
+    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
     
     try {
         const anime = await API.getDetails(id);
@@ -852,8 +676,8 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         const poster = safeUrl(anime.images.jpg.image_url);
         
         let statusColor = '#2ecc71'; 
-        if (anime.status === 'Онгоинг' || anime.status === 'Ongoing') statusColor = '#3498db';
-        if (anime.status === 'Анонс' || anime.status === 'Announced') statusColor = '#e74c3c';
+        if (anime.status === 'Онгоинг') statusColor = '#3498db';
+        if (anime.status === 'Анонс') statusColor = '#e74c3c';
         
         const stats = getStats(); 
         const favEntry = (stats.favedAnime || []).find(a => a.id === anime.id); 
@@ -863,14 +687,14 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         
         container.innerHTML = `
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;"><img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"></div>
-            <div style="padding-top: 30px;"><div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;"><img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 2px solid rgba(255,255,255,0.1);"><div style="flex: 1; padding-bottom: 5px;"><h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">${title}</h1><div style="display: flex; flex-wrap: wrap; gap: 6px;"><span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;">⭐ ${score}</span><span style="background: rgba(255,255,255,0.15); backdrop-filter: blur(5px); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">📺 ${anime.episodes || '?'} ${t('ep_episode')}</span><span style="background: ${statusColor}; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">${anime.status}</span></div></div></div>
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;"><button onclick="startWatching(window._tempAnimeData)" style="flex: 1; background: #5b5bff; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); display: flex; justify-content: center; align-items: center; gap: 8px;">${t('btn_watch')}</button><button onclick="openStatusModal('${anime.id}', '${title.replace(/'/g, "\\'")}')" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'}; border: 1px solid ${isFaved ? '#ff2d78' : 'rgba(255,255,255,0.15)'}; width: 56px; border-radius: 14px; font-size: 22px; cursor: pointer; display: flex; justify-content: center; align-items: center;">${isFaved ? '❤️' : '🤍'}</button></div>
+            <div style="padding-top: 30px;"><div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;"><img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 2px solid rgba(255,255,255,0.1);"><div style="flex: 1; padding-bottom: 5px;"><h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">${title}</h1><div style="display: flex; flex-wrap: wrap; gap: 6px;"><span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;">⭐ ${score}</span><span style="background: rgba(255,255,255,0.15); backdrop-filter: blur(5px); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">📺 ${anime.episodes || '?'} эп.</span><span style="background: ${statusColor}; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">${anime.status}</span></div></div></div>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;"><button onclick="startWatching(window._tempAnimeData)" style="flex: 1; background: #5b5bff; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); display: flex; justify-content: center; align-items: center; gap: 8px;">▶ Смотреть</button><button onclick="openStatusModal('${anime.id}', '${title.replace(/'/g, "\\'")}')" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'}; border: 1px solid ${isFaved ? '#ff2d78' : 'rgba(255,255,255,0.15)'}; width: 56px; border-radius: 14px; font-size: 22px; cursor: pointer; display: flex; justify-content: center; align-items: center;">${isFaved ? '❤️' : '🤍'}</button></div>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;">${escapeHTML(g)}</span>`).join('')}</div>
-                <div style="margin-bottom: 20px;"><h3 style="font-size: 16px; margin-bottom: 10px; color: #fff;">📖 ${t('modal_desc')}</h3><p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p><button id="desc-btn" onclick="toggleDescription()" style="background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">${t('btn_read_more')}</button></div>
+                <div style="margin-bottom: 20px;"><h3 style="font-size: 16px; margin-bottom: 10px; color: #fff;">📖 Описание</h3><p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p><button id="desc-btn" onclick="toggleDescription()" style="background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button></div>
             </div>`;
     } catch (e) { 
         console.error(e);
-        container.innerHTML = `<div style="text-align: center; padding: 40px; color: #ff4444;">${t('error_load')}</div>`; 
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>'; 
     }
 }
 
@@ -897,9 +721,9 @@ function setAnimeStatus(status) {
     if (status !== '') { 
         stats.favedAnime.push({ id: id, status: status }); 
         addXP(10); 
-        showToast(t('toast_status_updated')); 
+        showToast('Статус обновлен!'); 
     } else { 
-        showToast(t('toast_removed')); 
+        showToast('Удалено из списка'); 
     }
     saveStats(stats); 
     closeModal('statusModal');
@@ -932,13 +756,13 @@ function setAnimeStatus(status) {
 
 async function openRandomAnime() { 
     if (tg) tg.HapticFeedback.impactOccurred('medium'); 
-    showToast(t('toast_random')); 
+    showToast('🎲 Ищем случайное аниме...'); 
     try { 
         const items = await API.getRandom(1);
         if (items && items.length > 0) openAnimeDetail(items[0].id, 'catalog'); 
     } catch (e) { 
         console.error(e);
-        showToast(t('toast_search_err')); 
+        showToast('Ошибка поиска'); 
     } 
 }
 
@@ -947,10 +771,10 @@ function toggleDescription() {
     const btnEl = document.getElementById('desc-btn'); 
     if (descEl.style.webkitLineClamp === '4' || descEl.style.webkitLineClamp === '') { 
         descEl.style.webkitLineClamp = 'unset'; 
-        btnEl.innerHTML = t('btn_read_less'); 
+        btnEl.innerHTML = 'Свернуть ▲'; 
     } else { 
         descEl.style.webkitLineClamp = '4'; 
-        btnEl.innerHTML = t('btn_read_more'); 
+        btnEl.innerHTML = 'Читать полностью ▼'; 
     } 
 }
 
@@ -972,7 +796,7 @@ function renderMyList() {
     let filtered = favs;
     if (currentMyListFilter !== 'all') { filtered = favs.filter(a => a.status === currentMyListFilter); }
     if (filtered.length === 0) { 
-        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">${t('my_empty')}</div>`; 
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Тут пусто</div>'; 
         return; 
     }
     
@@ -997,7 +821,7 @@ function renderMyList() {
         });
     }).catch(e => {
         console.error(e);
-        grid.innerHTML = `<div style="text-align:center;color:#f44;grid-column:1/-1;">${t('error_net')}</div>`;
+        grid.innerHTML = '<div style="text-align:center;color:#f44;grid-column:1/-1;">Ошибка сети</div>';
     });
 }
 
@@ -1146,35 +970,12 @@ function openAchievementsModal() {
 }
 
 // ==========================================
-// 11. НАСТРОЙКИ (Смена языка)
+// 11. НАСТРОЙКИ (Пусто, так как языка больше нет)
 // ==========================================
 function initApiSettings() {
     const container = document.getElementById('settings-content-tab');
     if(!container) return;
-    
-    let html = `<div style="padding: 20px;">`;
-    html += `<h3 style="margin-bottom: 15px; color: #fff;">${t('set_lang')}</h3>`;
-    html += '<div style="display: flex; flex-direction: column; gap: 10px;">';
-    
-    const isRu = currentLang === 'ru';
-    const isEn = currentLang === 'en';
-
-    html += `
-        <button onclick="API.setLang('ru')" style="padding: 15px; border-radius: 12px; border: 1px solid ${isRu ? '#5b5bff' : 'rgba(255,255,255,0.1)'}; background: ${isRu ? 'rgba(91,91,255,0.2)' : '#1a1a20'}; color: #fff; text-align: left; font-size: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;">
-            <span>${t('lang_ru')}</span>
-            ${isRu ? '<span style="color: #5b5bff; font-weight: bold;">✓</span>' : ''}
-        </button>
-        <button onclick="API.setLang('en')" style="padding: 15px; border-radius: 12px; border: 1px solid ${isEn ? '#5b5bff' : 'rgba(255,255,255,0.1)'}; background: ${isEn ? 'rgba(91,91,255,0.2)' : '#1a1a20'}; color: #fff; text-align: left; font-size: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;">
-            <span>${t('lang_en')}</span>
-            ${isEn ? '<span style="color: #5b5bff; font-weight: bold;">✓</span>' : ''}
-        </button>
-    `;
-    
-    html += '</div>';
-    html += `<p style="color: #888; font-size: 12px; margin-top: 15px; line-height: 1.4;">${t('set_lang_desc')}</p>`;
-    html += '</div>';
-    
-    container.innerHTML = html;
+    container.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">Настроек пока нет</div>';
 }
 
 // ==========================================
@@ -1241,7 +1042,7 @@ function initHeroSlider() {
         const isFaved = favedList.includes(anime.id); 
         const heartClass = isFaved ? 'faved' : ''; 
         const heartIcon = isFaved ? '❤️' : '🤍'; 
-        sliderHTML += `<div class="hero-slide ${index === 0 ? 'active' : ''}"><div class="hero-bg" style="background-image: url('${safeUrl(anime.img)}')"></div><div class="hero-gradient"></div><div class="hero-content"><div class="hero-badges"><span class="badge star">⭐ ${anime.score}</span><span class="badge">${escapeHTML(anime.type)}</span><span class="badge">${escapeHTML(anime.year)}</span></div><h1 class="hero-title">${escapeHTML(anime.title)}</h1><div class="hero-actions"><button class="btn-primary" onclick="openAnimeDetail('${anime.id}', 'home')">${t('btn_watch')}</button><button class="btn-icon-heart ${heartClass}" onclick="openStatusModal('${anime.id}', '${escapeHTML(anime.title).replace(/'/g, "\\'")}')">${heartIcon}</button></div></div></div>`; 
+        sliderHTML += `<div class="hero-slide ${index === 0 ? 'active' : ''}"><div class="hero-bg" style="background-image: url('${safeUrl(anime.img)}')"></div><div class="hero-gradient"></div><div class="hero-content"><div class="hero-badges"><span class="badge star">⭐ ${anime.score}</span><span class="badge">${escapeHTML(anime.type)}</span><span class="badge">${escapeHTML(anime.year)}</span></div><h1 class="hero-title">${escapeHTML(anime.title)}</h1><div class="hero-actions"><button class="btn-primary" onclick="openAnimeDetail('${anime.id}', 'home')">▶ Смотреть</button><button class="btn-icon-heart ${heartClass}" onclick="openStatusModal('${anime.id}', '${escapeHTML(anime.title).replace(/'/g, "\\'")}')">${heartIcon}</button></div></div></div>`; 
         dotsHTML += `<div class="hero-dot ${index === 0 ? 'active' : ''}" onclick="goToSlide(${index})"></div>`; 
     }); 
     slider.innerHTML = sliderHTML; 
@@ -1274,7 +1075,6 @@ function addSwipeSupport(element) {
 }
 
 document.addEventListener('DOMContentLoaded', () => { 
-    translatePage();
     loadHomePage();
     loadProfileData(); 
 });
