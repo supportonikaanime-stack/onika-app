@@ -40,13 +40,6 @@ function showLog(msg, isError = false) {
     console.log(isError ? 'ERROR: ' : 'LOG: ', msg);
 }
 
-// СБРОС СТАТИСТИКИ
-if (!localStorage.getItem('onika_stats_reset_v3')) {
-    localStorage.removeItem('onika_stats');
-    localStorage.removeItem('onika_api_source');
-    localStorage.setItem('onika_stats_reset_v3', 'true');
-}
-
 // ==========================================
 // 1. НАСТРОЙКА SUPABASE
 // ==========================================
@@ -114,7 +107,7 @@ const TRANSLATIONS = {
         sort_pop: "По популярности", sort_rank: "По рейтингу", sort_new: "Новинки", filter_anime: "Аниме", filter_manga: "Манга",
         ach_earned: "Получено:", ach_of: "из", level_up: "Новый уровень:", rank: "Звание:", how_farm_xp: "Как фармить XP:", xp_watch: "🎬 Просмотр серии: +20 XP", xp_fav: "❤️ Добавить в избранное: +10 XP", xp_daily: "📅 Ежедневный вход: +50 XP", ep_episode: "эп.", ep_voice: "Озвучка:", ep_player: "Плеер:", voice_title: "Выбор озвучки", player_title: "Выбор плеера", eps_title: "Выбор серии",
         lang_ru: "🇷🇺 Русский (Shikimori)", lang_en: "🇬🇧 English (AniList)",
-        api_error: "Ошибка API", loading: "Загрузка...", error_net: "Ошибка сети", error_load: "Ошибка загрузки", error_db: "База данных не подключена", user_not_found: "Пользователь не найден", req_already_sent: "Заявка уже отправлена или вы друзья", this_is_you: "Это ваш ID", enter_id: "Введите ID"
+        api_error: "Ошибка API", loading: "Загрузка...", error_net: "Ошибка сети", error_load: "Ошибка загрузки", error_db: "База данных не подключена", user_not_found: "Пользователь не найден", req_already_sent: "Заявка уже отправлена или вы друзья", this_is_you: "Это ваш ID", enter_id: "Введите ID", modal_desc: "Описание"
     },
     en: {
         nav_home: "Home", nav_catalog: "Catalog", nav_my: "My List", nav_friends: "Friends", nav_profile: "Profile",
@@ -133,7 +126,7 @@ const TRANSLATIONS = {
         sort_pop: "By Popularity", sort_rank: "By Rating", sort_new: "New Releases", filter_anime: "Anime", filter_manga: "Manga",
         ach_earned: "Earned:", ach_of: "of", level_up: "New Level:", rank: "Rank:", how_farm_xp: "How to farm XP:", xp_watch: "🎬 Watch episode: +20 XP", xp_fav: "❤️ Add to favorites: +10 XP", xp_daily: "📅 Daily login: +50 XP", ep_episode: "ep.", ep_voice: "Voice:", ep_player: "Player:", voice_title: "Select Voice", player_title: "Select Player", eps_title: "Select Episode",
         lang_ru: "🇷🇺 Русский (Shikimori)", lang_en: "🇬🇧 English (AniList)",
-        api_error: "API Error", loading: "Loading...", error_net: "Network Error", error_load: "Load Error", error_db: "Database not connected", user_not_found: "User not found", req_already_sent: "Request already sent or you are friends", this_is_you: "This is your ID", enter_id: "Enter ID"
+        api_error: "API Error", loading: "Loading...", error_net: "Network Error", error_load: "Load Error", error_db: "Database not connected", user_not_found: "User not found", req_already_sent: "Request already sent or you are friends", this_is_you: "This is your ID", enter_id: "Enter ID", modal_desc: "Description"
     }
 };
 
@@ -237,6 +230,7 @@ const API_Shikimori = {
     },
     async getDetails(id) {
         const cleanId = id.replace('shikimori_', '');
+        // ИСПРАВЛЕНИЕ: Запрос всех нужных полей, чтобы не было 404
         const q = `{anime(id:${cleanId}){id name russian description score episodes status poster{originalUrl} genres{name}}}`;
         const d = await this.fetch(q);
         return d.anime ? this.convert(d.anime) : null;
@@ -273,7 +267,6 @@ const API = {
         this._cache.clear();
         localStorage.setItem('onika_lang', lang);
         
-        // Синхронизация языка в БД
         if (MY_TG_ID && supabaseClient) {
             supabaseClient.from('users').upsert({ tg_id: MY_TG_ID, lang: lang }, { onConflict: 'tg_id' }).catch(()=>{});
         }
@@ -282,7 +275,6 @@ const API = {
         showToast(lang === 'ru' ? 'Язык: Русский' : 'Language: English');
         updateLangUI();
         
-        // Принудительное обновление настроек, если они открыты
         if (document.getElementById('tab-btn-settings').classList.contains('active')) {
             initApiSettings();
         }
