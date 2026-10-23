@@ -205,7 +205,6 @@ function copyMyId() {
 async function loadProfileData() {
     let stats = getStats(); 
     
-    // ИСПРАВЛЕНО: Сначала берем сохраненный URL из localStorage, чтобы применить его моментально
     if (stats.active_banner_url) {
         ACTIVE_BANNER_URL = stats.active_banner_url;
     }
@@ -216,7 +215,6 @@ async function loadProfileData() {
     } 
     checkAchievements(stats); 
     
-    // Параллельно проверяем, не сменился ли баннер в базе данных (например, с другого устройства)
     if (MY_TG_ID && supabaseClient) {
         try {
             const { data: user } = await supabaseClient.from('users').select('active_banner').eq('tg_id', MY_TG_ID).single();
@@ -225,7 +223,7 @@ async function loadProfileData() {
                 if (banner) {
                     ACTIVE_BANNER_URL = safeUrl(banner.image_url);
                     stats.active_banner = user.active_banner;
-                    stats.active_banner_url = ACTIVE_BANNER_URL; // Обновляем локальный кэш
+                    stats.active_banner_url = ACTIVE_BANNER_URL; 
                     saveStats(stats);
                 }
             }
@@ -360,7 +358,6 @@ async function buyBanner(bannerId, price) {
         
         stats.active_banner = bannerId;
         
-        // Сохраняем URL локально для мгновенного отображения
         const { data: b } = await supabaseClient.from('banners').select('image_url').eq('id', bannerId).single();
         if (b) {
             stats.active_banner_url = safeUrl(b.image_url);
@@ -547,7 +544,7 @@ async function openFriendProfile(id, name) {
 
             <div class="achievements-card" style="margin-top: 15px; cursor: default;">
                 <div class="ach-header">
-                    <div class="ach-icon-big">🏆</div>
+                    <div class="ach-icon-big"><svg><use href="#oa-achievement"></use></svg></div>
                     <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p>${friendAchCount * 10} очков</p></div>
                     <div class="ach-total">${friendAchCount}/50</div>
                 </div>
@@ -695,7 +692,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         container.innerHTML = `
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;"><img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"></div>
             <div style="padding-top: 30px;"><div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;"><img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 2px solid rgba(255,255,255,0.1);"><div style="flex: 1; padding-bottom: 5px;"><h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">${title}</h1><div style="display: flex; flex-wrap: wrap; gap: 6px;"><span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;">⭐ ${score}</span><span style="background: rgba(255,255,255,0.15); backdrop-filter: blur(5px); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">📺 ${anime.episodes || '?'} эп.</span><span style="background: ${statusColor}; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">${anime.status}</span></div></div></div>
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;"><button onclick="startWatching(window._tempAnimeData)" style="flex: 1; background: #5b5bff; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); display: flex; justify-content: center; align-items: center; gap: 8px;">▶ Смотреть</button><button onclick="openStatusModal('${anime.id}', '${title.replace(/'/g, "\\'")}')" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'}; border: 1px solid ${isFaved ? '#ff2d78' : 'rgba(255,255,255,0.15)'}; width: 56px; border-radius: 14px; font-size: 22px; cursor: pointer; display: flex; justify-content: center; align-items: center;">${isFaved ? '❤️' : '🤍'}</button></div>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;"><button onclick="startWatching(window._tempAnimeData)" style="flex: 1; background: #5b5bff; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); display: flex; justify-content: center; align-items: center; gap: 8px;">▶ Смотреть</button><button onclick="openStatusModal('${anime.id}', '${title.replace(/'/g, "\\'")}')" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'}; border: 1px solid ${isFaved ? '#ff2d78' : 'rgba(255,255,255,0.15)'}; width: 56px; border-radius: 14px; font-size: 22px; cursor: pointer; display: flex; justify-content: center; align-items: center;">${isFaved ? '<svg style="width:24px;height:24px;fill:currentColor;stroke:none;"><use href="#oa-favorite"></use></svg>' : '<svg><use href="#oa-favorite"></use></svg>'}</button></div>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;">${escapeHTML(g)}</span>`).join('')}</div>
                 <div style="margin-bottom: 20px;"><h3 style="font-size: 16px; margin-bottom: 10px; color: #fff;">📖 Описание</h3><p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p><button id="desc-btn" onclick="toggleDescription()" style="background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button></div>
             </div>`;
@@ -709,7 +706,7 @@ function setAnimeStatus(status) {
     else { showToast('Удалено'); }
     saveStats(stats); closeModal('statusModal');
     const heartBtn = document.querySelector('#detail-content button[onclick^="openStatusModal"]');
-    if (heartBtn) { if (status !== '') { heartBtn.style.background = 'rgba(255,45,120,0.2)'; heartBtn.style.borderColor = '#ff2d78'; heartBtn.style.color = '#ff2d78'; heartBtn.innerHTML = '❤️'; } else { heartBtn.style.background = 'rgba(255,255,255,0.1)'; heartBtn.style.borderColor = 'rgba(255,255,255,0.15)'; heartBtn.style.color = '#fff'; heartBtn.innerHTML = '🤍'; } }
+    if (heartBtn) { if (status !== '') { heartBtn.style.background = 'rgba(255,45,120,0.2)'; heartBtn.style.borderColor = '#ff2d78'; heartBtn.style.color = '#ff2d78'; heartBtn.innerHTML = '<svg style="width:24px;height:24px;fill:currentColor;stroke:none;"><use href="#oa-favorite"></use></svg>'; } else { heartBtn.style.background = 'rgba(255,255,255,0.1)'; heartBtn.style.borderColor = 'rgba(255,255,255,0.15)'; heartBtn.style.color = '#fff'; heartBtn.innerHTML = '<svg><use href="#oa-favorite"></use></svg>'; } }
 }
 function toggleDescription() { 
     const descEl = document.getElementById('desc-text'); const btnEl = document.getElementById('desc-btn'); 
@@ -745,12 +742,12 @@ function renderMyList() {
 // 10. СИСТЕМА ДОСТИЖЕНИЙ И XP
 // ==========================================
 const ACHIEVEMENTS = [
-    { id: 1, name: "Первый шаг", desc: "Зарегистрироваться на сайте", icon: "🚀", reward: 50, check: (s) => true },
-    { id: 2, name: "Дебютный просмотр", desc: "Посмотреть первый эпизод", icon: "🎬", reward: 20, check: (s) => s.episodesWatched >= 1 },
-    { id: 3, name: "Марафонец", desc: "Посмотреть 10 эпизодов за день", icon: "🏃", reward: 100, check: (s) => s.episodesWatched >= 10 },
-    { id: 4, name: "Ночной страж", desc: "Посмотреть аниме после 3:00", icon: "🌙", reward: 30, check: () => { let h = new Date().getHours(); return h >= 3 && h < 6; } },
-    { id: 33, name: "Ежедневный визит", desc: "Заходить 7 дней подряд", icon: "📅", reward: 70, check: (s) => s.daysStreak >= 7 },
-    { id: 36, name: "Первый уровень", desc: "Достичь 10 уровня", icon: "🎖️", reward: 200, check: (s) => Math.floor(s.xp / 100) + 1 >= 10 }
+    { id: 1, name: "Первый шаг", desc: "Зарегистрироваться на сайте", icon: "oa-home", reward: 50, check: (s) => true },
+    { id: 2, name: "Дебютный просмотр", desc: "Посмотреть первый эпизод", icon: "oa-level", reward: 20, check: (s) => s.episodesWatched >= 1 },
+    { id: 3, name: "Марафонец", desc: "Посмотреть 10 эпизодов за день", icon: "oa-level", reward: 100, check: (s) => s.episodesWatched >= 10 },
+    { id: 4, name: "Ночной страж", desc: "Посмотреть аниме после 3:00", icon: "oa-check", reward: 30, check: () => { let h = new Date().getHours(); return h >= 3 && h < 6; } },
+    { id: 33, name: "Ежедневный визит", desc: "Заходить 7 дней подряд", icon: "oa-check", reward: 70, check: (s) => s.daysStreak >= 7 },
+    { id: 36, name: "Первый уровень", desc: "Достичь 10 уровня", icon: "oa-level", reward: 200, check: (s) => Math.floor(s.xp / 100) + 1 >= 10 }
 ];
 const LEVEL_TITLES = ["Первый эпизод", "Любопытный зритель", "Случайный странник", "Ученик манги", "Читатель субтитров", "Собиратель тайтлов", "Ночной марафонец", "Ценитель опенингов", "Знаток сейю", "Ловец спойлеров", "Страж таймлайна", "Искатель шедевров", "Коллекционер жанров", "Следопыт сезона", "Архивариус эпизодов", "Пилот меха", "Ученик додзё", "Начинающий маг", "Дух сакуры", "Странник измерений", "Хранитель клинка", "Проводник сюжета", "Алхимик эмоций", "Писец рецензий", "Охотник за онгоингами", "Мастер бинджвотча", "Сэнпай сайта", "Хранитель лора", "Ткач теорий", "Лунный самурай", "Небесный курьер", "Хранитель опенингов", "Повелитель плейлистов", "Критик с катаной", "Мудрец субтитров", "Дубляжный маг", "Страж спойлеров", "Картограф арок", "Коллекционер аватарок", "Ловец редких тайтлов", "Хроникёр сезонов", "Мастер клиффхэнгеров", "Дуэлянт мнений", "Хранитель уютного уголка", "Рыцарь романтики", "Тень сёнэна", "Адепт исэкая", "Архимаг тайтлов", "Небесный отаку", "Странник по мирам", "Хранитель легенд", "Мастер сюжетных поворотов", "Голос фандома", "Судья сезона", "Хранитель аниме-реликвий", "Пилот звёздного поезда", "Лунный библиотекарь", "Самурай субботы", "Повелитель финальных титров", "Искатель скрытых жемчужин", "Маг рекомендаций", "Страж уютных вечеров", "Рыцарь онгоинга", "Дух обсуждений", "Хранитель мемов", "Мастер аниме-детектива", "Небесный критик", "Повелитель сезонных марафонов", "Хранитель канона", "Ткач фанфиков", "Оракул спойлеров", "Лунный сэнпай", "Самурай рейтингов", "Архивариус легенд", "Маг жанров", "Страж ночных просмотров", "Повелитель опенингов", "Хранитель тропов", "Рыцарь вечернего просмотра", "Дух фестиваля", "Мастер эмоциональных качелей", "Следопыт забытых тайтлов", "Хранитель аниме-хроник", "Небесный администратор", "Самурай финального эпизода", "Оракул сезонов", "Повелитель легендарных арок", "Хранитель аниме-вселенной", "Маг идеального топа", "Дух великого марафона", "Рыцарь вечного онгоинга", "Архимаг фандома", "Страж золотой коллекции", "Легенда аниме-сайта", "Небесный хранитель тайтлов", "Великий отаку-владыка", "Хранитель последнего эпизода", "Мастер пересмотров", "Дух аниме-сообщества", "Верховный хранитель сезонов"];
 
@@ -805,7 +802,7 @@ function openAchievementsModal() {
     const stats = getStats(); const container = document.getElementById('achievements-list-container'); let html = ''; 
     ACHIEVEMENTS.forEach(ach => { 
         const isDone = stats.unlockedAchievements.includes(ach.id); 
-        html += `<div class="ach-list-item ${isDone ? 'completed' : ''}"><div class="ach-list-icon">${ach.icon}</div><div class="ach-list-info"><h4>${ach.name}</h4><p>${ach.desc}</p></div><div style="color:#ffd700; font-weight:bold; margin-left: 10px;">+${ach.reward} 🪙</div>${isDone ? '<div style="color:#ffd700; font-weight:bold; margin-left: 10px;">✓</div>' : ''}</div>`; 
+        html += `<div class="ach-list-item ${isDone ? 'completed' : ''}"><div class="ach-list-icon"><svg><use href="#${ach.icon}"></use></svg></div><div class="ach-list-info"><h4>${ach.name}</h4><p>${ach.desc}</p></div><div style="color:#ffd700; font-weight:bold; margin-left: 10px;">+${ach.reward} <svg style="width:12px;height:12px;display:inline;vertical-align:middle;"><use href="#oa-coins"></use></svg></div>${isDone ? '<div style="color:#ffd700; font-weight:bold; margin-left: 10px;"><svg style="width:16px;height:16px;"><use href="#oa-check"></use></svg></div>' : ''}</div>`; 
     }); 
     container.innerHTML = html; document.getElementById('achievementsModal').classList.add('active'); 
 }
@@ -837,7 +834,7 @@ function initHeroSlider() {
     if (!slider || heroData.length === 0) return; let sliderHTML = '', dotsHTML = ''; 
     const stats = getStats(); const favedList = (stats.favedAnime || []).map(a => a.id); 
     heroData.forEach((anime, index) => { 
-        const isFaved = favedList.includes(anime.id); const heartClass = isFaved ? 'faved' : ''; const heartIcon = isFaved ? '❤️' : '🤍'; 
+        const isFaved = favedList.includes(anime.id); const heartClass = isFaved ? 'faved' : ''; const heartIcon = isFaved ? '<svg style="width:24px;height:24px;fill:currentColor;stroke:none;"><use href="#oa-favorite"></use></svg>' : '<svg><use href="#oa-favorite"></use></svg>'; 
         sliderHTML += `<div class="hero-slide ${index === 0 ? 'active' : ''}"><div class="hero-bg" style="background-image: url('${safeUrl(anime.img)}')"></div><div class="hero-gradient"></div><div class="hero-content"><div class="hero-badges"><span class="badge star">⭐ ${anime.score}</span><span class="badge">${escapeHTML(anime.type)}</span><span class="badge">${escapeHTML(anime.year)}</span></div><h1 class="hero-title">${escapeHTML(anime.title)}</h1><div class="hero-actions"><button class="btn-primary" onclick="openAnimeDetail('${anime.id}', 'home')">▶ Смотреть</button><button class="btn-icon-heart ${heartClass}" onclick="openStatusModal('${anime.id}', '${escapeHTML(anime.title).replace(/'/g, "\\'")}')">${heartIcon}</button></div></div></div>`; 
         dotsHTML += `<div class="hero-dot ${index === 0 ? 'active' : ''}" onclick="goToSlide(${index})"></div>`; 
     }); 
