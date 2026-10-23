@@ -16,23 +16,22 @@
         .screen.active { display: block; animation: fade 0.3s ease; }
         @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* ИСПРАВЛЕНО: Маленькая кнопка без фона в углу */
+        /* Кнопка теперь имеет z-index 9999999, чтобы перекрыть слайдер (z-index: 2) */
         .lang-btn-floating {
             position: fixed;
-            top: 20px; 
+            top: 25px; 
             right: 15px;
-            z-index: 99999;
+            z-index: 9999999;
             background: transparent;
             border: none;
-            font-size: 24px;
+            font-size: 28px;
             cursor: pointer;
-            filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.8));
-            width: 40px;
-            height: 40px;
+            filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.9));
+            width: 50px;
+            height: 50px;
             display: flex;
             align-items: center;
             justify-content: center;
-            pointer-events: auto;
         }
 
         .hero-section { position: relative; height: 85vh; min-height: 500px; overflow: hidden; }
@@ -421,6 +420,6 @@
         <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon">👤</span><span class="nav-text" data-i18n="nav_profile">Профиль</span></div>
     </nav>
 
-    <script src="app.js?v=71"></script>
+    <script src="app.js?v=75"></script>
 </body>
 </html>
