@@ -230,8 +230,6 @@ const API_Shikimori = {
     },
     async getDetails(id) {
         const cleanId = id.replace('shikimori_', '');
-        // ИСПРАВЛЕНИЕ: У Shikimori в GraphQL нет поля anime для одного ID. 
-        // Используем поиск по ID в списке animes, чтобы получить детали.
         const q = `{animes(ids:"${cleanId}",limit:1){id name russian description score episodes status poster{originalUrl} genres{name}}}`;
         const d = await this.fetch(q);
         return d.animes && d.animes.length > 0 ? this.convert(d.animes[0]) : null;
@@ -263,6 +261,8 @@ const API = {
     _cache: new Map(),
     
     setLang(lang) {
+        if (this.currentLang === lang) return;
+        
         this.currentLang = lang;
         currentLang = lang;
         this._cache.clear();
@@ -275,12 +275,19 @@ const API = {
         translatePage();
         showToast(lang === 'ru' ? 'Язык: Русский' : 'Language: English');
         
+        // 1. Обновляем настройки, если мы в них
         if (document.getElementById('tab-btn-settings').classList.contains('active')) {
             initApiSettings();
         }
-        
-        if(document.getElementById('screen-home').classList.contains('active')) loadHomePage();
-        if(document.getElementById('screen-catalog').classList.contains('active')) loadCatalog(true);
+
+        // 2. Принудительно перезагружаем текущий экран
+        if (document.getElementById('screen-home').classList.contains('active')) {
+            loadHomePage();
+        } else if (document.getElementById('screen-catalog').classList.contains('active')) {
+            loadCatalog(true);
+        } else if (document.getElementById('screen-my').classList.contains('active')) {
+            renderMyList();
+        }
     },
 
     getApi() {
