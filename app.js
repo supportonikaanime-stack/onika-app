@@ -1,5 +1,5 @@
 // ==========================================
-// СИСТЕМА ВИЗУАЛЬНЫХ ЛОГОВ
+// СИСТЕМА ВИЗУАЛЬНЫХ ЛОГОВ (Скрыта, 5 кликов по верху)
 // ==========================================
 let clickCount = 0;
 document.addEventListener('click', (e) => {
@@ -8,9 +8,7 @@ document.addEventListener('click', (e) => {
         if (clickCount >= 5) {
             clickCount = 0;
             let logBox = document.getElementById('debug-log-box');
-            if (logBox) {
-                logBox.style.display = logBox.style.display === 'none' ? 'flex' : 'none';
-            }
+            if (logBox) logBox.style.display = logBox.style.display === 'none' ? 'flex' : 'none';
         }
     }
 });
@@ -40,6 +38,15 @@ function showLog(msg, isError = false) {
     content.appendChild(p);
     logBox.scrollTop = logBox.scrollHeight;
     console.log(isError ? 'ERROR: ' : 'LOG: ', msg);
+}
+
+// ==========================================
+// СБРОС СТАТИСТИКИ (выполняется один раз)
+// ==========================================
+if (!localStorage.getItem('onika_stats_reset_v1')) {
+    localStorage.removeItem('onika_stats');
+    localStorage.setItem('onika_stats_reset_v1', 'true');
+    showLog('Кэш статистики очищен');
 }
 
 // ==========================================
@@ -122,9 +129,7 @@ const API_AniLibria = {
     },
     convert(a) {
         let genresList = [];
-        if (Array.isArray(a.genres)) {
-            genresList = a.genres.map(g => g.name || '');
-        }
+        if (Array.isArray(a.genres)) genresList = a.genres.map(g => g.name || '');
 
         let statusText = 'Анонс';
         if (a.status && a.status.value === 'ISSUE') statusText = 'Онгоинг';
@@ -132,12 +137,11 @@ const API_AniLibria = {
 
         const posterUrl = a.poster?.src || a.poster?.preview || '';
         
-        // ИСПРАВЛЕНИЕ 1: Ищем рейтинг во всех возможных местах
-        let rawRating = a.statistics?.rating || a.age_rating?.value || 0;
-        let safeScore = Number(rawRating);
-        if (isNaN(safeScore)) safeScore = 0;
+        // ИСПРАВЛЕНИЕ РЕЙТИНГА: Берем все возможные поля
+        let rawRating = a.statistics?.rating || a.rating || a.score || 0;
+        let safeScore = parseFloat(rawRating);
+        if (isNaN(safeScore) || safeScore < 0 || safeScore > 10) safeScore = 0;
 
-        // ИСПРАВЛЕНИЕ 2: Берем количество серий откуда угодно
         let epCount = a.episodes_total || a.series_episodes_count || '?';
 
         return {
@@ -389,9 +393,9 @@ function loadProfileData() {
     
     if (avatarEl && MY_TG_ID) { 
         if (customAvatar) {
-            avatarEl.innerHTML = `<img src="${safeUrl(customAvatar)}">`; 
+            avatarEl.innerHTML = `<img src="${safeUrl(customAvatar)}" style="width:100%; height:100%; object-fit:cover;">`; 
         } else if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.photo_url) {
-            avatarEl.innerHTML = `<img src="${safeUrl(tg.initDataUnsafe.user.photo_url)}">`; 
+            avatarEl.innerHTML = `<img src="${safeUrl(tg.initDataUnsafe.user.photo_url)}" style="width:100%; height:100%; object-fit:cover;">`; 
         } else {
             avatarEl.innerHTML = `<span>${escapeHTML(MY_NAME[0].toUpperCase())}</span>`; 
         }
@@ -411,6 +415,7 @@ function loadProfileData() {
     const xpCurrentLevel = stats.xp % 100; 
     const progressPercent = (xpCurrentLevel / 100) * 100; 
     let rankTitle = LEVEL_TITLES[Math.min(currentLevel - 1, 99)]; 
+    
     setElText('user-level', currentLevel); 
     setElText('user-level-text', currentLevel); 
     setElText('user-rank', rankTitle); 
@@ -429,6 +434,7 @@ function loadProfileData() {
     setElText('modal-xp-next', xpForNextLevel); 
     setElWidth('modal-xp-bar', progressPercent + '%'); 
     setElText('modal-ach-earned', stats.unlockedAchievements.length); 
+    
     const nextAch = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id)); 
     if (nextAch) setElText('next-ach-name', nextAch.name); 
     else setElText('next-ach-name', 'Все выполнено!'); 
@@ -725,34 +731,28 @@ async function loadCatalog(reset = false) {
         let items = [];
         
         if (currentFilters.search) {
-            items = await API.searchAnime(currentFilters.search, catalogPage, 50); // Берем больше для фильтрации
+            items = await API.searchAnime(currentFilters.search, catalogPage, 50);
         } else {
-            // ИСПРАВЛЕНИЕ 3: Запрашиваем больше данных (50), чтобы фильтровать локально
             items = await API.getCatalog(catalogPage, 50); 
         }
 
-        // ЛОКАЛЬНАЯ ФИЛЬТРАЦИЯ
         let filteredItems = items;
 
-        // Фильтр по жанру
         if (currentFilters.genre && currentFilters.genre !== '') {
             filteredItems = filteredItems.filter(a => 
                 a.genres && a.genres.some(g => g.toLowerCase().includes(currentFilters.genre.toLowerCase()))
             );
         }
 
-        // Фильтр по году
         if (currentFilters.year && currentFilters.year !== '') {
             filteredItems = filteredItems.filter(a => String(a.year) === currentFilters.year);
         }
 
-        // Фильтр по статусу
         if (currentFilters.status && currentFilters.status !== '') {
             let statusRu = currentFilters.status === 'ongoing' ? 'Онгоинг' : currentFilters.status === 'released' ? 'Завершено' : 'Анонс';
             filteredItems = filteredItems.filter(a => a.status === statusRu);
         }
 
-        // Сортировка
         if (currentFilters.sort && currentFilters.sort !== 'popularity') {
              if (currentFilters.sort === 'ranked') {
                  filteredItems.sort((a, b) => b.score - a.score);
@@ -761,7 +761,6 @@ async function loadCatalog(reset = false) {
              }
         }
 
-        // Обрезаем до 12 для отображения
         const displayItems = filteredItems.slice(0, 12);
 
         if (reset) grid.innerHTML = '';
@@ -781,7 +780,6 @@ async function loadCatalog(reset = false) {
             grid.insertAdjacentHTML('beforeend', cardHtml);
         });
         
-        // Логика кнопки "Загрузить еще" (учитывая, что мы загружаем по 50)
         if (items.length < 50) { 
             hasMoreCatalog = false; 
             if (loadMoreBtn) loadMoreBtn.style.display = 'none'; 
