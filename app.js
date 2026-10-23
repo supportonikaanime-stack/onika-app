@@ -107,7 +107,9 @@ const TRANSLATIONS = {
         sort_pop: "По популярности", sort_rank: "По рейтингу", sort_new: "Новинки", filter_anime: "Аниме", filter_manga: "Манга",
         ach_earned: "Получено:", ach_of: "из", level_up: "Новый уровень:", rank: "Звание:", how_farm_xp: "Как фармить XP:", xp_watch: "🎬 Просмотр серии: +20 XP", xp_fav: "❤️ Добавить в избранное: +10 XP", xp_daily: "📅 Ежедневный вход: +50 XP", ep_episode: "эп.", ep_voice: "Озвучка:", ep_player: "Плеер:", voice_title: "Выбор озвучки", player_title: "Выбор плеера", eps_title: "Выбор серии",
         lang_ru: "🇷🇺 Русский (Shikimori)", lang_en: "🇬🇧 English (AniList)",
-        api_error: "Ошибка API", loading: "Загрузка...", error_net: "Ошибка сети", error_load: "Ошибка загрузки", error_db: "База данных не подключена", user_not_found: "Пользователь не найден", req_already_sent: "Заявка уже отправлена или вы друзья", this_is_you: "Это ваш ID", enter_id: "Введите ID", modal_desc: "Описание"
+        api_error: "Ошибка API", loading: "Загрузка...", error_net: "Ошибка сети", error_load: "Ошибка загрузки", error_db: "База данных не подключена", user_not_found: "Пользователь не найден", req_already_sent: "Заявка уже отправлена или вы друзья", this_is_you: "Это ваш ID", enter_id: "Введите ID", modal_desc: "Описание",
+        // Жанры
+        genre_action: "Экшен", genre_romance: "Романтика", genre_comedy: "Комедия", genre_fantasy: "Фэнтези", genre_drama: "Драма", genre_adventure: "Приключения", genre_scifi: "Фантастика"
     },
     en: {
         nav_home: "Home", nav_catalog: "Catalog", nav_my: "My List", nav_friends: "Friends", nav_profile: "Profile",
@@ -126,7 +128,9 @@ const TRANSLATIONS = {
         sort_pop: "By Popularity", sort_rank: "By Rating", sort_new: "New Releases", filter_anime: "Anime", filter_manga: "Manga",
         ach_earned: "Earned:", ach_of: "of", level_up: "New Level:", rank: "Rank:", how_farm_xp: "How to farm XP:", xp_watch: "🎬 Watch episode: +20 XP", xp_fav: "❤️ Add to favorites: +10 XP", xp_daily: "📅 Daily login: +50 XP", ep_episode: "ep.", ep_voice: "Voice:", ep_player: "Player:", voice_title: "Select Voice", player_title: "Select Player", eps_title: "Select Episode",
         lang_ru: "🇷🇺 Русский (Shikimori)", lang_en: "🇬🇧 English (AniList)",
-        api_error: "API Error", loading: "Loading...", error_net: "Network Error", error_load: "Load Error", error_db: "Database not connected", user_not_found: "User not found", req_already_sent: "Request already sent or you are friends", this_is_you: "This is your ID", enter_id: "Enter ID", modal_desc: "Description"
+        api_error: "API Error", loading: "Loading...", error_net: "Network Error", error_load: "Load Error", error_db: "Database not connected", user_not_found: "User not found", req_already_sent: "Request already sent or you are friends", this_is_you: "This is your ID", enter_id: "Enter ID", modal_desc: "Description",
+        // Жанры
+        genre_action: "Action", genre_romance: "Romance", genre_comedy: "Comedy", genre_fantasy: "Fantasy", genre_drama: "Drama", genre_adventure: "Adventure", genre_scifi: "Sci-Fi"
     }
 };
 
@@ -275,17 +279,22 @@ const API = {
         translatePage();
         showToast(lang === 'ru' ? 'Язык: Русский' : 'Language: English');
         
-        // 1. Обновляем настройки, если мы в них
+        // Перерисовываем настройки, чтобы галочка встала на место
         if (document.getElementById('tab-btn-settings').classList.contains('active')) {
             initApiSettings();
         }
 
-        // 2. Принудительно перезагружаем текущий экран
+        // Мгновенно перезагружаем экраны
         if (document.getElementById('screen-home').classList.contains('active')) {
             loadHomePage();
-        } else if (document.getElementById('screen-catalog').classList.contains('active')) {
+        } 
+        if (document.getElementById('screen-catalog').classList.contains('active')) {
+            // Принудительно сбрасываем фильтры и перезагружаем
+            currentFilters = { search: '', genre: '', year: '', status: '', sort: 'POPULARITY_DESC' };
+            initCatalogFilters();
             loadCatalog(true);
-        } else if (document.getElementById('screen-my').classList.contains('active')) {
+        }
+        if (document.getElementById('screen-my').classList.contains('active')) {
             renderMyList();
         }
     },
@@ -334,7 +343,16 @@ let currentMyListFilter = 'all';
 let previousScreen = 'catalog'; 
 let searchDebounceTimer;
 
-const GENRES = [{ id: '1', name: 'Экшен' }, { id: '22', name: 'Романтика' }, { id: '4', name: 'Комедия' }, { id: '10', name: 'Фэнтези' }, { id: '8', name: 'Драма' }, { id: '2', name: 'Приключения' }, { id: '24', name: 'Фантастика' }];
+// ИСПРАВЛЕНИЕ: Перевели жанры
+const GENRES = [
+    { id: '1', key: 'genre_action' }, 
+    { id: '22', key: 'genre_romance' }, 
+    { id: '4', key: 'genre_comedy' }, 
+    { id: '10', key: 'genre_fantasy' }, 
+    { id: '8', key: 'genre_drama' }, 
+    { id: '2', key: 'genre_adventure' }, 
+    { id: '24', key: 'genre_scifi' }
+];
 const YEARS = [{ id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' }, { id: '2021', name: '2021' }, { id: '2020', name: '2020' }];
 const STATUSES = [{ id: 'ongoing', name: 'status_ongoing' }, { id: 'released', name: 'status_released' }, { id: 'anons', name: 'status_anons' }];
 const SORTS = [{ id: 'popularity', name: 'sort_pop' }, { id: 'ranked', name: 'sort_rank' }, { id: 'aired_on', name: 'sort_new' }];
@@ -679,7 +697,7 @@ function initCatalogFilters() {
     if (!genreContainer) return; 
     let html = `<div class="genre-pill active" onclick="setGenreFilter('', this)"><div class="dot"></div>${t('modal_filter_any')}</div>`; 
     GENRES.forEach(g => { 
-        html += `<div class="genre-pill" onclick="setGenreFilter('${g.name}', this)">${g.name}</div>`; 
+        html += `<div class="genre-pill" onclick="setGenreFilter('${t(g.key)}', this)">${t(g.key)}</div>`; 
     }); 
     genreContainer.innerHTML = html; 
 }
