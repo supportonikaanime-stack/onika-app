@@ -281,7 +281,11 @@ const API = {
         translatePage();
         showToast(lang === 'ru' ? 'Язык: Русский' : 'Language: English');
         updateLangUI();
-        initApiSettings(); // Обновляем настройки
+        
+        // Принудительное обновление настроек, если они открыты
+        if (document.getElementById('tab-btn-settings').classList.contains('active')) {
+            initApiSettings();
+        }
         
         if(document.getElementById('screen-home').classList.contains('active')) loadHomePage();
         if(document.getElementById('screen-catalog').classList.contains('active')) loadCatalog(true);
