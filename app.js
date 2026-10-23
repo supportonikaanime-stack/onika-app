@@ -204,21 +204,30 @@ function copyMyId() {
 
 async function loadProfileData() {
     let stats = getStats(); 
+    
+    // ИСПРАВЛЕНО: Сначала берем сохраненный URL из localStorage, чтобы применить его моментально
+    if (stats.active_banner_url) {
+        ACTIVE_BANNER_URL = stats.active_banner_url;
+    }
+    
     const today = new Date().toDateString(); 
     if (stats.lastVisit !== today) { 
         stats.daysStreak += 1; stats.lastVisit = today; stats.xp += 50; stats.coins += 10; stats.watchedToday = []; saveStats(stats); 
     } 
     checkAchievements(stats); 
     
-    // Загружаем активный баннер пользователя
+    // Параллельно проверяем, не сменился ли баннер в базе данных (например, с другого устройства)
     if (MY_TG_ID && supabaseClient) {
         try {
             const { data: user } = await supabaseClient.from('users').select('active_banner').eq('tg_id', MY_TG_ID).single();
             if (user && user.active_banner) {
                 const { data: banner } = await supabaseClient.from('banners').select('image_url').eq('id', user.active_banner).single();
-                if (banner) ACTIVE_BANNER_URL = safeUrl(banner.image_url);
-            } else {
-                ACTIVE_BANNER_URL = ''; // Сброс, если баннера нет
+                if (banner) {
+                    ACTIVE_BANNER_URL = safeUrl(banner.image_url);
+                    stats.active_banner = user.active_banner;
+                    stats.active_banner_url = ACTIVE_BANNER_URL; // Обновляем локальный кэш
+                    saveStats(stats);
+                }
             }
         } catch(e) { console.error(e); }
     }
@@ -312,7 +321,8 @@ async function openShopModal() {
             } else if (isOwned) {
                 btnHtml = `<button class="shop-btn owned" onclick="applyBanner(${b.id}, '${b.image_url}')">Применить</button>`;
             } else {
-                btnHtml = `<button class="shop-btn" onclick="buyBanner(${b.id}, ${b.price})">Купить ${b.price} 🪙</button>`;
+                const priceText = b.price === 0 ? 'Получить' : `Купить ${b.price} 🪙`;
+                btnHtml = `<button class="shop-btn" onclick="buyBanner(${b.id}, ${b.price})">${priceText}</button>`;
             }
 
             html += `
@@ -349,10 +359,18 @@ async function buyBanner(bannerId, price) {
         await supabaseClient.from('user_banners').insert({ tg_id: MY_TG_ID, banner_id: bannerId });
         
         stats.active_banner = bannerId;
+        
+        // Сохраняем URL локально для мгновенного отображения
+        const { data: b } = await supabaseClient.from('banners').select('image_url').eq('id', bannerId).single();
+        if (b) {
+            stats.active_banner_url = safeUrl(b.image_url);
+            ACTIVE_BANNER_URL = stats.active_banner_url;
+        }
+        
         saveStats(stats);
         syncProfileToDB();
 
-        showToast('✅ Баннер куплен и применен!');
+        showToast('✅ Баннер получен!');
         openShopModal(); 
         loadProfileData(); 
 
@@ -365,15 +383,30 @@ async function buyBanner(bannerId, price) {
 async function applyBanner(bannerId, imageUrl) {
     let stats = getStats();
     stats.active_banner = bannerId;
+    stats.active_banner_url = safeUrl(imageUrl);
     saveStats(stats);
     syncProfileToDB();
     
-    ACTIVE_BANNER_URL = safeUrl(imageUrl);
+    ACTIVE_BANNER_URL = stats.active_banner_url;
     const bannerEl = document.getElementById('profile-banner');
     if (bannerEl) bannerEl.style.backgroundImage = `url('${ACTIVE_BANNER_URL}')`;
 
     showToast('Баннер применен!');
     openShopModal(); 
+}
+
+async function resetBanner() {
+    let stats = getStats();
+    stats.active_banner = null;
+    stats.active_banner_url = '';
+    saveStats(stats);
+    syncProfileToDB();
+    
+    ACTIVE_BANNER_URL = '';
+    const bannerEl = document.getElementById('profile-banner');
+    if (bannerEl) bannerEl.style.backgroundImage = 'none';
+
+    showToast('Баннер снят');
 }
 
 // ==========================================
@@ -723,7 +756,7 @@ const LEVEL_TITLES = ["Первый эпизод", "Любопытный зри�
 
 function getStats() { 
     let stats = JSON.parse(localStorage.getItem('onika_stats')); 
-    if (!stats) { stats = { episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0, active_banner: null, lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [] }; localStorage.setItem('onika_stats', JSON.stringify(stats)); } 
+    if (!stats) { stats = { episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0, active_banner: null, active_banner_url: '', lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [] }; localStorage.setItem('onika_stats', JSON.stringify(stats)); } 
     if (!stats.unlockedAchievements) stats.unlockedAchievements = []; if (!stats.favedAnime) stats.favedAnime = []; if (!stats.watchedToday) stats.watchedToday = []; 
     if (stats.coins === undefined) stats.coins = 0; 
     return stats; 
