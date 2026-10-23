@@ -257,6 +257,23 @@ async function loadProfileData() {
     setElText('user-level', currentLevel); 
     setElText('user-level-text', currentLevel); 
     setElText('user-rank', rankTitle); 
+
+    // ИСПРАВЛЕНО: Логика смены картинки уровня каждые 20 уровней
+    const levelImg = document.getElementById('user-level-image');
+    if (levelImg) {
+        let imgNum = 1;
+        if (currentLevel > 100) {
+            // Если уровень выше 100, начинаем заново (или можно оставить 5)
+            imgNum = Math.floor((currentLevel - 1) / 20) % 5 + 1;
+        } else {
+            if (currentLevel >= 80) imgNum = 5;
+            else if (currentLevel >= 60) imgNum = 4;
+            else if (currentLevel >= 40) imgNum = 3;
+            else if (currentLevel >= 20) imgNum = 2;
+        }
+        levelImg.src = `lvl${imgNum}.png`;
+    }
+
     setElText('user-xp-current', xpCurrentLevel); 
     setElText('user-xp-next', xpForNextLevel); 
     setElWidth('user-xp-bar', progressPercent + '%'); 
@@ -531,7 +548,10 @@ async function openFriendProfile(id, name) {
                         <h2>${escapeHTML(friend.name)}</h2>
                         <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 6px 15px; display: inline-block; margin: 5px 0 15px;"><span style="color: #ccc; font-size: 12px;">ID:</span> <span style="color: #fff; font-weight: bold;">${escapeHTML(friend.tg_id)}</span></div>
                         <div class="level-row">
-                            <div class="level-badge"><span>${lvl}</span></div>
+                            <div class="level-badge">
+                                <img id="friend-level-image" src="lvl1.png" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 10px rgba(91, 91, 255, 0.5));">
+                                <span id="friend-level-num" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 22px; font-weight: 800; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">${lvl}</span>
+                            </div>
                             <div class="level-info">
                                 <div class="level-title">УРОВЕНЬ ${lvl} <span class="rank">${rank}</span></div>
                                 <div class="xp-bar-container"><div class="xp-bar-fill" style="width: ${(friend.xp || 0) % 100}%;"></div></div>
@@ -553,6 +573,18 @@ async function openFriendProfile(id, name) {
             ${lastWatchedHtml}
             <button onclick="removeFriend(${friend.tg_id})" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">🗑️ Удалить из друзей</button>
         `;
+        
+        // Устанавливаем картинку уровня друга
+        const friendImg = document.getElementById('friend-level-image');
+        if (friendImg) {
+            let imgNum = 1;
+            if (lvl >= 80) imgNum = 5;
+            else if (lvl >= 60) imgNum = 4;
+            else if (lvl >= 40) imgNum = 3;
+            else if (lvl >= 20) imgNum = 2;
+            friendImg.src = `lvl${imgNum}.png`;
+        }
+        
     } catch (e) { container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка</div>'; }
 }
 
