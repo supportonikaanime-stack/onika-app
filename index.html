@@ -34,10 +34,12 @@
         .hero-actions { display: flex; gap: 12px; align-items: center; }
         .btn-primary { flex: 1; background: var(--primary); color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 8px 25px rgba(91,91,255,0.4); cursor: pointer; }
         .btn-primary:active { transform: scale(0.96); }
-        .btn-icon-heart { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 56px; height: 56px; border-radius: 14px; display: flex; justify-content: center; align-items: center; cursor: pointer;}
-        .btn-icon-heart svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        
+        /* ИСПРАВЛЕНО: Жесткие размеры для SVG в кнопке избранного */
+        .btn-icon-heart { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 56px; height: 56px; border-radius: 14px; display: flex; justify-content: center; align-items: center; cursor: pointer; flex-shrink: 0; }
+        .btn-icon-heart svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         .btn-icon-heart.faved { background: rgba(255,45,120,0.2); border-color: rgba(255,45,120,0.5); color: #ff2d78; }
-        .btn-icon-heart.faved svg { fill: #ff2d78; }
+        .btn-icon-heart.faved svg { fill: #ff2d78; stroke: #ff2d78; }
         
         .hero-dots { position: absolute; bottom: 20px; right: 20px; display: flex; gap: 6px; z-index: 10; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 20px; backdrop-filter: blur(5px); }
         .hero-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.3); transition: 0.3s; }
@@ -73,9 +75,9 @@
         .catalog-card-img { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; background: #222; }
         .catalog-card-title { position: absolute; bottom: 0; left: 0; width: 100%; padding: 30px 10px 10px 10px; font-size: 13px; font-weight: 700; color: #fff; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, transparent 100%); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .filter-option-btn { background: #1a1a20; border: 1px solid rgba(255,255,255,0.05); color: #fff; padding: 15px; border-radius: 12px; text-align: left; font-size: 15px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
+        .filter-option-btn { background: #1a1a20; border: 1px solid rgba(255,255,255,0.05); color: #fff; padding: 15px; border-radius: 12px; text-align: left; font-size: 15px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 12px; }
         .filter-option-btn.active { background: rgba(91,91,255,0.2); border-color: #5b5bff; }
-        .filter-option-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .filter-option-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 
         .detail-poster { width: 140px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .detail-title { font-size: 24px; font-weight: 800; margin-bottom: 10px; line-height: 1.2; }
@@ -173,7 +175,8 @@
         .ach-next-info { flex: 1; }
         .ach-next-info h4 { font-size: 14px; color: #fff; margin-bottom: 2px; }
         .ach-next-info p { font-size: 11px; color: #888; }
-        .ach-reward { font-size: 12px; font-weight: bold; color: #ffd700; }
+        .ach-reward { font-size: 12px; font-weight: bold; color: #ffd700; display: flex; align-items: center; gap: 4px; }
+        .ach-reward svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
         /* Настройки */
         .settings-btn {
@@ -235,7 +238,8 @@
         .level-up-popup .text { flex: 1; min-width: 0; }
         .level-up-popup .text h4 { color: #fff; font-size: 16px; margin-bottom: 2px; }
         .level-up-popup .text p { color: rgba(255,255,255,0.8); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .level-up-popup .coins { font-size: 16px; font-weight: bold; color: #ffd700; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 8px; }
+        .level-up-popup .coins { font-size: 16px; font-weight: bold; color: #ffd700; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 8px; display: flex; align-items: center; gap: 4px; }
+        .level-up-popup .coins svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-h); background: rgba(10,10,15,0.95); backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-around; align-items: center; z-index: 9999; padding-bottom: env(safe-area-inset-bottom); }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); cursor: pointer; transition: 0.2s; }
@@ -262,6 +266,12 @@
       <symbol id="oa-achievement" viewBox="0 0 24 24"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/><path d="m8.5 18.5-.8 3 4.3-2.3 4.3 2.3-.8-3"/></symbol>
       <symbol id="oa-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
       <symbol id="oa-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+      
+      <!-- НОВЫЕ ИКОНКИ ДЛЯ СТАТУСОВ -->
+      <symbol id="oa-eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+      <symbol id="oa-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+      <symbol id="oa-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+      <symbol id="oa-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></symbol>
     </svg>
 
     <div class="level-up-popup" id="levelUpPopup">
@@ -270,7 +280,7 @@
             <h4>Новый уровень: <span id="popup-level">2</span></h4>
             <p>Звание: <span id="popup-rank">Любопытный зритель</span></p>
         </div>
-        <div class="coins">+<span id="popup-coins">100</span> <svg style="width:14px;height:14px;display:inline;vertical-align:middle;"><use href="#oa-coins"></use></svg></div>
+        <div class="coins">+<span id="popup-coins">100</span> <svg><use href="#oa-coins"></use></svg></div>
     </div>
 
     <div id="screen-home" class="screen active">
@@ -428,7 +438,7 @@
                 <div class="ach-next">
                     <div class="ach-next-icon"><svg><use href="#oa-level"></use></svg></div>
                     <div class="ach-next-info"><h4>Дальше: <span id="next-ach-name">Первый шаг</span></h4><p>Продолжайте смотреть</p></div>
-                    <div class="ach-reward">+<span id="next-ach-reward">50</span> <svg style="width:14px;height:14px;display:inline;vertical-align:middle;"><use href="#oa-coins"></use></svg></div>
+                    <div class="ach-reward">+<span id="next-ach-reward">50</span> <svg><use href="#oa-coins"></use></svg></div>
                 </div>
             </div>
 
@@ -479,18 +489,19 @@
         </div>
     </div>
 
+    <!-- ИСПРАВЛЕНО: Модалка статуса с SVG иконками -->
     <div class="modal-overlay" id="statusModal" onclick="closeModal('statusModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('statusModal')"><svg><use href="#oa-close"></use></svg></button>
             <div class="modal-title">Добавить в список</div>
             <div class="modal-subtitle" id="status-anime-title">Название аниме</div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button class="filter-option-btn" onclick="setAnimeStatus('watching')">👀 Смотрю</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('planned')">📅 В планах</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('completed')">✅ Просмотрено</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('dropped')">🚫 Заброшено</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('watching')"><svg style="color: #3498db;"><use href="#oa-eye"></use></svg> Смотрю</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('planned')"><svg style="color: #f1c40f;"><use href="#oa-calendar"></use></svg> В планах</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('completed')"><svg style="color: #2ecc71;"><use href="#oa-check"></use></svg> Просмотрено</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('dropped')"><svg style="color: #e74c3c;"><use href="#oa-close"></use></svg> Заброшено</button>
                 <button class="filter-option-btn" onclick="setAnimeStatus('favorite')" style="color: #ff2d78;"><svg><use href="#oa-favorite"></use></svg> Любимое</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('')" style="color: #888;"><svg><use href="#oa-close"></use></svg> Удалить</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('')" style="color: #888;"><svg><use href="#oa-trash"></use></svg> Удалить</button>
             </div>
         </div>
     </div>
@@ -529,6 +540,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=110"></script>
+    <script src="app.js?v=111"></script>
 </body>
 </html>
