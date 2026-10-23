@@ -1,5 +1,5 @@
 // ==========================================
-// СИСТЕМА ВИЗУАЛЬНЫХ ЛОГОВ (Скрыта, 5 кликов по верху)
+// СИСТЕМА ВИЗУАЛЬНЫХ ЛОГОВ
 // ==========================================
 let clickCount = 0;
 document.addEventListener('click', (e) => {
@@ -40,13 +40,10 @@ function showLog(msg, isError = false) {
     console.log(isError ? 'ERROR: ' : 'LOG: ', msg);
 }
 
-// ==========================================
-// СБРОС СТАТИСТИКИ (выполняется один раз)
-// ==========================================
+// СБРОС СТАТИСТИКИ
 if (!localStorage.getItem('onika_stats_reset_v1')) {
     localStorage.removeItem('onika_stats');
     localStorage.setItem('onika_stats_reset_v1', 'true');
-    showLog('Кэш статистики очищен');
 }
 
 // ==========================================
@@ -81,9 +78,15 @@ function escapeHTML(str) {
     return str.toString().replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
+// Функция теперь обрабатывает относительные ссылки для AniLibria и Shikimori
 function safeUrl(url) {
     if (!url) return '';
     if (url.startsWith('/')) {
+        // Если это Shikimori (обычно ссылки начинаются с /system/)
+        if (url.includes('/system/') || url.includes('/assets/')) {
+            return 'https://shikimori.io' + url;
+        }
+        // Иначе считаем, что это AniLibria
         return 'https://anilibria.top' + url;
     }
     try {
@@ -137,7 +140,6 @@ const API_AniLibria = {
 
         const posterUrl = a.poster?.src || a.poster?.preview || '';
         
-        // ИСПРАВЛЕНИЕ РЕЙТИНГА: Берем все возможные поля
         let rawRating = a.statistics?.rating || a.rating || a.score || 0;
         let safeScore = parseFloat(rawRating);
         if (isNaN(safeScore) || safeScore < 0 || safeScore > 10) safeScore = 0;
@@ -209,12 +211,18 @@ const API_AniList = {
     }
 };
 
-// --- API SHIKIMORI ---
+// --- API SHIKIMORI (Добавлен User-Agent) ---
 const API_Shikimori = {
-    BASE_URL: 'https://shikimori.one/api/graphql',
+    BASE_URL: 'https://shikimori.io/api/graphql',
     async fetch(query) {
+        // Используем прокси и добавляем обязательный User-Agent
         const res = await fetch(PROXY_URL + encodeURIComponent(this.BASE_URL), {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query })
+            method: 'POST', 
+            headers: { 
+                'Content-Type': 'application/json',
+                'User-Agent': 'OnikaAnime/1.0' // <--- ДОБАВЛЕНО
+            }, 
+            body: JSON.stringify({ query })
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const d = await res.json();
