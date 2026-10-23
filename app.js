@@ -258,12 +258,11 @@ async function loadProfileData() {
     setElText('user-level-text', currentLevel); 
     setElText('user-rank', rankTitle); 
 
-    // ИСПРАВЛЕНО: Логика смены картинки уровня каждые 20 уровней
+    // Логика смены картинки уровня каждые 20 уровней
     const levelImg = document.getElementById('user-level-image');
     if (levelImg) {
         let imgNum = 1;
         if (currentLevel > 100) {
-            // Если уровень выше 100, начинаем заново (или можно оставить 5)
             imgNum = Math.floor((currentLevel - 1) / 20) % 5 + 1;
         } else {
             if (currentLevel >= 80) imgNum = 5;
@@ -549,8 +548,8 @@ async function openFriendProfile(id, name) {
                         <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 6px 15px; display: inline-block; margin: 5px 0 15px;"><span style="color: #ccc; font-size: 12px;">ID:</span> <span style="color: #fff; font-weight: bold;">${escapeHTML(friend.tg_id)}</span></div>
                         <div class="level-row">
                             <div class="level-badge">
-                                <img id="friend-level-image" src="lvl1.png" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 10px rgba(91, 91, 255, 0.5));">
-                                <span id="friend-level-num" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 22px; font-weight: 800; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">${lvl}</span>
+                                <img id="friend-level-image" src="lvl1.png">
+                                <span id="friend-level-num">${lvl}</span>
                             </div>
                             <div class="level-info">
                                 <div class="level-title">УРОВЕНЬ ${lvl} <span class="rank">${rank}</span></div>
