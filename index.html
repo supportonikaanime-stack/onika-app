@@ -16,6 +16,26 @@
         .screen.active { display: block; animation: fade 0.3s ease; }
         @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+        .lang-btn-floating {
+            position: absolute;
+            top: 50px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
         .hero-section { position: relative; height: 85vh; min-height: 500px; overflow: hidden; }
         .hero-slider { position: relative; width: 100%; height: 100%; }
         .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; visibility: hidden; transition: 0.6s; display: flex; align-items: flex-end; }
@@ -100,7 +120,7 @@
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .camera-icon { position: absolute; bottom: 0; right: 0; background: #1a1a20; border: 1px solid #333; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #888; }
         .user-details { text-align: center; }
-        .user-details h2 { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 15px; } /* УБРАН СЛОГАН И УМЕНЬШЕН ОТСТУП */
+        .user-details h2 { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 15px; }
         
         .level-row { display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 12px; text-align: left; cursor: pointer; transition: 0.2s; }
         .level-row:active { transform: scale(0.98); }
@@ -173,31 +193,33 @@
     <div class="level-up-popup" id="levelUpPopup">
         <div class="icon">🎉</div>
         <div class="text">
-            <h4>Новый уровень: <span id="popup-level">2</span></h4>
-            <p>Звание: <span id="popup-rank">Любопытный зритель</span></p>
+            <h4><span data-i18n="level_up">Новый уровень:</span> <span id="popup-level">2</span></h4>
+            <p><span data-i18n="rank">Звание:</span> <span id="popup-rank">Любопытный зритель</span></p>
         </div>
     </div>
 
     <div id="screen-home" class="screen active">
+        <button class="lang-btn-floating" id="global-lang-btn" onclick="API.setLang(API.currentLang === 'ru' ? 'en' : 'ru')">🇷🇺</button>
+
         <section class="hero-section" id="heroSection">
             <div class="hero-slider" id="heroSlider"></div>
             <div class="hero-dots" id="heroDots"></div>
         </section>
         <section class="content-section">
-            <div class="section-header"><h2>🔥 Популярное сейчас</h2></div>
+            <div class="section-header"><h2 data-i18n="home_popular">🔥 Популярное сейчас</h2></div>
             <div class="horizontal-scroll" id="popular-list"></div>
         </section>
         <section class="tg-banner-section">
             <a href="https://t.me/onikaanime" target="_blank" class="tg-banner">
                 <div class="tg-icon">✈️</div>
                 <div class="tg-text">
-                    <h3>Наш Telegram-канал</h3>
-                    <p>Новости, розыгрыши и анонсы</p>
+                    <h3 data-i18n="home_tg_title">Наш Telegram-канал</h3>
+                    <p data-i18n="home_tg_sub">Новости, розыгрыши и анонсы</p>
                 </div>
             </a>
         </section>
         <section class="content-section">
-            <div class="section-header"><h2>✨ Рекомендации для вас</h2></div>
+            <div class="section-header"><h2 data-i18n="home_recs">✨ Рекомендации для вас</h2></div>
             <div class="grid-catalog" id="recommended-list"></div>
         </section>
     </div>
@@ -206,85 +228,85 @@
         <div style="padding: 20px 20px 10px 20px;">
             <div style="display: flex; align-items: center; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 0 15px; margin-bottom: 15px;">
                 <span style="color: #888; font-size: 18px;">🔍</span>
-                <input type="text" id="search-input" placeholder="Найти аниме..." oninput="searchAnime()" style="flex: 1; background: transparent; border: none; padding: 14px 10px; color: #fff; font-size: 15px; outline: none;">
+                <input type="text" id="search-input" data-i18n-placeholder="cat_search" placeholder="Найти аниме..." oninput="searchAnime()" style="flex: 1; background: transparent; border: none; padding: 14px 10px; color: #fff; font-size: 15px; outline: none;">
             </div>
             <div onclick="openRandomAnime()" style="display: flex; align-items: center; justify-content: space-between; background: #14141f; border-radius: 16px; padding: 16px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <div style="width: 45px; height: 45px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px;">🎲</div>
                     <div>
-                        <div style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 2px;">Случайное аниме</div>
-                        <div style="font-size: 12px; color: #888;">Доверься судьбе</div>
+                        <div data-i18n="cat_random" style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 2px;">Случайное аниме</div>
+                        <div data-i18n="cat_random_sub" style="font-size: 12px; color: #888;">Доверься судьбе</div>
                     </div>
                 </div>
                 <div style="color: #888; font-size: 20px;">›</div>
             </div>
             <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;" id="genre-filters"></div>
             <div style="display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 10px;" id="dropdown-filters">
-                <button class="filter-btn" onclick="openFilterModal('year')">Год ⌄</button>
-                <button class="filter-btn" onclick="openFilterModal('status')">Статус ⌄</button>
-                <button class="filter-btn" onclick="openFilterModal('sort')">Сортировка ⌄</button>
+                <button class="filter-btn" data-i18n="cat_year" onclick="openFilterModal('year')">Год ⌄</button>
+                <button class="filter-btn" data-i18n="cat_status" onclick="openFilterModal('status')">Статус ⌄</button>
+                <button class="filter-btn" data-i18n="cat_sort" onclick="openFilterModal('sort')">Сортировка ⌄</button>
             </div>
         </div>
         <div class="grid-catalog" id="catalog-grid"></div>
         <div style="text-align: center; padding: 20px;">
-            <button id="load-more-btn" onclick="loadMoreCatalog()" style="display: none; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 12px 30px; border-radius: 20px; font-weight: bold; cursor: pointer;">Загрузить еще</button>
+            <button id="load-more-btn" data-i18n="cat_load_more" onclick="loadMoreCatalog()" style="display: none; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 12px 30px; border-radius: 20px; font-weight: bold; cursor: pointer;">Загрузить еще</button>
         </div>
     </div>
 
     <div id="screen-my" class="screen">
-        <header class="profile-header" style="padding-bottom: 10px;"><h1>Моё</h1></header>
+        <header class="profile-header" style="padding-bottom: 10px;"><h1 data-i18n="nav_my">Моё</h1></header>
         <div class="my-list-tabs" id="my-list-tabs">
-            <div class="my-list-tab active" onclick="filterMyList('all', this)">Все</div>
-            <div class="my-list-tab" onclick="filterMyList('watching', this)">Смотрю</div>
-            <div class="my-list-tab" onclick="filterMyList('planned', this)">В планах</div>
-            <div class="my-list-tab" onclick="filterMyList('completed', this)">Просмотрено</div>
-            <div class="my-list-tab" onclick="filterMyList('dropped', this)">Заброшено</div>
-            <div class="my-list-tab" onclick="filterMyList('favorite', this)">Любимое</div>
+            <div class="my-list-tab active" data-i18n="my_all" onclick="filterMyList('all', this)">Все</div>
+            <div class="my-list-tab" data-i18n="my_watching" onclick="filterMyList('watching', this)">Смотрю</div>
+            <div class="my-list-tab" data-i18n="my_planned" onclick="filterMyList('planned', this)">В планах</div>
+            <div class="my-list-tab" data-i18n="my_completed" onclick="filterMyList('completed', this)">Просмотрено</div>
+            <div class="my-list-tab" data-i18n="my_dropped" onclick="filterMyList('dropped', this)">Заброшено</div>
+            <div class="my-list-tab" data-i18n="my_favorite" onclick="filterMyList('favorite', this)">Любимое</div>
         </div>
         <div class="grid-catalog" id="my-grid" style="margin-top: 10px;"></div>
     </div>
 
     <div id="screen-friends" class="screen">
-        <header class="profile-header" style="padding-bottom: 10px;"><h1>Друзья</h1></header>
+        <header class="profile-header" style="padding-bottom: 10px;"><h1 data-i18n="nav_friends">Друзья</h1></header>
         <div class="friends-search">
-            <input type="number" id="friend-search-input" placeholder="Введите Telegram ID друга...">
-            <button onclick="searchFriend()">Найти</button>
+            <input type="number" id="friend-search-input" data-i18n-placeholder="fr_search_placeholder" placeholder="Введите Telegram ID друга...">
+            <button data-i18n="fr_find" onclick="searchFriend()">Найти</button>
         </div>
         <div id="search-result-container" style="padding: 0 20px 20px;"></div>
         <div id="friends-list-container"></div>
     </div>
 
     <div id="screen-friend-profile" class="screen" style="padding: 20px;">
-        <button onclick="switchTab('friends')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <button data-i18n="btn_back" onclick="switchTab('friends')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div id="friend-profile-content"></div>
     </div>
 
     <div id="screen-detail" class="screen" style="padding: 20px;">
-        <button onclick="goBackFromDetail()" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <button data-i18n="btn_back" onclick="goBackFromDetail()" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div id="detail-content"></div>
     </div>
 
     <div id="screen-voice" class="screen" style="padding: 20px;">
-        <button onclick="switchTab('detail')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
-        <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор озвучки</h1>
+        <button data-i18n="btn_back" onclick="switchTab('detail')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <h1 id="voice-title" style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор озвучки</h1>
         <div style="display: flex; flex-direction: column; gap: 12px;" id="voice-list"></div>
     </div>
 
     <div id="screen-player" class="screen" style="padding: 20px;">
-        <button onclick="switchTab('voice')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
-        <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор плеера</h1>
+        <button data-i18n="btn_back" onclick="switchTab('voice')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <h1 id="player-title" style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор плеера</h1>
         <div style="display: flex; flex-direction: column; gap: 12px;" id="player-list"></div>
     </div>
 
     <div id="screen-episodes" class="screen" style="padding: 20px;">
-        <button onclick="switchTab('player')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
-        <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 10px;">Выбор серии</h1>
-        <p style="color: #888; font-size: 14px; margin-bottom: 20px;">Озвучка: <span id="selected-voice-text" style="color: #fff;"></span> • Плеер: <span id="selected-player-text" style="color: #fff;"></span></p>
+        <button data-i18n="btn_back" onclick="switchTab('player')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <h1 id="eps-title" style="font-size: 24px; font-weight: 800; margin-bottom: 10px;">Выбор серии</h1>
+        <p style="color: #888; font-size: 14px; margin-bottom: 20px;"><span data-i18n="ep_voice">Озвучка:</span> <span id="selected-voice-text" style="color: #fff;"></span> • <span data-i18n="ep_player">Плеер:</span> <span id="selected-player-text" style="color: #fff;"></span></p>
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;" id="episodes-list"></div>
     </div>
 
     <div id="screen-profile" class="screen">
-        <header class="profile-header"><h1>Профиль</h1></header>
+        <header class="profile-header"><h1 data-i18n="nav_profile">Профиль</h1></header>
         <div class="profile-container">
             <div class="user-card">
                 <div class="avatar-container" onclick="document.getElementById('avatar-upload').click()">
@@ -294,10 +316,9 @@
                 <input type="file" id="avatar-upload" accept="image/*" style="display: none;" onchange="uploadCustomAvatar(this)">
                 <div class="user-details">
                     <h2 id="tg-name">Гость</h2>
-                    <!-- Слоган УДАЛЕН -->
                     
                     <div onclick="copyMyId()" style="background: rgba(91,91,255,0.1); border: 1px solid rgba(91,91,255,0.3); border-radius: 12px; padding: 8px 15px; display: inline-flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer; margin-top: 5px;">
-                        <span style="color: #888; font-size: 12px;">Мой ID:</span>
+                        <span style="color: #888; font-size: 12px;"><span data-i18n="fr_id">ID:</span></span>
                         <span id="my-tg-id" style="color: #fff; font-weight: bold; font-size: 14px;">...</span>
                         <span style="color: #5b5bff; font-size: 16px;">📋</span>
                     </div>
@@ -305,7 +326,7 @@
                     <div class="level-row" onclick="openLevelModal()">
                         <div class="level-badge"><span id="user-level">1</span></div>
                         <div class="level-info">
-                            <div class="level-title">УРОВЕНЬ <span id="user-level-text">1</span> <span class="rank" id="user-rank">Первый эпизод</span></div>
+                            <div class="level-title"><span data-i18n="prof_level">УРОВЕНЬ</span> <span id="user-level-text">1</span> <span class="rank" id="user-rank">Первый эпизод</span></div>
                             <div class="xp-bar-container"><div class="xp-bar-fill" id="user-xp-bar" style="width: 20%;"></div></div>
                             <div class="xp-text"><span id="user-xp-current">0</span> / <span id="user-xp-next">100</span> XP</div>
                         </div>
@@ -314,34 +335,34 @@
             </div>
 
             <div class="stats-card">
-                <div class="stat-item"><div class="stat-value" id="stat-episodes">0</div><div class="stat-label">серий</div></div>
+                <div class="stat-item"><div class="stat-value" id="stat-episodes">0</div><div class="stat-label" data-i18n="prof_episodes">серий</div></div>
                 <div class="stat-divider"></div>
-                <div class="stat-item"><div class="stat-value" id="stat-minutes">0 <span style="font-size: 14px; font-weight: normal;">мин</span></div><div class="stat-label">просмотра</div></div>
+                <div class="stat-item"><div class="stat-value" id="stat-minutes">0</div><div class="stat-label" data-i18n="prof_minutes">просмотра</div></div>
                 <div class="stat-divider"></div>
-                <div class="stat-item"><div class="stat-value" id="stat-days">1</div><div class="stat-label">день подряд</div></div>
+                <div class="stat-item"><div class="stat-value" id="stat-days">1</div><div class="stat-label" data-i18n="prof_days">день подряд</div></div>
             </div>
 
             <div class="profile-tabs">
-                <button class="tab-btn active" id="tab-btn-profile" onclick="switchProfileTab('profile')">👤 Профиль</button>
-                <button class="tab-btn" id="tab-btn-settings" onclick="switchProfileTab('settings')">⚙️ Настройки</button>
+                <button class="tab-btn active" id="tab-btn-profile" data-i18n="prof_profile_tab" onclick="switchProfileTab('profile')">👤 Профиль</button>
+                <button class="tab-btn" id="tab-btn-settings" data-i18n="prof_settings_tab" onclick="switchProfileTab('settings')">⚙️ Настройки</button>
             </div>
 
             <div class="achievements-card" id="profile-content-tab" onclick="openAchievementsModal()">
                 <div class="ach-header">
                     <div class="ach-icon-big">🏆</div>
-                    <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p><span id="ach-points">0</span> очков</p></div>
+                    <div class="ach-info"><h3 data-i18n="prof_ach">ДОСТИЖЕНИЯ</h3><p><span id="ach-points">0</span> <span data-i18n="prof_points">очков</span></p></div>
                     <div class="ach-total"><span id="ach-earned">0</span>/50</div>
                 </div>
                 <div class="ach-progress-wrap"><div class="ach-progress-bar" id="ach-bar" style="width: 0%;"></div></div>
                 <div class="ach-next">
                     <div class="ach-next-icon">🔥</div>
-                    <div class="ach-next-info"><h4>Дальше: <span id="next-ach-name">Первый шаг</span></h4><p>Продолжайте смотреть</p></div>
+                    <div class="ach-next-info"><h4><span data-i18n="prof_next">Дальше:</span> <span id="next-ach-name">Первый шаг</span></h4><p data-i18n="prof_continue">Продолжайте смотреть</p></div>
                     <div class="ach-reward">+500 🪙</div>
                 </div>
             </div>
 
             <div class="settings-card" id="settings-content-tab" style="display: none;">
-                <div style="padding: 20px; text-align: center; color: #888;">⚙️ Настройки загружаются...</div>
+                <div style="padding: 20px; text-align: center; color: #888;">⚙️ <span data-i18n="loading">Загрузка...</span></div>
             </div>
             <div style="height: 20px;"></div>
         </div>
@@ -351,11 +372,11 @@
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('levelModal')">✕</button>
             <div class="modal-icon-large">🚀</div>
-            <div class="modal-title">Уровень <span id="modal-level-num">1</span></div>
-            <div class="modal-subtitle">Звание: <span style="color: #b44aff; font-weight: bold;" id="modal-rank">Первый эпизод</span></div>
+            <div class="modal-title"><span data-i18n="prof_level">УРОВЕНЬ</span> <span id="modal-level-num">1</span></div>
+            <div class="modal-subtitle"><span data-i18n="rank">Звание:</span> <span style="color: #b44aff; font-weight: bold;" id="modal-rank">Первый эпизод</span></div>
             <div class="modal-xp-bar"><div class="modal-xp-fill" id="modal-xp-bar" style="width: 20%;"></div></div>
             <div class="modal-xp-text"><span id="modal-xp-cur">0</span> / <span id="modal-xp-next">100</span> XP</div>
-            <div class="modal-desc"><b>Как фармить XP:</b><br>🎬 Просмотр серии: +20 XP<br>❤️ Добавить в избранное: +10 XP<br>📅 Ежедневный вход: +50 XP</div>
+            <div class="modal-desc"><b data-i18n="how_farm_xp">Как фармить XP:</b><br><span data-i18n="xp_watch">🎬 Просмотр серии: +20 XP</span><br><span data-i18n="xp_fav">❤️ Добавить в избранное: +10 XP</span><br><span data-i18n="xp_daily">📅 Ежедневный вход: +50 XP</span></div>
         </div>
     </div>
 
@@ -363,8 +384,8 @@
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('achievementsModal')">✕</button>
             <div class="modal-icon-large">🏆</div>
-            <div class="modal-title">Достижения</div>
-            <div class="modal-subtitle">Получено: <span id="modal-ach-earned">0</span> из 50</div>
+            <div class="modal-title" data-i18n="prof_ach">ДОСТИЖЕНИЯ</div>
+            <div class="modal-subtitle"><span data-i18n="ach_earned">Получено:</span> <span id="modal-ach-earned">0</span> <span data-i18n="ach_of">из</span> 50</div>
             <div id="achievements-list-container" style="margin-top: 15px;"></div>
         </div>
     </div>
@@ -380,27 +401,27 @@
     <div class="modal-overlay" id="statusModal" onclick="closeModal('statusModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('statusModal')">✕</button>
-            <div class="modal-title">Добавить в список</div>
+            <div class="modal-title" data-i18n="modal_add_list">Добавить в список</div>
             <div class="modal-subtitle" id="status-anime-title">Название аниме</div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button class="filter-option-btn" onclick="setAnimeStatus('watching')">👀 Смотрю</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('planned')">📅 В планах</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('completed')">✅ Просмотрено</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('dropped')">🚫 Заброшено</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('favorite')" style="color: #ff2d78;">❤️ Любимое</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('')" style="color: #888;">🗑️ Пусто (Удалить)</button>
+                <button class="filter-option-btn" data-i18n="modal_watch" onclick="setAnimeStatus('watching')">👀 Смотрю</button>
+                <button class="filter-option-btn" data-i18n="modal_plan" onclick="setAnimeStatus('planned')">📅 В планах</button>
+                <button class="filter-option-btn" data-i18n="modal_comp" onclick="setAnimeStatus('completed')">✅ Просмотрено</button>
+                <button class="filter-option-btn" data-i18n="modal_drop" onclick="setAnimeStatus('dropped')">🚫 Заброшено</button>
+                <button class="filter-option-btn" data-i18n="modal_fav" onclick="setAnimeStatus('favorite')" style="color: #ff2d78;">❤️ Любимое</button>
+                <button class="filter-option-btn" data-i18n="modal_clear" onclick="setAnimeStatus('')" style="color: #888;">🗑️ Пусто (Удалить)</button>
             </div>
         </div>
     </div>
 
     <nav class="bottom-nav">
-        <div class="nav-item active" onclick="switchTab('home', this)"><span class="nav-icon">🏠</span><span class="nav-text">Главная</span></div>
-        <div class="nav-item" onclick="switchTab('catalog', this)"><span class="nav-icon">🔍</span><span class="nav-text">Каталог</span></div>
-        <div class="nav-item" onclick="switchTab('my', this)"><span class="nav-icon">📚</span><span class="nav-text">Моё</span></div>
-        <div class="nav-item" onclick="switchTab('friends', this)"><span class="nav-icon">👥</span><span class="nav-text">Друзья</span></div>
-        <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon">👤</span><span class="nav-text">Профиль</span></div>
+        <div class="nav-item active" onclick="switchTab('home', this)"><span class="nav-icon">🏠</span><span class="nav-text" data-i18n="nav_home">Главная</span></div>
+        <div class="nav-item" onclick="switchTab('catalog', this)"><span class="nav-icon">🔍</span><span class="nav-text" data-i18n="nav_catalog">Каталог</span></div>
+        <div class="nav-item" onclick="switchTab('my', this)"><span class="nav-icon">📚</span><span class="nav-text" data-i18n="nav_my">Моё</span></div>
+        <div class="nav-item" onclick="switchTab('friends', this)"><span class="nav-icon">👥</span><span class="nav-text" data-i18n="nav_friends">Друзья</span></div>
+        <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon">👤</span><span class="nav-text" data-i18n="nav_profile">Профиль</span></div>
     </nav>
 
-    <script src="app.js?v=60"></script>
+    <script src="app.js?v=70"></script>
 </body>
 </html>
