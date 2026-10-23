@@ -56,6 +56,7 @@ try {
 const tg = window.Telegram.WebApp;
 let MY_TG_ID = null;
 let MY_NAME = 'Гость';
+let MY_PHOTO_URL = '';
 
 if (tg) {
     tg.expand();
@@ -64,6 +65,7 @@ if (tg) {
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
         MY_TG_ID = tg.initDataUnsafe.user.id;
         MY_NAME = tg.initDataUnsafe.user.first_name + (tg.initDataUnsafe.user.last_name ? ' ' + tg.initDataUnsafe.user.last_name : '');
+        MY_PHOTO_URL = tg.initDataUnsafe.user.photo_url || '';
     }
 }
 
@@ -235,13 +237,13 @@ function goBackFromDetail() {
 async function syncProfileToDB() {
     if (!MY_TG_ID || !supabaseClient) return;
     let stats = getStats();
-    let avatar = localStorage.getItem('onika_custom_avatar');
     try {
         await supabaseClient.from('users').upsert({
             tg_id: MY_TG_ID, 
             name: MY_NAME, 
-            avatar_url: avatar,
+            avatar_url: MY_PHOTO_URL, // Отправляем в БД ссылку из Telegram
             xp: stats.xp,
+            coins: stats.coins, // Сохраняем монеты
             episodes_watched: stats.episodesWatched, 
             minutes_watched: stats.minutesWatched, 
             days_streak: stats.daysStreak,
@@ -256,14 +258,12 @@ function copyMyId() {
 }
 
 function loadProfileData() {
-    const customAvatar = localStorage.getItem('onika_custom_avatar'); 
     const avatarEl = document.getElementById('tg-avatar'); 
     
+    // ИСПРАВЛЕНИЕ: Берем аватарку ТОЛЬКО из Telegram
     if (avatarEl && MY_TG_ID) { 
-        if (customAvatar) {
-            avatarEl.innerHTML = `<img src="${safeUrl(customAvatar)}" style="width:100%; height:100%; object-fit:cover;">`; 
-        } else if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.photo_url) {
-            avatarEl.innerHTML = `<img src="${safeUrl(tg.initDataUnsafe.user.photo_url)}" style="width:100%; height:100%; object-fit:cover;">`; 
+        if (MY_PHOTO_URL) {
+            avatarEl.innerHTML = `<img src="${safeUrl(MY_PHOTO_URL)}" style="width:100%; height:100%; object-fit:cover;">`; 
         } else {
             avatarEl.innerHTML = `<span>${escapeHTML(MY_NAME[0].toUpperCase())}</span>`; 
         }
@@ -275,7 +275,7 @@ function loadProfileData() {
     let stats = getStats(); 
     const today = new Date().toDateString(); 
     if (stats.lastVisit !== today) { 
-        stats.daysStreak += 1; stats.lastVisit = today; stats.xp += 50; stats.watchedToday = []; saveStats(stats); 
+        stats.daysStreak += 1; stats.lastVisit = today; stats.xp += 50; stats.coins += 10; stats.watchedToday = []; saveStats(stats); 
     } 
     checkAchievements(stats); 
     const currentLevel = Math.floor(stats.xp / 100) + 1; 
@@ -291,7 +291,9 @@ function loadProfileData() {
     setElText('user-xp-next', xpForNextLevel); 
     setElWidth('user-xp-bar', progressPercent + '%'); 
     
-    // Убрали серии/минуты/дни (элементы удалены из HTML, но на всякий случай не трогаем)
+    // Вывод монет
+    setElText('user-coins', stats.coins);
+
     setElText('ach-points', stats.unlockedAchievements.length * 10); 
     setElText('ach-earned', stats.unlockedAchievements.length); 
     setElWidth('ach-bar', (stats.unlockedAchievements.length / 50) * 100 + '%'); 
@@ -510,7 +512,7 @@ function playEpisode(epNum) {
     stats.episodesWatched += 1; 
     stats.minutesWatched += 24; 
     saveStats(stats); 
-    if (tg) tg.showAlert(`🎬 Просмотр:\n${currentAnimeForPlayer.title}\n${selectedVoice}\n${selectedPlayer}\nСерия: ${epNum}\n\n(+20 XP)`); 
+    if (tg) tg.showAlert(`🎬 Просмотр:\n${currentAnimeForPlayer.title}\n${selectedVoice}\n${selectedPlayer}\nСерия: ${epNum}\n\n(+20 XP, +1 серия)`); 
 }
 
 // ==========================================
@@ -829,24 +831,25 @@ function renderMyList() {
 // 10. СИСТЕМА ДОСТИЖЕНИЙ И XP
 // ==========================================
 const ACHIEVEMENTS = [
-    { id: 1, name: "Первый шаг", desc: "Зарегистрироваться на сайте", icon: "🚀", check: (s) => true },
-    { id: 2, name: "Дебютный просмотр", desc: "Посмотреть первый эпизод", icon: "🎬", check: (s) => s.episodesWatched >= 1 },
-    { id: 3, name: "Марафонец", desc: "Посмотреть 10 эпизодов за день", icon: "🏃", check: (s) => s.episodesWatched >= 10 },
-    { id: 4, name: "Ночной страж", desc: "Посмотреть аниме после 3:00", icon: "🌙", check: () => { let h = new Date().getHours(); return h >= 3 && h < 6; } },
-    { id: 33, name: "Ежедневный визит", desc: "Заходить 7 дней подряд", icon: "📅", check: (s) => s.daysStreak >= 7 },
-    { id: 36, name: "Первый уровень", desc: "Достичь 10 уровня", icon: "🎖️", check: (s) => Math.floor(s.xp / 100) + 1 >= 10 }
+    { id: 1, name: "Первый шаг", desc: "Зарегистрироваться на сайте", icon: "🚀", reward: 50, check: (s) => true },
+    { id: 2, name: "Дебютный просмотр", desc: "Посмотреть первый эпизод", icon: "🎬", reward: 20, check: (s) => s.episodesWatched >= 1 },
+    { id: 3, name: "Марафонец", desc: "Посмотреть 10 эпизодов за день", icon: "🏃", reward: 100, check: (s) => s.episodesWatched >= 10 },
+    { id: 4, name: "Ночной страж", desc: "Посмотреть аниме после 3:00", icon: "🌙", reward: 30, check: () => { let h = new Date().getHours(); return h >= 3 && h < 6; } },
+    { id: 33, name: "Ежедневный визит", desc: "Заходить 7 дней подряд", icon: "📅", reward: 70, check: (s) => s.daysStreak >= 7 },
+    { id: 36, name: "Первый уровень", desc: "Достичь 10 уровня", icon: "🎖️", reward: 200, check: (s) => Math.floor(s.xp / 100) + 1 >= 10 }
 ];
 const LEVEL_TITLES = ["Первый эпизод", "Любопытный зритель", "Случайный странник", "Ученик манги", "Читатель субтитров", "Собиратель тайтлов", "Ночной марафонец", "Ценитель опенингов", "Знаток сейю", "Ловец спойлеров", "Страж таймлайна", "Искатель шедевров", "Коллекционер жанров", "Следопыт сезона", "Архивариус эпизодов", "Пилот меха", "Ученик додзё", "Начинающий маг", "Дух сакуры", "Странник измерений", "Хранитель клинка", "Проводник сюжета", "Алхимик эмоций", "Писец рецензий", "Охотник за онгоингами", "Мастер бинджвотча", "Сэнпай сайта", "Хранитель лора", "Ткач теорий", "Лунный самурай", "Небесный курьер", "Хранитель опенингов", "Повелитель плейлистов", "Критик с катаной", "Мудрец субтитров", "Дубляжный маг", "Страж спойлеров", "Картограф арок", "Коллекционер аватарок", "Ловец редких тайтлов", "Хроникёр сезонов", "Мастер клиффхэнгеров", "Дуэлянт мнений", "Хранитель уютного уголка", "Рыцарь романтики", "Тень сёнэна", "Адепт исэкая", "Архимаг тайтлов", "Небесный отаку", "Странник по мирам", "Хранитель легенд", "Мастер сюжетных поворотов", "Голос фандома", "Судья сезона", "Хранитель аниме-реликвий", "Пилот звёздного поезда", "Лунный библиотекарь", "Самурай субботы", "Повелитель финальных титров", "Искатель скрытых жемчужин", "Маг рекомендаций", "Страж уютных вечеров", "Рыцарь онгоинга", "Дух обсуждений", "Хранитель мемов", "Мастер аниме-детектива", "Небесный критик", "Повелитель сезонных марафонов", "Хранитель канона", "Ткач фанфиков", "Оракул спойлеров", "Лунный сэнпай", "Самурай рейтингов", "Архивариус легенд", "Маг жанров", "Страж ночных просмотров", "Повелитель опенингов", "Хранитель тропов", "Рыцарь вечернего просмотра", "Дух фестиваля", "Мастер эмоциональных качелей", "Следопыт забытых тайтлов", "Хранитель аниме-хроник", "Небесный администратор", "Самурай финального эпизода", "Оракул сезонов", "Повелитель легендарных арок", "Хранитель аниме-вселенной", "Маг идеального топа", "Дух великого марафона", "Рыцарь вечного онгоинга", "Архимаг фандома", "Страж золотой коллекции", "Легенда аниме-сайта", "Небесный хранитель тайтлов", "Великий отаку-владыка", "Хранитель последнего эпизода", "Мастер пересмотров", "Дух аниме-сообщества", "Верховный хранитель сезонов"];
 
 function getStats() { 
     let stats = JSON.parse(localStorage.getItem('onika_stats')); 
     if (!stats) { 
-        stats = { episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [] }; 
+        stats = { episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0, lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [] }; 
         localStorage.setItem('onika_stats', JSON.stringify(stats)); 
     } 
     if (!stats.unlockedAchievements) stats.unlockedAchievements = []; 
     if (!stats.favedAnime) stats.favedAnime = []; 
     if (!stats.watchedToday) stats.watchedToday = []; 
+    if (stats.coins === undefined) stats.coins = 0; 
     return stats; 
 }
 
@@ -861,8 +864,9 @@ function checkAchievements(stats) {
         if (!stats.unlockedAchievements.includes(ach.id)) { 
             if (ach.check(stats)) { 
                 stats.unlockedAchievements.push(ach.id); 
+                stats.coins += ach.reward; // Начисление монет за достижение
                 changed = true; 
-                showToast(`🏆 ${ach.name}!`); 
+                showToast(`🏆 ${ach.name}! (+${ach.reward} 🪙)`); 
             } 
         } 
     }); 
@@ -873,21 +877,27 @@ function addXP(amount) {
     let stats = getStats(); 
     const oldLevel = Math.floor(stats.xp / 100) + 1; 
     stats.xp += amount; 
-    saveStats(stats); 
-    checkAchievements(stats); 
+    
     const newLevel = Math.floor(stats.xp / 100) + 1; 
     if (newLevel > oldLevel) { 
-        showLevelUpPopup(newLevel, LEVEL_TITLES[Math.min(newLevel - 1, 99)]); 
+        // Вычисляем награду монет за уровень (чем выше, тем больше)
+        const rewardCoins = Math.floor(100 + Math.pow(newLevel, 2.5) * 2); 
+        stats.coins += rewardCoins;
+        
+        showLevelUpPopup(newLevel, LEVEL_TITLES[Math.min(newLevel - 1, 99)], rewardCoins); 
         if (tg) tg.HapticFeedback.notificationOccurred('success'); 
     } else { 
         showToast(`+${amount} XP`); 
-    } 
+    }
+    saveStats(stats); 
+    checkAchievements(stats); 
 }
 
-function showLevelUpPopup(level, rank) { 
+function showLevelUpPopup(level, rank, coins) { 
     const popup = document.getElementById('levelUpPopup'); 
     document.getElementById('popup-level').textContent = level; 
     document.getElementById('popup-rank').textContent = rank; 
+    document.getElementById('popup-coins').textContent = coins;
     popup.classList.add('show'); 
     setTimeout(() => popup.classList.remove('show'), 4000); 
 }
@@ -902,37 +912,6 @@ function showToast(msg) {
     toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#5b5bff;color:#fff;padding:10px 20px;border-radius:20px;font-weight:bold;z-index:99999;box-shadow:0 4px 15px rgba(0,0,0,0.5);animation:fade 0.3s ease;text-align:center;'; 
     document.body.appendChild(toast); 
     setTimeout(() => toast.remove(), 2500); 
-}
-
-function uploadCustomAvatar(input) { 
-    if (input.files && input.files[0]) { 
-        const reader = new FileReader(); 
-        reader.onload = function(e) { 
-            const img = new Image(); 
-            img.onload = function() { 
-                const canvas = document.createElement('canvas'); 
-                const ctx = canvas.getContext('2d'); 
-                const maxSize = 200; 
-                let width = img.width, height = img.height; 
-                if (width > height) { 
-                    if (width > maxSize) { height *= maxSize / width; width = maxSize; } 
-                } else { 
-                    if (height > maxSize) { width *= maxSize / height; height = maxSize; } 
-                } 
-                canvas.width = width; 
-                canvas.height = height; 
-                ctx.drawImage(img, 0, 0, width, height); 
-                try {
-                    localStorage.setItem('onika_custom_avatar', canvas.toDataURL('image/jpeg', 0.8)); 
-                    loadProfileData(); 
-                } catch(err) {
-                    showToast('Image too large'); 
-                }
-            }; 
-            img.src = e.target.result; 
-        }; 
-        reader.readAsDataURL(input.files[0]); 
-    } 
 }
 
 function switchProfileTab(tab) { 
@@ -963,14 +942,14 @@ function openAchievementsModal() {
     let html = ''; 
     ACHIEVEMENTS.forEach(ach => { 
         const isDone = stats.unlockedAchievements.includes(ach.id); 
-        html += `<div class="ach-list-item ${isDone ? 'completed' : ''}"><div class="ach-list-icon">${ach.icon}</div><div class="ach-list-info"><h4>${ach.name}</h4><p>${ach.desc}</p></div>${isDone ? '<div style="color:#ffd700; font-weight:bold;">✓</div>' : ''}</div>`; 
+        html += `<div class="ach-list-item ${isDone ? 'completed' : ''}"><div class="ach-list-icon">${ach.icon}</div><div class="ach-list-info"><h4>${ach.name}</h4><p>${ach.desc}</p></div><div style="color:#ffd700; font-weight:bold; margin-left: 10px;">+${ach.reward} 🪙</div>${isDone ? '<div style="color:#ffd700; font-weight:bold; margin-left: 10px;">✓</div>' : ''}</div>`; 
     }); 
     container.innerHTML = html; 
     document.getElementById('achievementsModal').classList.add('active'); 
 }
 
 // ==========================================
-// 11. НАСТРОЙКИ (Пусто, так как языка больше нет)
+// 11. НАСТРОЙКИ (Пусто)
 // ==========================================
 function initApiSettings() {
     const container = document.getElementById('settings-content-tab');
