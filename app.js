@@ -256,7 +256,6 @@ function copyMyId() {
     navigator.clipboard.writeText(MY_TG_ID).then(() => { showToast('📋 ID скопирован!'); }).catch(() => {});
 }
 
-// Функция для кнопки баннера
 function openBannerMenu() {
     showToast('🖼️ Система баннеров в разработке!');
 }
@@ -293,7 +292,7 @@ function loadProfileData() {
     setElText('user-xp-current', xpCurrentLevel); 
     setElText('user-xp-next', xpForNextLevel); 
     setElWidth('user-xp-bar', progressPercent + '%'); 
-    setElText('user-coins', stats.coins);
+    setElText('user-coins', stats.coins || 0);
 
     setElText('ach-points', stats.unlockedAchievements.length * 10); 
     setElText('ach-earned', stats.unlockedAchievements.length); 
@@ -359,7 +358,7 @@ async function loadFriends() {
             if (accUsers && accUsers.length > 0) {
                 accUsers.forEach(friend => {
                     const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
-                    html += `<div class="friend-card" onclick="openFriendProfile(${friend.tg_id}, '${escapeHTML(friend.name).replace(/'/g, "\\'")}')"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${escapeHTML(friend.name[0].toUpperCase())}';">` : escapeHTML(friend.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(friend.name)}</h3><p>ID: ${escapeHTML(friend.tg_id)} • Ур. ${Math.floor(friend.xp / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
+                    html += `<div class="friend-card" onclick="openFriendProfile(${friend.tg_id}, '${escapeHTML(friend.name).replace(/'/g, "\\'")}')"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${escapeHTML(friend.name[0].toUpperCase())}';">` : escapeHTML(friend.name[0].toUpperCase())}</div><div class="friend-info"><h3>${escapeHTML(friend.name)}</h3><p>ID: ${escapeHTML(friend.tg_id)} • Ур. ${Math.floor((friend.xp||0) / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
                 });
             }
         }
@@ -444,21 +443,37 @@ async function openFriendProfile(id, name) {
         const { data: friend, error } = await supabaseClient.from('users').select('*').eq('tg_id', id).single();
         if (error || !friend) throw new Error('Not found');
 
-        const lvl = Math.floor(friend.xp / 100) + 1;
+        const lvl = Math.floor((friend.xp || 0) / 100) + 1;
         const rank = LEVEL_TITLES[Math.min(lvl - 1, 99)];
-        const coins = friend.coins || 0;
-        const friendAchCount = Math.min(Math.floor(lvl / 2) + 1, 50); 
+        
+        // ИСПРАВЛЕНО: Убрали монеты из профиля друга
         
         let lastWatchedHtml = '';
         if (friend.last_watched) {
-            lastWatchedHtml = `<div style="margin-top: 15px; padding: 15px; background: rgba(91,91,255,0.1); border-radius: 12px; border: 1px solid rgba(91,91,255,0.2);"><div style="font-size: 12px; color: #888; margin-bottom: 5px;">Последнее аниме:</div><div style="font-size: 16px; font-weight: bold; color: #fff;">ID: ${escapeHTML(friend.last_watched)}</div></div>`;
+            container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка аниме...</div>';
+            const animeData = await API.getDetails(friend.last_watched);
+            if (animeData) {
+                lastWatchedHtml = `
+                    <div style="margin-top: 15px; padding: 15px; background: rgba(91,91,255,0.1); border-radius: 12px; border: 1px solid rgba(91,91,255,0.2); cursor: pointer;" onclick="openAnimeDetail('${animeData.id}', 'friends')">
+                        <div style="font-size: 12px; color: #888; margin-bottom: 8px;">Последнее аниме:</div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <img src="${safeUrl(animeData.images.jpg.image_url)}" style="width: 40px; height: 55px; border-radius: 6px; object-fit: cover;">
+                            <div style="font-size: 14px; font-weight: bold; color: #fff; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${escapeHTML(animeData.title)}</div>
+                        </div>
+                    </div>`;
+            } else {
+                lastWatchedHtml = `<div style="margin-top: 15px; padding: 15px; background: rgba(91,91,255,0.1); border-radius: 12px; border: 1px solid rgba(91,91,255,0.2);"><div style="font-size: 12px; color: #888; margin-bottom: 5px;">Последнее аниме:</div><div style="font-size: 14px; color: #fff;">Не удалось загрузить</div></div>`;
+            }
         }
+
+        const friendAchCount = Math.min(Math.floor(lvl / 2) + 1, 50); 
 
         const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
         const avatarHtml = avatarUrl 
             ? `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.parentElement.innerHTML='${escapeHTML(friend.name[0].toUpperCase())}';">` 
             : escapeHTML(friend.name[0].toUpperCase());
 
+        // ИСПРАВЛЕНО: HTML профиля друга без блока монет
         container.innerHTML = `
             <div class="user-card">
                 <div class="avatar-container">
@@ -468,18 +483,14 @@ async function openFriendProfile(id, name) {
                 </div>
                 <div class="user-details">
                     <h2>${escapeHTML(friend.name)}</h2>
-                    <div class="coin-balance" style="margin-bottom: 15px;">
-                        <span>🪙</span>
-                        <span>${coins}</span>
-                    </div>
                     <div style="background: rgba(91,91,255,0.1); border: 1px solid rgba(91,91,255,0.3); border-radius: 12px; padding: 6px 15px; display: inline-block; margin: 5px 0 15px;"><span style="color: #888; font-size: 12px;">ID:</span> <span style="color: #fff; font-weight: bold;">${escapeHTML(friend.tg_id)}</span></div>
                     
                     <div class="level-row">
                         <div class="level-badge"><span>${lvl}</span></div>
                         <div class="level-info">
                             <div class="level-title">УРОВЕНЬ ${lvl} <span class="rank">${rank}</span></div>
-                            <div class="xp-bar-container"><div class="xp-bar-fill" style="width: ${friend.xp % 100}%;"></div></div>
-                            <div class="xp-text">${friend.xp % 100} / ${lvl * 100} XP</div>
+                            <div class="xp-bar-container"><div class="xp-bar-fill" style="width: ${(friend.xp || 0) % 100}%;"></div></div>
+                            <div class="xp-text">${(friend.xp || 0) % 100} / ${lvl * 100} XP</div>
                         </div>
                     </div>
                 </div>
@@ -498,7 +509,10 @@ async function openFriendProfile(id, name) {
             ${lastWatchedHtml}
             <button onclick="removeFriend(${friend.tg_id})" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">🗑️ Удалить из друзей</button>
         `;
-    } catch (e) { container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки профиля</div>'; }
+    } catch (e) { 
+        console.error(e);
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки профиля</div>'; 
+    }
 }
 
 // ==========================================
