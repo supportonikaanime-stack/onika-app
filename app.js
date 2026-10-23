@@ -230,10 +230,11 @@ const API_Shikimori = {
     },
     async getDetails(id) {
         const cleanId = id.replace('shikimori_', '');
-        // ИСПРАВЛЕНИЕ: Запрос всех нужных полей, чтобы не было 404
-        const q = `{anime(id:${cleanId}){id name russian description score episodes status poster{originalUrl} genres{name}}}`;
+        // ИСПРАВЛЕНИЕ: У Shikimori в GraphQL нет поля anime для одного ID. 
+        // Используем поиск по ID в списке animes, чтобы получить детали.
+        const q = `{animes(ids:"${cleanId}",limit:1){id name russian description score episodes status poster{originalUrl} genres{name}}}`;
         const d = await this.fetch(q);
-        return d.anime ? this.convert(d.anime) : null;
+        return d.animes && d.animes.length > 0 ? this.convert(d.animes[0]) : null;
     },
     async getRandom(limit) {
         const p = Math.floor(Math.random()*50)+1;
@@ -273,7 +274,6 @@ const API = {
 
         translatePage();
         showToast(lang === 'ru' ? 'Язык: Русский' : 'Language: English');
-        updateLangUI();
         
         if (document.getElementById('tab-btn-settings').classList.contains('active')) {
             initApiSettings();
@@ -1152,13 +1152,6 @@ function initApiSettings() {
     container.innerHTML = html;
 }
 
-function updateLangUI() {
-    const btn = document.getElementById('global-lang-btn');
-    if (btn) {
-        btn.textContent = currentLang === 'ru' ? '🇷🇺' : '🇬🇧';
-    }
-}
-
 // ==========================================
 // 12. ГЛАВНАЯ СТРАНИЦА
 // ==========================================
@@ -1206,7 +1199,6 @@ async function loadHomePage() {
         }
         
         showLog('5. ✅ Главная загружена!');
-        updateLangUI();
 
     } catch (e) {
         showLog('Ошибка главной: ' + e.message, true);
@@ -1258,7 +1250,6 @@ function addSwipeSupport(element) {
 
 document.addEventListener('DOMContentLoaded', () => { 
     translatePage();
-    updateLangUI();
     loadHomePage();
     loadProfileData(); 
 });
