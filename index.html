@@ -141,7 +141,7 @@
         .coin-balance svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         
         /* ==========================================
-           БЕЙДЖ УРОВНЯ 64x64 С ИДЕАЛЬНОЙ ЦИФРОЙ
+           БЕЙДЖ УРОВНЯ 64x64, ЦИФРА 20px С ОБВОДКОЙ
            ========================================== */
         .level-row { 
             display: flex; 
@@ -160,7 +160,7 @@
         .level-row:active { transform: scale(0.98); }
         
         .level-badge { 
-            width: 64px; /* Ровно 64 */
+            width: 64px;
             height: 64px; 
             display: flex; 
             align-items: center; 
@@ -201,21 +201,24 @@
             to { transform: rotate(360deg); }
         }
         
-        /* ИДЕАЛЬНАЯ ЦИФРА ПО ЦЕНТРУ */
+        /* ЦИФРА 20px С ЧЕТКОЙ ЧЕРНОЙ ОБВОДКОЙ */
         .level-badge span { 
             position: relative;
             z-index: 2;
-            font-size: 28px; /* Уменьшено, чтобы не выходила за рамки */
+            font-size: 20px; /* Размер 20px */
             font-weight: 900; 
             color: #fff; 
-            line-height: 1; /* Убирает смещение вниз */
+            line-height: 1; 
             display: flex; 
             align-items: center; 
             justify-content: center;
-            /* Мягкое свечение вместо обводки */
+            /* Имитация четкой обводки с помощью теней */
             text-shadow: 
-                0 0 10px rgba(0, 0, 0, 0.9), 
-                0 0 20px rgba(91, 91, 255, 0.9);
+                -1.5px -1.5px 0 #000,  
+                 1.5px -1.5px 0 #000,
+                -1.5px  1.5px 0 #000,
+                 1.5px  1.5px 0 #000,
+                 0 2px 4px rgba(0,0,0,0.8); /* Легкая тень снизу */
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
@@ -698,6 +701,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=126"></script>
+    <script src="app.js?v=127"></script>
 </body>
 </html>
