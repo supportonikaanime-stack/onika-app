@@ -109,6 +109,7 @@ const API = {
         } catch(e) { console.error(e); return []; }
     },
     getCatalog(page, limit) { return this._cachedFetch('getCatalog', page, limit); },
+    // ИСПРАВЛЕНИЕ 2: Добавлен метод поиска
     searchAnime(q, page, limit) { return this._cachedFetch('searchAnime', q, page, limit); },
     getDetails(id) { return this._cachedFetch('getDetails', id); },
     getRandom(limit) { return this._cachedFetch('getRandom', limit); }
@@ -205,6 +206,7 @@ function copyMyId() {
 async function loadProfileData() {
     let stats = getStats(); 
     
+    // ИСПРАВЛЕНИЕ 7: Берем баннер из localStorage, если он там есть
     if (stats.active_banner_url) {
         ACTIVE_BANNER_URL = stats.active_banner_url;
     }
@@ -215,7 +217,8 @@ async function loadProfileData() {
     } 
     checkAchievements(stats); 
     
-    if (MY_TG_ID && supabaseClient) {
+    // ИСПРАВЛЕНИЕ 7: Запрашиваем БД только если в localStorage нет ссылки, но есть ID баннера
+    if (MY_TG_ID && supabaseClient && !ACTIVE_BANNER_URL && stats.active_banner) {
         try {
             const { data: user } = await supabaseClient.from('users').select('active_banner').eq('tg_id', MY_TG_ID).single();
             if (user && user.active_banner) {
@@ -248,10 +251,10 @@ async function loadProfileData() {
     setElText('my-tg-id', MY_TG_ID || 'Нет ID');
     setElText('tg-name', MY_NAME);
 
+    // ИСПРАВЛЕНИЕ 6: Правильная математика XP (всегда 100 до следующего уровня)
     const currentLevel = Math.floor(stats.xp / 100) + 1; 
-    const xpForNextLevel = currentLevel * 100; 
     const xpCurrentLevel = stats.xp % 100; 
-    const progressPercent = (xpCurrentLevel / 100) * 100; 
+    const progressPercent = xpCurrentLevel; 
     let rankTitle = LEVEL_TITLES[Math.min(currentLevel - 1, 99)]; 
     
     setElText('user-level', currentLevel); 
@@ -274,7 +277,7 @@ async function loadProfileData() {
     }
 
     setElText('user-xp-current', xpCurrentLevel); 
-    setElText('user-xp-next', xpForNextLevel); 
+    setElText('user-xp-next', 100); // Всегда 100
     setElWidth('user-xp-bar', progressPercent + '%'); 
     setElText('user-coins', stats.coins || 0);
 
@@ -284,7 +287,7 @@ async function loadProfileData() {
     setElText('modal-level-num', currentLevel); 
     setElText('modal-rank', rankTitle); 
     setElText('modal-xp-cur', xpCurrentLevel); 
-    setElText('modal-xp-next', xpForNextLevel); 
+    setElText('modal-xp-next', 100); // Всегда 100
     setElWidth('modal-xp-bar', progressPercent + '%'); 
     setElText('modal-ach-earned', stats.unlockedAchievements.length); 
     
@@ -494,9 +497,11 @@ async function rejectFriend(userId) {
     await supabaseClient.from('friends').delete().eq('user_id', userId).eq('friend_id', MY_TG_ID);
     loadFriends();
 }
+// ИСПРАВЛЕНИЕ 4: Удаление друзей в обе стороны за 1 запрос
 async function removeFriend(friendId) {
-    await supabaseClient.from('friends').delete().eq('user_id', MY_TG_ID).eq('friend_id', friendId);
-    await supabaseClient.from('friends').delete().eq('user_id', friendId).eq('friend_id', MY_TG_ID);
+    await supabaseClient.from('friends')
+        .delete()
+        .or(`and(user_id.eq.${MY_TG_ID},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${MY_TG_ID})`);
     switchTab('friends');
 }
 
@@ -554,7 +559,7 @@ async function openFriendProfile(id, name) {
                             <div class="level-info">
                                 <div class="level-title">УРОВЕНЬ ${lvl} <span class="rank">${rank}</span></div>
                                 <div class="xp-bar-container"><div class="xp-bar-fill" style="width: ${(friend.xp || 0) % 100}%;"></div></div>
-                                <div class="xp-text">${(friend.xp || 0) % 100} / ${lvl * 100} XP</div>
+                                <div class="xp-text">${(friend.xp || 0) % 100} / 100 XP</div>
                             </div>
                         </div>
                     </div>
@@ -590,7 +595,11 @@ async function openFriendProfile(id, name) {
 // ==========================================
 // 7. ПЛЕЕР
 // ==========================================
-function startWatching(anime) { currentAnimeForPlayer = anime; switchTab('voice'); }
+// ИСПРАВЛЕНИЕ 1: Очистка плеера при выходе
+function startWatching(anime) { 
+    currentAnimeForPlayer = anime; 
+    switchTab('voice'); 
+}
 function renderVoiceSelection() { 
     const container = document.getElementById('voice-list'); 
     let html = ''; 
@@ -623,6 +632,9 @@ function playEpisode(epNum) {
     stats.minutesWatched += 24; 
     saveStats(stats); 
     if (tg) tg.showAlert(`🎬 Просмотр:\n${currentAnimeForPlayer.title}\n${selectedVoice}\n${selectedPlayer}\nСерия: ${epNum}\n\n(+20 XP)`); 
+    // Сбрасываем текущее аниме после просмотра
+    currentAnimeForPlayer = null;
+    switchTab('home');
 }
 
 // ==========================================
@@ -723,12 +735,13 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         
         const heartSvg = `<svg style="width: 26px; height: 26px;"><use href="#oa-favorite"></use></svg>`;
 
+        // ИСПРАВЛЕНИЕ 3: Передаем только ID в openStatusModal, без названия
         container.innerHTML = `
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;"><img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"></div>
             <div style="padding-top: 30px;"><div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;"><img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 2px solid rgba(255,255,255,0.1);"><div style="flex: 1; padding-bottom: 5px;"><h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">${title}</h1><div style="display: flex; flex-wrap: wrap; gap: 6px;"><span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;">⭐ ${score}</span><span style="background: rgba(255,255,255,0.15); backdrop-filter: blur(5px); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">📺 ${anime.episodes || '?'} эп.</span><span style="background: ${statusColor}; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">${anime.status}</span></div></div></div>
                 <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                     <button onclick="startWatching(window._tempAnimeData)" style="flex: 1; background: #5b5bff; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); display: flex; justify-content: center; align-items: center; gap: 8px;">▶ Смотреть</button>
-                    <button onclick="openStatusModal('${anime.id}', '${title.replace(/'/g, "\\'")}')" class="btn-icon-heart ${isFaved ? 'faved' : ''}" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'}; border: 1px solid ${isFaved ? '#ff2d78' : 'rgba(255,255,255,0.15)'};">
+                    <button onclick="openStatusModal('${anime.id}')" class="btn-icon-heart ${isFaved ? 'faved' : ''}" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'}; border: 1px solid ${isFaved ? '#ff2d78' : 'rgba(255,255,255,0.15)'};">
                         ${heartSvg}
                     </button>
                 </div>
@@ -738,19 +751,30 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
     } catch (e) { container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка</div>'; }
 }
 
-function openStatusModal(id, title) { 
-    document.getElementById('status-anime-title').textContent = title; 
+// ИСПРАВЛЕНИЕ 3: Берем название из window._tempAnimeData, а не передаем в onclick
+function openStatusModal(id) { 
+    const animeTitle = window._tempAnimeData ? window._tempAnimeData.title : 'Аниме';
+    document.getElementById('status-anime-title').textContent = animeTitle; 
     document.getElementById('statusModal').classList.add('active'); 
     window._currentAnimeForStatus = id; 
-    window._currentBtnForStatus = null; 
 }
 
 function setAnimeStatus(status) {
     const id = window._currentAnimeForStatus; if (!id) return;
-    let stats = getStats(); stats.favedAnime = stats.favedAnime || []; stats.favedAnime = stats.favedAnime.filter(a => a.id !== id);
+    let stats = getStats(); stats.favedAnime = stats.favedAnime || []; 
+    
+    // ИСПРАВЛЕНИЕ 5: Кешируем данные для "Моё" списка
+    let cachedAnime = stats.cachedAnime || {};
+    if (status !== '' && window._tempAnimeData) {
+        cachedAnime[id] = window._tempAnimeData;
+        stats.cachedAnime = cachedAnime;
+    }
+    
+    stats.favedAnime = stats.favedAnime.filter(a => a.id !== id);
     if (status !== '') { stats.favedAnime.push({ id: id, status: status }); addXP(10); showToast('Статус обновлен!'); } 
     else { showToast('Удалено'); }
     saveStats(stats); closeModal('statusModal');
+    
     const heartBtn = document.querySelector('#detail-content button[onclick^="openStatusModal"]');
     if (heartBtn) { 
         if (status !== '') { 
@@ -787,14 +811,35 @@ function renderMyList() {
     let stats = getStats(); let favs = stats.favedAnime || []; let filtered = favs;
     if (currentMyListFilter !== 'all') filtered = favs.filter(a => a.status === currentMyListFilter);
     if (filtered.length === 0) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Тут пусто</div>'; return; }
-    Promise.all(filtered.map(a => API.getDetails(a.id))).then(items => {
-        const validItems = items.filter(Boolean); grid.innerHTML = '';
-        validItems.forEach(anime => {
-            const title = escapeHTML(anime.title); const img = safeUrl(anime.images.jpg.image_url); const score = anime.score ? Number(anime.score).toFixed(1) : '?';
-            const cardHtml = `<div class="catalog-card" onclick="openAnimeDetail('${anime.id}', 'my')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`;
-            grid.insertAdjacentHTML('beforeend', cardHtml);
-        });
+    
+    // ИСПРАВЛЕНИЕ 5: Берем из кеша или запрашиваем по одному с защитой
+    const cachedAnime = stats.cachedAnime || {};
+    grid.innerHTML = '';
+    
+    filtered.forEach(favItem => {
+        let anime = cachedAnime[favItem.id];
+        if (anime) {
+            renderMyListCard(anime, grid);
+        } else {
+            // Если нет в кеше, делаем запрос (но без Promise.all, чтобы не вешать прокси)
+            API.getDetails(favItem.id).then(data => {
+                if (data) {
+                    renderMyListCard(data, grid);
+                    // Дополнительно кешируем
+                    let s = getStats();
+                    s.cachedAnime = s.cachedAnime || {};
+                    s.cachedAnime[favItem.id] = data;
+                    saveStats(s);
+                }
+            }).catch(() => {});
+        }
     });
+}
+
+function renderMyListCard(anime, grid) {
+    const title = escapeHTML(anime.title); const img = safeUrl(anime.images.jpg.image_url); const score = anime.score ? Number(anime.score).toFixed(1) : '?';
+    const cardHtml = `<div class="catalog-card" onclick="openAnimeDetail('${anime.id}', 'my')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`;
+    grid.insertAdjacentHTML('beforeend', cardHtml);
 }
 
 // ==========================================
@@ -812,9 +857,10 @@ const LEVEL_TITLES = ["Первый эпизод", "Любопытный зри�
 
 function getStats() { 
     let stats = JSON.parse(localStorage.getItem('onika_stats')); 
-    if (!stats) { stats = { episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0, active_banner: null, active_banner_url: '', lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [] }; localStorage.setItem('onika_stats', JSON.stringify(stats)); } 
+    if (!stats) { stats = { episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0, active_banner: null, active_banner_url: '', lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [], cachedAnime: {} }; localStorage.setItem('onika_stats', JSON.stringify(stats)); } 
     if (!stats.unlockedAchievements) stats.unlockedAchievements = []; if (!stats.favedAnime) stats.favedAnime = []; if (!stats.watchedToday) stats.watchedToday = []; 
     if (stats.coins === undefined) stats.coins = 0; 
+    if (!stats.cachedAnime) stats.cachedAnime = {};
     return stats; 
 }
 function saveStats(stats) { localStorage.setItem('onika_stats', JSON.stringify(stats)); }
@@ -894,7 +940,7 @@ function initHeroSlider() {
     const stats = getStats(); const favedList = (stats.favedAnime || []).map(a => a.id); 
     heroData.forEach((anime, index) => { 
         const isFaved = favedList.includes(anime.id); const heartClass = isFaved ? 'faved' : ''; const heartIcon = isFaved ? '<svg style="width:24px;height:24px;fill:currentColor;stroke:none;"><use href="#oa-favorite"></use></svg>' : '<svg><use href="#oa-favorite"></use></svg>'; 
-        sliderHTML += `<div class="hero-slide ${index === 0 ? 'active' : ''}"><div class="hero-bg" style="background-image: url('${safeUrl(anime.img)}')"></div><div class="hero-gradient"></div><div class="hero-content"><div class="hero-badges"><span class="badge star">⭐ ${anime.score}</span><span class="badge">${escapeHTML(anime.type)}</span><span class="badge">${escapeHTML(anime.year)}</span></div><h1 class="hero-title">${escapeHTML(anime.title)}</h1><div class="hero-actions"><button class="btn-primary" onclick="openAnimeDetail('${anime.id}', 'home')">▶ Смотреть</button><button class="btn-icon-heart ${heartClass}" onclick="openStatusModal('${anime.id}', '${escapeHTML(anime.title).replace(/'/g, "\\'")}')">${heartIcon}</button></div></div></div>`; 
+        sliderHTML += `<div class="hero-slide ${index === 0 ? 'active' : ''}"><div class="hero-bg" style="background-image: url('${safeUrl(anime.img)}')"></div><div class="hero-gradient"></div><div class="hero-content"><div class="hero-badges"><span class="badge star">⭐ ${anime.score}</span><span class="badge">${escapeHTML(anime.type)}</span><span class="badge">${escapeHTML(anime.year)}</span></div><h1 class="hero-title">${escapeHTML(anime.title)}</h1><div class="hero-actions"><button class="btn-primary" onclick="openAnimeDetail('${anime.id}', 'home')">▶ Смотреть</button><button class="btn-icon-heart ${heartClass}" onclick="openStatusModal('${anime.id}')">${heartIcon}</button></div></div></div>`; 
         dotsHTML += `<div class="hero-dot ${index === 0 ? 'active' : ''}" onclick="goToSlide(${index})"></div>`; 
     }); 
     slider.innerHTML = sliderHTML; dotsContainer.innerHTML = dotsHTML; startSlideShow(); addSwipeSupport(slider); 
