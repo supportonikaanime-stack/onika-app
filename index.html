@@ -141,14 +141,14 @@
         .coin-balance svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         
         /* ==========================================
-           БЕЙДЖ УРОВНЯ (100x100, СТИЛЬНАЯ ЦИФРА)
+           БЕЙДЖ УРОВНЯ 64x64 С ИДЕАЛЬНОЙ ЦИФРОЙ
            ========================================== */
         .level-row { 
             display: flex; 
             align-items: center; 
-            gap: 15px; 
+            gap: 12px; 
             background: rgba(10, 10, 15, 0.6); 
-            padding: 12px 15px; 
+            padding: 10px 12px; 
             border-radius: 16px; 
             text-align: left; 
             cursor: pointer; 
@@ -160,8 +160,8 @@
         .level-row:active { transform: scale(0.98); }
         
         .level-badge { 
-            width: 100px; /* Увеличено ровно до 100 */
-            height: 100px; 
+            width: 64px; /* Ровно 64 */
+            height: 64px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
@@ -201,28 +201,30 @@
             to { transform: rotate(360deg); }
         }
         
-        /* КРАСИВАЯ ЦИФРА (БЕЗ ОБВОДКИ) */
+        /* ИДЕАЛЬНАЯ ЦИФРА ПО ЦЕНТРУ */
         .level-badge span { 
             position: relative;
             z-index: 2;
-            font-size: 46px; /* Огромная цифра для 100px */
+            font-size: 28px; /* Уменьшено, чтобы не выходила за рамки */
             font-weight: 900; 
             color: #fff; 
-            line-height: 1;
+            line-height: 1; /* Убирает смещение вниз */
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
             /* Мягкое свечение вместо обводки */
             text-shadow: 
                 0 0 10px rgba(0, 0, 0, 0.9), 
-                0 0 25px rgba(91, 91, 255, 0.9),
-                0 0 40px rgba(180, 74, 255, 0.5);
+                0 0 20px rgba(91, 91, 255, 0.9);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         .level-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-        .level-title { font-size: 14px; color: #fff; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; white-space: nowrap; overflow: hidden; }
+        .level-title { font-size: 12px; color: #fff; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; }
         .level-title .rank { color: #b44aff; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 10px rgba(180, 74, 255, 0.8); }
-        .xp-bar-container { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-bottom: 5px; border: 1px solid rgba(255,255,255,0.05); }
-        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 4px; box-shadow: 0 0 10px #00f5ff; }
-        .xp-text { font-size: 12px; color: #aaa; text-align: right; font-weight: 500; }
+        .xp-bar-container { width: 100%; height: 6px; background: #222; border-radius: 3px; overflow: hidden; margin-bottom: 4px; border: 1px solid rgba(255,255,255,0.05); }
+        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 3px; box-shadow: 0 0 10px #00f5ff; }
+        .xp-text { font-size: 10px; color: #aaa; text-align: right; font-weight: 500; }
         /* ========================================== */
         
         .profile-tabs { display: flex; background: #14141f; border-radius: 15px; padding: 5px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.05); }
@@ -696,6 +698,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=125"></script>
+    <script src="app.js?v=126"></script>
 </body>
 </html>
