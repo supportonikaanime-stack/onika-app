@@ -141,46 +141,60 @@
         .coin-balance svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         
         /* ==========================================
-           ВСТАВЛЯЕМ ТВОЙ SVG
+           ОБНОВЛЕННЫЙ БЛОК УРОВНЯ (УВЕЛИЧЕН + СВЕЧЕНИЕ)
            ========================================== */
         .level-row { 
             display: flex; 
             align-items: center; 
-            gap: 12px; 
-            background: rgba(10, 10, 15, 0.7); 
-            padding: 10px 12px; 
+            gap: 15px; 
+            background: rgba(10, 10, 15, 0.6); 
+            padding: 12px 15px; 
             border-radius: 16px; 
             text-align: left; 
             cursor: pointer; 
             transition: 0.2s; 
             backdrop-filter: blur(10px); 
-            border: 1px solid rgba(91, 91, 255, 0.3); 
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(91, 91, 255, 0.1); 
+            border: 1px solid rgba(91, 91, 255, 0.4); /* Более заметная фиолетовая рамка */
+            box-shadow: 0 4px 25px rgba(91, 91, 255, 0.15), inset 0 0 20px rgba(91, 91, 255, 0.1); 
         }
         .level-row:active { transform: scale(0.98); }
         
         .level-badge { 
-            width: 56px; 
-            height: 56px; 
+            width: 68px; /* Увеличено с 56 до 68 */
+            height: 68px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
             flex-shrink: 0; 
             position: relative; 
-            border-radius: 50%;
-            overflow: hidden;
-            background: rgba(0,0,0,0.5); /* Темный фон под SVG */
         }
         
-        /* Твой SVG */
-        .level-badge svg.emblem {
+        /* Внешнее свечение вокруг картинки */
+        .level-badge::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(91, 91, 255, 0.4) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: auraPulse 2.5s infinite alternate;
+            z-index: 0;
+        }
+
+        @keyframes auraPulse {
+            0% { transform: scale(0.9); opacity: 0.4; }
+            100% { transform: scale(1.2); opacity: 0.8; }
+        }
+        
+        /* Сам SVG-артефакт */
+        .level-emblem { 
             position: absolute;
             width: 100%;
             height: 100%;
             z-index: 1;
-            /* Уменьшаем яркость, чтобы цифра читалась */
-            opacity: 0.8; 
-            animation: spinEmblem 30s linear infinite;
+            /* Убираем черный фон и добавляем мощное свечение */
+            filter: drop-shadow(0 0 8px rgba(91, 91, 255, 0.9)) drop-shadow(0 0 15px rgba(180, 74, 255, 0.5));
+            animation: spinEmblem 25s linear infinite;
         }
         
         @keyframes spinEmblem {
@@ -188,28 +202,28 @@
             to { transform: rotate(360deg); }
         }
         
-        /* Цифра (идеально по центру) */
+        /* Цифра (идеально по центру, с мощной тенью) */
         .level-badge span { 
             position: relative;
             z-index: 2;
-            font-size: 24px; 
+            font-size: 28px; /* Увеличен размер цифры */
             font-weight: 900; 
             color: #fff; 
             line-height: 1;
             text-shadow: 
-                -1px -1px 0 #000,  
-                 1px -1px 0 #000,
-                -1px  1px 0 #000,
-                 1px  1px 0 #000,
-                 0 0 15px rgba(91, 91, 255, 1);
+                -2px -2px 0 #000,  
+                 2px -2px 0 #000,
+                -2px  2px 0 #000,
+                 2px  2px 0 #000,
+                 0 0 20px rgba(91, 91, 255, 1);
         }
         
         .level-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-        .level-title { font-size: 12px; color: #fff; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; }
-        .level-title .rank { color: #b44aff; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 10px rgba(180, 74, 255, 0.5); }
-        .xp-bar-container { width: 100%; height: 6px; background: #222; border-radius: 3px; overflow: hidden; margin-bottom: 4px; border: 1px solid rgba(255,255,255,0.05); }
-        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 3px; box-shadow: 0 0 10px #00f5ff; }
-        .xp-text { font-size: 10px; color: #aaa; text-align: right; font-weight: 500; }
+        .level-title { font-size: 13px; color: #fff; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; white-space: nowrap; overflow: hidden; }
+        .level-title .rank { color: #b44aff; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 10px rgba(180, 74, 255, 0.8); }
+        .xp-bar-container { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-bottom: 5px; border: 1px solid rgba(255,255,255,0.05); }
+        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 4px; box-shadow: 0 0 10px #00f5ff; }
+        .xp-text { font-size: 11px; color: #aaa; text-align: right; font-weight: 500; }
         /* ========================================== */
         
         .profile-tabs { display: flex; background: #14141f; border-radius: 15px; padding: 5px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.05); }
@@ -473,8 +487,8 @@
 
                         <div class="level-row" onclick="openLevelModal()">
                             <div class="level-badge">
-                                <!-- ВСТАВЛЯЕМ ТВОЙ SVG -->
-                                <svg class="emblem" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+                                <!-- ВСТАВЛЯЕМ ТВОЙ SVG С ПРАВКАМИ -->
+                                <svg class="level-emblem" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
                                   <defs>
                                     <radialGradient id="glow" cx="50%" cy="50%">
                                       <stop offset="0" stop-color="#fff" stop-opacity=".95"/>
@@ -547,7 +561,8 @@
                                     <circle cx="500" cy="500" r="285" stroke-width="2"/>
                                   </g>
                                   <path d="M500 240 L514 266 L540 250 L548 280 L579 271 L575 302 L607 305 L590 332 L618 345 L595 365 L620 390 L590 400 L605 430 L575 435 L582 468 L550 460 L540 492 L514 478 L500 505 L486 478 L460 492 L450 460 L418 468 L425 435 L395 430 L410 400 L380 390 L405 365 L382 345 L410 332 L393 305 L425 302 L421 271 L452 280 L460 250 L486 266 Z" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>
-                                  <circle cx="500" cy="500" r="190" fill="#000" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
+                                  <!-- УБРАН ЧЕРНЫЙ ФОН (fill="#000" заменен на fill="none") -->
+                                  <circle cx="500" cy="500" r="190" fill="none" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
                                   <circle cx="500" cy="500" r="164" fill="none" stroke="#fff" stroke-width="2" opacity=".65"/>
                                   <circle cx="500" cy="500" r="8" fill="#fff" filter="url(#softGlow)"/>
                                   <g fill="#fff" filter="url(#strongGlow)">
@@ -682,6 +697,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=122"></script>
+    <script src="app.js?v=123"></script>
 </body>
 </html>
