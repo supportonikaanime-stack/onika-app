@@ -221,8 +221,15 @@ async function loadProfileData() {
     }
     
     const today = new Date().toDateString(); 
+    // Ежедневный вход
     if (stats.lastVisit !== today) { 
-        stats.daysStreak += 1; stats.lastVisit = today; stats.xp += 50; stats.coins += 10; stats.watchedToday = []; saveStats(stats); 
+        stats.daysStreak += 1; 
+        stats.lastVisit = today; 
+        stats.xp += 5; // +5 XP за вход
+        stats.coins += 10; 
+        stats.watchedToday = []; 
+        saveStats(stats); 
+        showToast('📅 Ежедневный вход! +5 XP');
     } 
     checkAchievements(stats); 
     
@@ -533,104 +540,113 @@ async function openFriendProfile(id, name) {
             if (b) friendBanner = `style="background-image: url('${safeUrl(b.image_url)}');"`;
         }
 
+        // СТРУКТУРА КАК В ПРОФИЛЕ
         container.innerHTML = `
-            <div class="user-card" ${friendBanner}>
-                <div class="user-card-content">
-                    <div class="avatar-container">
-                        <div class="avatar" style="background: linear-gradient(135deg, #5b5bff, #b44aff); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff; overflow: hidden;">${avatarHtml}</div>
+            <div class="user-card-wrapper">
+                <div class="user-card-top" ${friendBanner}>
+                    <div class="user-card-top-content">
+                        <div class="avatar-container">
+                            <div class="avatar" style="background: linear-gradient(135deg, #5b5bff, #b44aff); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff; overflow: hidden;">${avatarHtml}</div>
+                        </div>
+                        <div class="user-details">
+                            <h2>${escapeHTML(friend.name)}</h2>
+                            <div class="id-container">
+                                <span style="color: #ccc; font-size: 12px;">ID:</span>
+                                <span style="color: #fff; font-weight: bold; font-size: 14px;">${escapeHTML(friend.tg_id)}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="user-details">
-                        <h2>${escapeHTML(friend.name)}</h2>
-                        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 6px 15px; display: inline-block; margin: 5px 0 15px;"><span style="color: #ccc; font-size: 12px;">ID:</span> <span style="color: #fff; font-weight: bold;">${escapeHTML(friend.tg_id)}</span></div>
-                        <div class="level-row">
-                            <div class="level-badge">
-                                <svg class="emblem" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
-                                  <defs>
-                                    <radialGradient id="glow" cx="50%" cy="50%">
-                                      <stop offset="0" stop-color="#fff" stop-opacity=".95"/>
-                                      <stop offset=".55" stop-color="#fff" stop-opacity=".45"/>
-                                      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
-                                    </radialGradient>
-                                    <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
-                                      <feGaussianBlur stdDeviation="5" result="blur"/>
-                                      <feMerge>
-                                        <feMergeNode in="blur"/>
-                                        <feMergeNode in="SourceGraphic"/>
-                                      </feMerge>
-                                    </filter>
-                                    <filter id="strongGlow" x="-100%" y="-100%" width="300%" height="300%">
-                                      <feGaussianBlur stdDeviation="12" result="blur"/>
-                                      <feMerge>
-                                        <feMergeNode in="blur"/>
-                                        <feMergeNode in="SourceGraphic"/>
-                                      </feMerge>
-                                    </filter>
-                                    <g id="ray">
-                                      <path d="M500 72 L500 210" stroke="#fff" stroke-width="2" opacity=".5"/>
-                                      <path d="M500 92 L488 150 L500 137 L512 150 Z" fill="none" stroke="#fff" stroke-width="2"/>
-                                    </g>
-                                    <g id="diamond">
-                                      <path d="M500 174 L514 198 L500 222 L486 198 Z" fill="none" stroke="#fff" stroke-width="3"/>
-                                      <path d="M500 183 L507 198 L500 211 L493 198 Z" fill="#fff" opacity=".35"/>
-                                    </g>
-                                    <g id="crystal">
-                                      <path d="M500 66 L532 155 L500 137 L468 155 Z" fill="none" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
-                                      <path d="M500 88 L515 143 L500 128 L485 143 Z" fill="none" stroke="#fff" stroke-width="2"/>
-                                      <path d="M500 66 L500 137" stroke="#fff" stroke-width="2"/>
-                                    </g>
-                                    <g id="diagonal">
-                                      <path d="M500 116 L527 170 L500 157 L473 170 Z" fill="none" stroke="#fff" stroke-width="3"/>
-                                      <path d="M500 132 L512 161 L500 153 L488 161 Z" fill="#fff" opacity=".35"/>
-                                    </g>
-                                  </defs>
-                                  <circle cx="500" cy="500" r="390" fill="url(#glow)" opacity=".18" filter="url(#strongGlow)"/>
-                                  <g opacity=".55" stroke="#fff" fill="none">
-                                    <circle cx="500" cy="500" r="350" stroke-width="2"/>
-                                    <circle cx="500" cy="500" r="330" stroke-width="1"/>
-                                    <circle cx="500" cy="500" r="300" stroke-width="3"/>
-                                    <circle cx="500" cy="500" r="270" stroke-width="1"/>
-                                    <circle cx="500" cy="500" r="245" stroke-width="2"/>
-                                    <path d="M500 105 V895"/>
-                                    <path d="M105 500 H895"/>
-                                    <path d="M220 220 L780 780"/>
-                                    <path d="M780 220 L220 780"/>
-                                    <path d="M155 355 L845 645"/>
-                                    <path d="M155 645 L845 355"/>
-                                    <path d="M355 155 L645 845"/>
-                                    <path d="M645 155 L355 845"/>
-                                  </g>
-                                  <g>
-                                    <use href="#ray"/><use href="#ray" transform="rotate(22.5 500 500)"/><use href="#ray" transform="rotate(45 500 500)"/><use href="#ray" transform="rotate(67.5 500 500)"/><use href="#ray" transform="rotate(90 500 500)"/><use href="#ray" transform="rotate(112.5 500 500)"/><use href="#ray" transform="rotate(135 500 500)"/><use href="#ray" transform="rotate(157.5 500 500)"/><use href="#ray" transform="rotate(180 500 500)"/><use href="#ray" transform="rotate(202.5 500 500)"/><use href="#ray" transform="rotate(225 500 500)"/><use href="#ray" transform="rotate(247.5 500 500)"/><use href="#ray" transform="rotate(270 500 500)"/><use href="#ray" transform="rotate(292.5 500 500)"/><use href="#ray" transform="rotate(315 500 500)"/><use href="#ray" transform="rotate(337.5 500 500)"/>
-                                  </g>
-                                  <g>
-                                    <use href="#diamond"/><use href="#diamond" transform="rotate(30 500 500)"/><use href="#diamond" transform="rotate(60 500 500)"/><use href="#diamond" transform="rotate(90 500 500)"/><use href="#diamond" transform="rotate(120 500 500)"/><use href="#diamond" transform="rotate(150 500 500)"/><use href="#diamond" transform="rotate(180 500 500)"/><use href="#diamond" transform="rotate(210 500 500)"/><use href="#diamond" transform="rotate(240 500 500)"/><use href="#diamond" transform="rotate(270 500 500)"/><use href="#diamond" transform="rotate(300 500 500)"/><use href="#diamond" transform="rotate(330 500 500)"/>
-                                  </g>
-                                  <g filter="url(#softGlow)">
-                                    <use href="#crystal"/><use href="#crystal" transform="rotate(90 500 500)"/><use href="#crystal" transform="rotate(180 500 500)"/><use href="#crystal" transform="rotate(270 500 500)"/>
-                                  </g>
-                                  <g opacity=".9">
-                                    <use href="#diagonal"/><use href="#diagonal" transform="rotate(45 500 500)"/><use href="#diagonal" transform="rotate(90 500 500)"/><use href="#diagonal" transform="rotate(135 500 500)"/><use href="#diagonal" transform="rotate(180 500 500)"/><use href="#diagonal" transform="rotate(225 500 500)"/><use href="#diagonal" transform="rotate(270 500 500)"/><use href="#diagonal" transform="rotate(315 500 500)"/>
-                                  </g>
-                                  <g fill="none" stroke="#fff" filter="url(#softGlow)">
-                                    <circle cx="500" cy="500" r="235" stroke-width="9"/>
-                                    <circle cx="500" cy="500" r="260" stroke-width="3"/>
-                                    <circle cx="500" cy="500" r="285" stroke-width="2"/>
-                                  </g>
-                                  <path d="M500 240 L514 266 L540 250 L548 280 L579 271 L575 302 L607 305 L590 332 L618 345 L595 365 L620 390 L590 400 L605 430 L575 435 L582 468 L550 460 L540 492 L514 478 L500 505 L486 478 L460 492 L450 460 L418 468 L425 435 L395 430 L410 400 L380 390 L405 365 L382 345 L410 332 L393 305 L425 302 L421 271 L452 280 L460 250 L486 266 Z" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>
-                                  <circle cx="500" cy="500" r="190" fill="#000" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
-                                  <circle cx="500" cy="500" r="164" fill="none" stroke="#fff" stroke-width="2" opacity=".65"/>
-                                  <circle cx="500" cy="500" r="8" fill="#fff" filter="url(#softGlow)"/>
-                                  <g fill="#fff" filter="url(#strongGlow)">
-                                    <circle cx="500" cy="215" r="5"/><circle cx="785" cy="500" r="5"/><circle cx="500" cy="785" r="5"/><circle cx="215" cy="500" r="5"/><circle cx="700" cy="300" r="3"/><circle cx="300" cy="700" r="3"/>
-                                  </g>
-                                </svg>
-                                <span>${lvl}</span>
-                            </div>
-                            <div class="level-info">
-                                <div class="level-title">УРОВЕНЬ ${lvl} <span class="rank">${rank}</span></div>
-                                <div class="xp-bar-container"><div class="xp-bar-fill" style="width: ${(friend.xp || 0) % 100}%;"></div></div>
-                                <div class="xp-text">${(friend.xp || 0) % 100} / 100 XP</div>
-                            </div>
+                </div>
+                <div class="user-card-bottom">
+                    <div class="level-row">
+                        <div class="level-badge">
+                            <!-- SVG друга -->
+                            <svg class="level-emblem" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+                              <defs>
+                                <radialGradient id="glow" cx="50%" cy="50%">
+                                  <stop offset="0" stop-color="#fff" stop-opacity=".95"/>
+                                  <stop offset=".55" stop-color="#fff" stop-opacity=".45"/>
+                                  <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+                                </radialGradient>
+                                <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
+                                  <feGaussianBlur stdDeviation="5" result="blur"/>
+                                  <feMerge>
+                                    <feMergeNode in="blur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                  </feMerge>
+                                </filter>
+                                <filter id="strongGlow" x="-100%" y="-100%" width="300%" height="300%">
+                                  <feGaussianBlur stdDeviation="12" result="blur"/>
+                                  <feMerge>
+                                    <feMergeNode in="blur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                  </feMerge>
+                                </filter>
+                                <g id="ray">
+                                  <path d="M500 72 L500 210" stroke="#fff" stroke-width="2" opacity=".5"/>
+                                  <path d="M500 92 L488 150 L500 137 L512 150 Z" fill="none" stroke="#fff" stroke-width="2"/>
+                                </g>
+                                <g id="diamond">
+                                  <path d="M500 174 L514 198 L500 222 L486 198 Z" fill="none" stroke="#fff" stroke-width="3"/>
+                                  <path d="M500 183 L507 198 L500 211 L493 198 Z" fill="#fff" opacity=".35"/>
+                                </g>
+                                <g id="crystal">
+                                  <path d="M500 66 L532 155 L500 137 L468 155 Z" fill="none" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
+                                  <path d="M500 88 L515 143 L500 128 L485 143 Z" fill="none" stroke="#fff" stroke-width="2"/>
+                                  <path d="M500 66 L500 137" stroke="#fff" stroke-width="2"/>
+                                </g>
+                                <g id="diagonal">
+                                  <path d="M500 116 L527 170 L500 157 L473 170 Z" fill="none" stroke="#fff" stroke-width="3"/>
+                                  <path d="M500 132 L512 161 L500 153 L488 161 Z" fill="#fff" opacity=".35"/>
+                                </g>
+                              </defs>
+                              <circle cx="500" cy="500" r="390" fill="url(#glow)" opacity=".18" filter="url(#strongGlow)"/>
+                              <g opacity=".55" stroke="#fff" fill="none">
+                                <circle cx="500" cy="500" r="350" stroke-width="2"/>
+                                <circle cx="500" cy="500" r="330" stroke-width="1"/>
+                                <circle cx="500" cy="500" r="300" stroke-width="3"/>
+                                <circle cx="500" cy="500" r="270" stroke-width="1"/>
+                                <circle cx="500" cy="500" r="245" stroke-width="2"/>
+                                <path d="M500 105 V895"/>
+                                <path d="M105 500 H895"/>
+                                <path d="M220 220 L780 780"/>
+                                <path d="M780 220 L220 780"/>
+                                <path d="M155 355 L845 645"/>
+                                <path d="M155 645 L845 355"/>
+                                <path d="M355 155 L645 845"/>
+                                <path d="M645 155 L355 845"/>
+                              </g>
+                              <g>
+                                <use href="#ray"/><use href="#ray" transform="rotate(22.5 500 500)"/><use href="#ray" transform="rotate(45 500 500)"/><use href="#ray" transform="rotate(67.5 500 500)"/><use href="#ray" transform="rotate(90 500 500)"/><use href="#ray" transform="rotate(112.5 500 500)"/><use href="#ray" transform="rotate(135 500 500)"/><use href="#ray" transform="rotate(157.5 500 500)"/><use href="#ray" transform="rotate(180 500 500)"/><use href="#ray" transform="rotate(202.5 500 500)"/><use href="#ray" transform="rotate(225 500 500)"/><use href="#ray" transform="rotate(247.5 500 500)"/><use href="#ray" transform="rotate(270 500 500)"/><use href="#ray" transform="rotate(292.5 500 500)"/><use href="#ray" transform="rotate(315 500 500)"/><use href="#ray" transform="rotate(337.5 500 500)"/>
+                              </g>
+                              <g>
+                                <use href="#diamond"/><use href="#diamond" transform="rotate(30 500 500)"/><use href="#diamond" transform="rotate(60 500 500)"/><use href="#diamond" transform="rotate(90 500 500)"/><use href="#diamond" transform="rotate(120 500 500)"/><use href="#diamond" transform="rotate(150 500 500)"/><use href="#diamond" transform="rotate(180 500 500)"/><use href="#diamond" transform="rotate(210 500 500)"/><use href="#diamond" transform="rotate(240 500 500)"/><use href="#diamond" transform="rotate(270 500 500)"/><use href="#diamond" transform="rotate(300 500 500)"/><use href="#diamond" transform="rotate(330 500 500)"/>
+                              </g>
+                              <g filter="url(#softGlow)">
+                                <use href="#crystal"/><use href="#crystal" transform="rotate(90 500 500)"/><use href="#crystal" transform="rotate(180 500 500)"/><use href="#crystal" transform="rotate(270 500 500)"/>
+                              </g>
+                              <g opacity=".9">
+                                <use href="#diagonal"/><use href="#diagonal" transform="rotate(45 500 500)"/><use href="#diagonal" transform="rotate(90 500 500)"/><use href="#diagonal" transform="rotate(135 500 500)"/><use href="#diagonal" transform="rotate(180 500 500)"/><use href="#diagonal" transform="rotate(225 500 500)"/><use href="#diagonal" transform="rotate(270 500 500)"/><use href="#diagonal" transform="rotate(315 500 500)"/>
+                              </g>
+                              <g fill="none" stroke="#fff" filter="url(#softGlow)">
+                                <circle cx="500" cy="500" r="235" stroke-width="9"/>
+                                <circle cx="500" cy="500" r="260" stroke-width="3"/>
+                                <circle cx="500" cy="500" r="285" stroke-width="2"/>
+                              </g>
+                              <path d="M500 240 L514 266 L540 250 L548 280 L579 271 L575 302 L607 305 L590 332 L618 345 L595 365 L620 390 L590 400 L605 430 L575 435 L582 468 L550 460 L540 492 L514 478 L500 505 L486 478 L460 492 L450 460 L418 468 L425 435 L395 430 L410 400 L380 390 L405 365 L382 345 L410 332 L393 305 L425 302 L421 271 L452 280 L460 250 L486 266 Z" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>
+                              <circle cx="500" cy="500" r="190" fill="none" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
+                              <circle cx="500" cy="500" r="164" fill="none" stroke="#fff" stroke-width="2" opacity=".65"/>
+                              <circle cx="500" cy="500" r="8" fill="#fff" filter="url(#softGlow)"/>
+                              <g fill="#fff" filter="url(#strongGlow)">
+                                <circle cx="500" cy="215" r="5"/><circle cx="785" cy="500" r="5"/><circle cx="500" cy="785" r="5"/><circle cx="215" cy="500" r="5"/><circle cx="700" cy="300" r="3"/><circle cx="300" cy="700" r="3"/>
+                              </g>
+                            </svg>
+                            <span>${lvl}</span>
+                        </div>
+                        <div class="level-info">
+                            <div class="level-title">УРОВЕНЬ ${lvl} <span class="rank">${rank}</span></div>
+                            <div class="xp-bar-container"><div class="xp-bar-fill" style="width: ${(friend.xp || 0) % 100}%;"></div></div>
+                            <div class="xp-text">${(friend.xp || 0) % 100} / 100 XP</div>
                         </div>
                     </div>
                 </div>
@@ -895,10 +911,11 @@ const LEVEL_TITLES = ["Первый эпизод", "Любопытный зри�
 
 function getStats() { 
     let stats = JSON.parse(localStorage.getItem('onika_stats')); 
-    if (!stats) { stats = { episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0, active_banner: null, active_banner_url: '', lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [], cachedAnime: {} }; localStorage.setItem('onika_stats', JSON.stringify(stats)); } 
+    if (!stats) { stats = { episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0, active_banner: null, active_banner_url: '', lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [], cachedAnime: {}, totalMinutesOnSite: 0 }; localStorage.setItem('onika_stats', JSON.stringify(stats)); } 
     if (!stats.unlockedAchievements) stats.unlockedAchievements = []; if (!stats.favedAnime) stats.favedAnime = []; if (!stats.watchedToday) stats.watchedToday = []; 
     if (stats.coins === undefined) stats.coins = 0; 
     if (!stats.cachedAnime) stats.cachedAnime = {};
+    if (stats.totalMinutesOnSite === undefined) stats.totalMinutesOnSite = 0; // Инициализация счетчика времени
     return stats; 
 }
 function saveStats(stats) { localStorage.setItem('onika_stats', JSON.stringify(stats)); }
@@ -921,6 +938,26 @@ function addXP(amount) {
     } else { showToast(`+${amount} XP`); }
     saveStats(stats); checkAchievements(stats); 
 }
+
+// НОВАЯ ФУНКЦИЯ: Начисление XP за время на сайте
+function addXPForTime(minutes) {
+    let stats = getStats();
+    stats.totalMinutesOnSite = (stats.totalMinutesOnSite || 0) + minutes;
+    
+    // Если накопился час
+    if (stats.totalMinutesOnSite >= 60) {
+        const hours = Math.floor(stats.totalMinutesOnSite / 60);
+        stats.totalMinutesOnSite = stats.totalMinutesOnSite % 60; // Остаток
+        saveStats(stats);
+        
+        // Начисляем 2 XP за каждый час
+        addXP(hours * 2); 
+        showToast(`⏱️ Вы провели на сайте ${hours} ч. (+${hours * 2} XP)`);
+    } else {
+        saveStats(stats);
+    }
+}
+
 function showLevelUpPopup(level, rank, coins) { 
     const popup = document.getElementById('levelUpPopup'); 
     document.getElementById('popup-level').textContent = level; document.getElementById('popup-rank').textContent = rank; document.getElementById('popup-coins').textContent = coins;
@@ -1000,6 +1037,16 @@ function addSwipeSupport(element) {
         startSlideShow(); 
     }, { passive: true }); 
 }
+
+// ==========================================
+// 13. ТАЙМЕР ВРЕМЕНИ НА САЙТЕ
+// ==========================================
+// Каждую минуту проверяем, что пользователь на сайте
+setInterval(() => {
+    if (document.visibilityState === 'visible') {
+        addXPForTime(1); // Добавляем 1 минуту
+    }
+}, 60000);
 
 document.addEventListener('DOMContentLoaded', () => { 
     loadHomePage(); loadProfileData(); 
