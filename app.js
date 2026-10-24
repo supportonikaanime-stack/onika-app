@@ -61,7 +61,6 @@ const API_Shikimori = {
         return d.data;
     },
     async getCatalog(page, limit, filters) {
-        // Собираем GraphQL строку динамически
         let args = [`page:${page}`, `limit:${limit}`];
         
         if (filters.search) args.push(`search:"${filters.search}"`);
@@ -69,7 +68,6 @@ const API_Shikimori = {
             const genreId = GENRES.find(g => g.name === filters.genre)?.id;
             if (genreId) args.push(`genre:${genreId}`);
         }
-        // Shikimori GraphQL принимает year как строку в season
         if (filters.year) args.push(`season:"${filters.year}"`); 
         if (filters.status) args.push(`status:${filters.status}`);
         if (filters.sort) args.push(`order:${filters.sort}`);
@@ -152,7 +150,6 @@ function switchTab(tabName, element) {
     const screen = document.getElementById(`screen-${tabName}`);
     if (screen) screen.classList.add('active');
 
-    // ИСПРАВЛЕНИЕ: Если элемент передан, используем его. Если нет, ищем по индексу.
     if (element) {
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         element.classList.add('active');
@@ -166,7 +163,6 @@ function switchTab(tabName, element) {
         if (tabName === 'profile' && navItems[4]) navItems[4].classList.add('active');
     }
 
-    // Дальнейшая логика загрузки...
     if (tabName === 'profile') loadProfileData();
     if (tabName === 'catalog') {
         if (document.getElementById('catalog-grid').children.length === 0) {
@@ -271,6 +267,21 @@ async function loadProfileData() {
     setElText('user-level', currentLevel); 
     setElText('user-level-text', currentLevel); 
     setElText('user-rank', rankTitle); 
+
+    // ИСПРАВЛЕНИЕ: Смена картинки уровня с новыми файлами
+    const levelImg = document.getElementById('user-level-image');
+    if (levelImg) {
+        let imgNum = 1;
+        if (currentLevel > 100) {
+            imgNum = Math.floor((currentLevel - 1) / 20) % 5 + 1;
+        } else {
+            if (currentLevel >= 80) imgNum = 5;
+            else if (currentLevel >= 60) imgNum = 4;
+            else if (currentLevel >= 40) imgNum = 3;
+            else if (currentLevel >= 20) imgNum = 2;
+        }
+        levelImg.src = `lvl${imgNum}.png`;
+    }
 
     setElText('user-xp-current', xpCurrentLevel); 
     setElText('user-xp-next', 100);
@@ -548,6 +559,8 @@ async function openFriendProfile(id, name) {
                         <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 6px 15px; display: inline-block; margin: 5px 0 15px;"><span style="color: #ccc; font-size: 12px;">ID:</span> <span style="color: #fff; font-weight: bold;">${escapeHTML(friend.tg_id)}</span></div>
                         <div class="level-row">
                             <div class="level-badge">
+                                <!-- ИСПРАВЛЕНИЕ: Возвращаем картинку и для друга -->
+                                <img id="friend-level-image" src="lvl1.png">
                                 <span>${lvl}</span>
                             </div>
                             <div class="level-info">
@@ -571,6 +584,16 @@ async function openFriendProfile(id, name) {
             ${lastWatchedHtml}
             <button onclick="removeFriend(${friend.tg_id})" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">🗑️ Удалить из друзей</button>
         `;
+        
+        const friendImg = document.getElementById('friend-level-image');
+        if (friendImg) {
+            let imgNum = 1;
+            if (lvl >= 80) imgNum = 5;
+            else if (lvl >= 60) imgNum = 4;
+            else if (lvl >= 40) imgNum = 3;
+            else if (lvl >= 20) imgNum = 2;
+            friendImg.src = `lvl${imgNum}.png`;
+        }
     } catch (e) { container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка</div>'; }
 }
 
