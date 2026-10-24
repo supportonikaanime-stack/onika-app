@@ -268,7 +268,7 @@ async function loadProfileData() {
     setElText('user-level-text', currentLevel); 
     setElText('user-rank', rankTitle); 
 
-    // ИСПРАВЛЕНИЕ: Смена картинки уровня с новыми файлами
+    // Смена картинки уровня
     const levelImg = document.getElementById('user-level-image');
     if (levelImg) {
         let imgNum = 1;
@@ -559,7 +559,6 @@ async function openFriendProfile(id, name) {
                         <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 6px 15px; display: inline-block; margin: 5px 0 15px;"><span style="color: #ccc; font-size: 12px;">ID:</span> <span style="color: #fff; font-weight: bold;">${escapeHTML(friend.tg_id)}</span></div>
                         <div class="level-row">
                             <div class="level-badge">
-                                <!-- ИСПРАВЛЕНИЕ: Возвращаем картинку и для друга -->
                                 <img id="friend-level-image" src="lvl1.png">
                                 <span>${lvl}</span>
                             </div>
