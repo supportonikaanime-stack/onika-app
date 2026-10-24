@@ -182,7 +182,7 @@
         }
         
         /* ==========================================
-           БЕЙДЖ УРОВНЯ 64x64, ЦИФРА 20px С ОБВОДКОЙ
+           БЕЙДЖ УРОВНЯ (ПРОФИЛЬ)
            ========================================== */
         .level-row { 
             display: flex; 
@@ -329,8 +329,25 @@
         .modal-close { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; }
         .modal-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
         
+        /* ==========================================
+           МОДАЛЬНОЕ ОКНО: ИКОНКА 120x120
+           ========================================== */
         .modal-icon-large { display: flex; justify-content: center; margin-bottom: 15px; color: var(--primary); position: relative; }
-        .modal-icon-large svg { width: 64px; height: 64px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+        
+        /* Отдельный класс для большого бейджа в модалке */
+        .modal-level-badge {
+            width: 120px !important;
+            height: 120px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .modal-level-badge span {
+            font-size: 42px !important; /* Большая цифра */
+        }
+        /* ========================================== */
         
         .modal-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 5px; }
         .modal-subtitle { font-size: 14px; color: #888; margin-bottom: 20px; word-wrap: break-word; line-height: 1.4; }
@@ -674,7 +691,7 @@
             
             <!-- ИКОНКА 120x120 -->
             <div class="modal-icon-large">
-                <div class="level-badge" style="width: 120px; height: 120px; margin: 0 auto;">
+                <div class="level-badge modal-level-badge">
                     <svg class="level-emblem" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
                       <defs>
                         <radialGradient id="glow" cx="50%" cy="50%">
@@ -755,7 +772,7 @@
                         <circle cx="500" cy="215" r="5"/><circle cx="785" cy="500" r="5"/><circle cx="500" cy="785" r="5"/><circle cx="215" cy="500" r="5"/><circle cx="700" cy="300" r="3"/><circle cx="300" cy="700" r="3"/>
                       </g>
                     </svg>
-                    <span id="modal-icon-level" style="font-size: 42px;">1</span>
+                    <span id="modal-icon-level">1</span>
                 </div>
             </div>
             
@@ -839,6 +856,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=131"></script>
+    <script src="app.js?v=132"></script>
 </body>
 </html>
