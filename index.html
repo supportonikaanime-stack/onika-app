@@ -98,30 +98,58 @@
         .profile-header h1 { font-size: 32px; font-weight: 800; color: #fff; }
         .profile-container { padding: 0 15px; }
         
-        .user-card { 
+        /* ==========================================
+           НОВАЯ СТРУКТУРА КАРТОЧКИ ПРОФИЛЯ
+           ========================================== */
+        .user-card-wrapper { 
             background: #14141f; 
             border-radius: 20px; 
-            padding: 20px; 
             border: 1px solid rgba(255,255,255,0.05); 
-            position: relative; 
             overflow: hidden; 
+            position: relative; 
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Верхняя часть с баннером */
+        .user-card-top {
+            padding: 20px 20px 0 20px; /* Убираем нижний отступ */
+            position: relative;
             background-size: cover;
             background-position: center;
+            min-height: 260px; /* Высота для баннера */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding-bottom: 15px;
         }
-        .user-card::before { 
-            content: ''; 
-            position: absolute; 
-            inset: 0; 
-            background: linear-gradient(to bottom, rgba(20,20,31,0.3) 0%, rgba(20,20,31,0.9) 70%, #14141f 100%); 
-            z-index: 1; 
-        }
-        .user-card-content { position: relative; z-index: 2; }
         
+        /* Градиент, чтобы текст читался поверх баннера */
+        .user-card-top::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(20,20,31,0.1) 0%, rgba(20,20,31,0.7) 60%, #14141f 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        .user-card-top-content { position: relative; z-index: 2; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        
+        /* Нижняя часть (только уровень) */
+        .user-card-bottom {
+            padding: 15px 20px 20px 20px;
+            position: relative;
+            z-index: 3;
+            background: #14141f; /* Чистый темный фон */
+        }
+
         .avatar-container { position: relative; width: 80px; height: 80px; margin: 0 auto 15px auto; }
         .avatar { width: 100%; height: 100%; border-radius: 50%; background: #222; border: 2px solid #333; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-        .user-details { text-align: center; }
+        .user-details { text-align: center; width: 100%; }
         .user-details h2 { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
         
         .coin-balance {
@@ -132,13 +160,26 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             color: #ffd700;
             font-weight: bold;
             font-size: 16px;
             backdrop-filter: blur(5px);
         }
         .coin-balance svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        
+        .id-container {
+            background: rgba(0,0,0,0.5); 
+            border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 12px; 
+            padding: 8px 15px; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 10px; 
+            margin-bottom: 5px; 
+            cursor: pointer; 
+            backdrop-filter: blur(5px);
+        }
         
         /* ==========================================
            БЕЙДЖ УРОВНЯ 64x64, ЦИФРА 20px С ОБВОДКОЙ
@@ -218,7 +259,7 @@
                  1.5px -1.5px 0 #000,
                 -1.5px  1.5px 0 #000,
                  1.5px  1.5px 0 #000,
-                 0 2px 4px rgba(0,0,0,0.8); /* Легкая тень снизу */
+                 0 2px 4px rgba(0,0,0,0.8);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
@@ -469,122 +510,127 @@
     <div id="screen-profile" class="screen">
         <header class="profile-header"><h1>Профиль</h1></header>
         <div class="profile-container">
-            <div class="user-card" id="profile-banner">
-                <div class="user-card-content">
-                    <div class="avatar-container">
-                        <div class="avatar" id="tg-avatar"><span id="avatar-letter">?</span></div>
-                    </div>
-
-                    <div class="user-details">
-                        <h2 id="tg-name">Гость</h2>
-                        
-                        <div class="coin-balance">
-                            <svg><use href="#oa-coin"></use></svg>
-                            <span id="user-coins">0</span>
+            <!-- НОВАЯ СТРУКТУРА -->
+            <div class="user-card-wrapper">
+                <!-- ВЕРХНЯЯ ЧАСТЬ (Баннер) -->
+                <div class="user-card-top" id="profile-banner">
+                    <div class="user-card-top-content">
+                        <div class="avatar-container">
+                            <div class="avatar" id="tg-avatar"><span id="avatar-letter">?</span></div>
                         </div>
-
-                        <div onclick="copyMyId()" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px 15px; display: inline-flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer; margin-top: 5px; backdrop-filter: blur(5px);">
-                            <span style="color: #ccc; font-size: 12px;">Мой ID:</span>
-                            <span id="my-tg-id" style="color: #fff; font-weight: bold; font-size: 14px;">...</span>
-                            <span style="color: #5b5bff; font-size: 16px;">📋</span>
-                        </div>
-
-                        <div class="level-row" onclick="openLevelModal()">
-                            <div class="level-badge">
-                                <!-- ВСТАВЛЯЕМ ТВОЙ SVG С ПРАВКАМИ -->
-                                <svg class="level-emblem" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
-                                  <defs>
-                                    <radialGradient id="glow" cx="50%" cy="50%">
-                                      <stop offset="0" stop-color="#fff" stop-opacity=".95"/>
-                                      <stop offset=".55" stop-color="#fff" stop-opacity=".45"/>
-                                      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
-                                    </radialGradient>
-                                    <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
-                                      <feGaussianBlur stdDeviation="5" result="blur"/>
-                                      <feMerge>
-                                        <feMergeNode in="blur"/>
-                                        <feMergeNode in="SourceGraphic"/>
-                                      </feMerge>
-                                    </filter>
-                                    <filter id="strongGlow" x="-100%" y="-100%" width="300%" height="300%">
-                                      <feGaussianBlur stdDeviation="12" result="blur"/>
-                                      <feMerge>
-                                        <feMergeNode in="blur"/>
-                                        <feMergeNode in="SourceGraphic"/>
-                                      </feMerge>
-                                    </filter>
-                                    <g id="ray">
-                                      <path d="M500 72 L500 210" stroke="#fff" stroke-width="2" opacity=".5"/>
-                                      <path d="M500 92 L488 150 L500 137 L512 150 Z" fill="none" stroke="#fff" stroke-width="2"/>
-                                    </g>
-                                    <g id="diamond">
-                                      <path d="M500 174 L514 198 L500 222 L486 198 Z" fill="none" stroke="#fff" stroke-width="3"/>
-                                      <path d="M500 183 L507 198 L500 211 L493 198 Z" fill="#fff" opacity=".35"/>
-                                    </g>
-                                    <g id="crystal">
-                                      <path d="M500 66 L532 155 L500 137 L468 155 Z" fill="none" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
-                                      <path d="M500 88 L515 143 L500 128 L485 143 Z" fill="none" stroke="#fff" stroke-width="2"/>
-                                      <path d="M500 66 L500 137" stroke="#fff" stroke-width="2"/>
-                                    </g>
-                                    <g id="diagonal">
-                                      <path d="M500 116 L527 170 L500 157 L473 170 Z" fill="none" stroke="#fff" stroke-width="3"/>
-                                      <path d="M500 132 L512 161 L500 153 L488 161 Z" fill="#fff" opacity=".35"/>
-                                    </g>
-                                  </defs>
-                                  <circle cx="500" cy="500" r="390" fill="url(#glow)" opacity=".18" filter="url(#strongGlow)"/>
-                                  <g opacity=".55" stroke="#fff" fill="none">
-                                    <circle cx="500" cy="500" r="350" stroke-width="2"/>
-                                    <circle cx="500" cy="500" r="330" stroke-width="1"/>
-                                    <circle cx="500" cy="500" r="300" stroke-width="3"/>
-                                    <circle cx="500" cy="500" r="270" stroke-width="1"/>
-                                    <circle cx="500" cy="500" r="245" stroke-width="2"/>
-                                    <path d="M500 105 V895"/>
-                                    <path d="M105 500 H895"/>
-                                    <path d="M220 220 L780 780"/>
-                                    <path d="M780 220 L220 780"/>
-                                    <path d="M155 355 L845 645"/>
-                                    <path d="M155 645 L845 355"/>
-                                    <path d="M355 155 L645 845"/>
-                                    <path d="M645 155 L355 845"/>
-                                  </g>
-                                  <g>
-                                    <use href="#ray"/><use href="#ray" transform="rotate(22.5 500 500)"/><use href="#ray" transform="rotate(45 500 500)"/><use href="#ray" transform="rotate(67.5 500 500)"/><use href="#ray" transform="rotate(90 500 500)"/><use href="#ray" transform="rotate(112.5 500 500)"/><use href="#ray" transform="rotate(135 500 500)"/><use href="#ray" transform="rotate(157.5 500 500)"/><use href="#ray" transform="rotate(180 500 500)"/><use href="#ray" transform="rotate(202.5 500 500)"/><use href="#ray" transform="rotate(225 500 500)"/><use href="#ray" transform="rotate(247.5 500 500)"/><use href="#ray" transform="rotate(270 500 500)"/><use href="#ray" transform="rotate(292.5 500 500)"/><use href="#ray" transform="rotate(315 500 500)"/><use href="#ray" transform="rotate(337.5 500 500)"/>
-                                  </g>
-                                  <g>
-                                    <use href="#diamond"/><use href="#diamond" transform="rotate(30 500 500)"/><use href="#diamond" transform="rotate(60 500 500)"/><use href="#diamond" transform="rotate(90 500 500)"/><use href="#diamond" transform="rotate(120 500 500)"/><use href="#diamond" transform="rotate(150 500 500)"/><use href="#diamond" transform="rotate(180 500 500)"/><use href="#diamond" transform="rotate(210 500 500)"/><use href="#diamond" transform="rotate(240 500 500)"/><use href="#diamond" transform="rotate(270 500 500)"/><use href="#diamond" transform="rotate(300 500 500)"/><use href="#diamond" transform="rotate(330 500 500)"/>
-                                  </g>
-                                  <g filter="url(#softGlow)">
-                                    <use href="#crystal"/><use href="#crystal" transform="rotate(90 500 500)"/><use href="#crystal" transform="rotate(180 500 500)"/><use href="#crystal" transform="rotate(270 500 500)"/>
-                                  </g>
-                                  <g opacity=".9">
-                                    <use href="#diagonal"/><use href="#diagonal" transform="rotate(45 500 500)"/><use href="#diagonal" transform="rotate(90 500 500)"/><use href="#diagonal" transform="rotate(135 500 500)"/><use href="#diagonal" transform="rotate(180 500 500)"/><use href="#diagonal" transform="rotate(225 500 500)"/><use href="#diagonal" transform="rotate(270 500 500)"/><use href="#diagonal" transform="rotate(315 500 500)"/>
-                                  </g>
-                                  <g fill="none" stroke="#fff" filter="url(#softGlow)">
-                                    <circle cx="500" cy="500" r="235" stroke-width="9"/>
-                                    <circle cx="500" cy="500" r="260" stroke-width="3"/>
-                                    <circle cx="500" cy="500" r="285" stroke-width="2"/>
-                                  </g>
-                                  <path d="M500 240 L514 266 L540 250 L548 280 L579 271 L575 302 L607 305 L590 332 L618 345 L595 365 L620 390 L590 400 L605 430 L575 435 L582 468 L550 460 L540 492 L514 478 L500 505 L486 478 L460 492 L450 460 L418 468 L425 435 L395 430 L410 400 L380 390 L405 365 L382 345 L410 332 L393 305 L425 302 L421 271 L452 280 L460 250 L486 266 Z" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>
-                                  <!-- УБРАН ЧЕРНЫЙ ФОН -->
-                                  <circle cx="500" cy="500" r="190" fill="none" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
-                                  <circle cx="500" cy="500" r="164" fill="none" stroke="#fff" stroke-width="2" opacity=".65"/>
-                                  <circle cx="500" cy="500" r="8" fill="#fff" filter="url(#softGlow)"/>
-                                  <g fill="#fff" filter="url(#strongGlow)">
-                                    <circle cx="500" cy="215" r="5"/><circle cx="785" cy="500" r="5"/><circle cx="500" cy="785" r="5"/><circle cx="215" cy="500" r="5"/><circle cx="700" cy="300" r="3"/><circle cx="300" cy="700" r="3"/>
-                                  </g>
-                                </svg>
-
-                                <span id="user-level">1</span>
+                        <div class="user-details">
+                            <h2 id="tg-name">Гость</h2>
+                            <div class="coin-balance">
+                                <svg><use href="#oa-coin"></use></svg>
+                                <span id="user-coins">0</span>
                             </div>
-                            <div class="level-info">
-                                <div class="level-title">УРОВЕНЬ <span id="user-level-text">1</span> <span class="rank" id="user-rank">Первый эпизод</span></div>
-                                <div class="xp-bar-container"><div class="xp-bar-fill" id="user-xp-bar" style="width: 20%;"></div></div>
-                                <div class="xp-text"><span id="user-xp-current">0</span> / <span id="user-xp-next">100</span> XP</div>
+                            <br>
+                            <div onclick="copyMyId()" class="id-container">
+                                <span style="color: #ccc; font-size: 12px;">Мой ID:</span>
+                                <span id="my-tg-id" style="color: #fff; font-weight: bold; font-size: 14px;">...</span>
+                                <span style="color: #5b5bff; font-size: 16px;">📋</span>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- НИЖНЯЯ ЧАСТЬ (Уровень) -->
+                <div class="user-card-bottom">
+                    <div class="level-row" onclick="openLevelModal()">
+                        <div class="level-badge">
+                            <!-- ВСТАВЛЯЕМ ТВОЙ SVG С ПРАВКАМИ -->
+                            <svg class="level-emblem" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+                              <defs>
+                                <radialGradient id="glow" cx="50%" cy="50%">
+                                  <stop offset="0" stop-color="#fff" stop-opacity=".95"/>
+                                  <stop offset=".55" stop-color="#fff" stop-opacity=".45"/>
+                                  <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+                                </radialGradient>
+                                <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
+                                  <feGaussianBlur stdDeviation="5" result="blur"/>
+                                  <feMerge>
+                                    <feMergeNode in="blur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                  </feMerge>
+                                </filter>
+                                <filter id="strongGlow" x="-100%" y="-100%" width="300%" height="300%">
+                                  <feGaussianBlur stdDeviation="12" result="blur"/>
+                                  <feMerge>
+                                    <feMergeNode in="blur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                  </feMerge>
+                                </filter>
+                                <g id="ray">
+                                  <path d="M500 72 L500 210" stroke="#fff" stroke-width="2" opacity=".5"/>
+                                  <path d="M500 92 L488 150 L500 137 L512 150 Z" fill="none" stroke="#fff" stroke-width="2"/>
+                                </g>
+                                <g id="diamond">
+                                  <path d="M500 174 L514 198 L500 222 L486 198 Z" fill="none" stroke="#fff" stroke-width="3"/>
+                                  <path d="M500 183 L507 198 L500 211 L493 198 Z" fill="#fff" opacity=".35"/>
+                                </g>
+                                <g id="crystal">
+                                  <path d="M500 66 L532 155 L500 137 L468 155 Z" fill="none" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
+                                  <path d="M500 88 L515 143 L500 128 L485 143 Z" fill="none" stroke="#fff" stroke-width="2"/>
+                                  <path d="M500 66 L500 137" stroke="#fff" stroke-width="2"/>
+                                </g>
+                                <g id="diagonal">
+                                  <path d="M500 116 L527 170 L500 157 L473 170 Z" fill="none" stroke="#fff" stroke-width="3"/>
+                                  <path d="M500 132 L512 161 L500 153 L488 161 Z" fill="#fff" opacity=".35"/>
+                                </g>
+                              </defs>
+                              <circle cx="500" cy="500" r="390" fill="url(#glow)" opacity=".18" filter="url(#strongGlow)"/>
+                              <g opacity=".55" stroke="#fff" fill="none">
+                                <circle cx="500" cy="500" r="350" stroke-width="2"/>
+                                <circle cx="500" cy="500" r="330" stroke-width="1"/>
+                                <circle cx="500" cy="500" r="300" stroke-width="3"/>
+                                <circle cx="500" cy="500" r="270" stroke-width="1"/>
+                                <circle cx="500" cy="500" r="245" stroke-width="2"/>
+                                <path d="M500 105 V895"/>
+                                <path d="M105 500 H895"/>
+                                <path d="M220 220 L780 780"/>
+                                <path d="M780 220 L220 780"/>
+                                <path d="M155 355 L845 645"/>
+                                <path d="M155 645 L845 355"/>
+                                <path d="M355 155 L645 845"/>
+                                <path d="M645 155 L355 845"/>
+                              </g>
+                              <g>
+                                <use href="#ray"/><use href="#ray" transform="rotate(22.5 500 500)"/><use href="#ray" transform="rotate(45 500 500)"/><use href="#ray" transform="rotate(67.5 500 500)"/><use href="#ray" transform="rotate(90 500 500)"/><use href="#ray" transform="rotate(112.5 500 500)"/><use href="#ray" transform="rotate(135 500 500)"/><use href="#ray" transform="rotate(157.5 500 500)"/><use href="#ray" transform="rotate(180 500 500)"/><use href="#ray" transform="rotate(202.5 500 500)"/><use href="#ray" transform="rotate(225 500 500)"/><use href="#ray" transform="rotate(247.5 500 500)"/><use href="#ray" transform="rotate(270 500 500)"/><use href="#ray" transform="rotate(292.5 500 500)"/><use href="#ray" transform="rotate(315 500 500)"/><use href="#ray" transform="rotate(337.5 500 500)"/>
+                              </g>
+                              <g>
+                                <use href="#diamond"/><use href="#diamond" transform="rotate(30 500 500)"/><use href="#diamond" transform="rotate(60 500 500)"/><use href="#diamond" transform="rotate(90 500 500)"/><use href="#diamond" transform="rotate(120 500 500)"/><use href="#diamond" transform="rotate(150 500 500)"/><use href="#diamond" transform="rotate(180 500 500)"/><use href="#diamond" transform="rotate(210 500 500)"/><use href="#diamond" transform="rotate(240 500 500)"/><use href="#diamond" transform="rotate(270 500 500)"/><use href="#diamond" transform="rotate(300 500 500)"/><use href="#diamond" transform="rotate(330 500 500)"/>
+                              </g>
+                              <g filter="url(#softGlow)">
+                                <use href="#crystal"/><use href="#crystal" transform="rotate(90 500 500)"/><use href="#crystal" transform="rotate(180 500 500)"/><use href="#crystal" transform="rotate(270 500 500)"/>
+                              </g>
+                              <g opacity=".9">
+                                <use href="#diagonal"/><use href="#diagonal" transform="rotate(45 500 500)"/><use href="#diagonal" transform="rotate(90 500 500)"/><use href="#diagonal" transform="rotate(135 500 500)"/><use href="#diagonal" transform="rotate(180 500 500)"/><use href="#diagonal" transform="rotate(225 500 500)"/><use href="#diagonal" transform="rotate(270 500 500)"/><use href="#diagonal" transform="rotate(315 500 500)"/>
+                              </g>
+                              <g fill="none" stroke="#fff" filter="url(#softGlow)">
+                                <circle cx="500" cy="500" r="235" stroke-width="9"/>
+                                <circle cx="500" cy="500" r="260" stroke-width="3"/>
+                                <circle cx="500" cy="500" r="285" stroke-width="2"/>
+                              </g>
+                              <path d="M500 240 L514 266 L540 250 L548 280 L579 271 L575 302 L607 305 L590 332 L618 345 L595 365 L620 390 L590 400 L605 430 L575 435 L582 468 L550 460 L540 492 L514 478 L500 505 L486 478 L460 492 L450 460 L418 468 L425 435 L395 430 L410 400 L380 390 L405 365 L382 345 L410 332 L393 305 L425 302 L421 271 L452 280 L460 250 L486 266 Z" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>
+                              <circle cx="500" cy="500" r="190" fill="none" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
+                              <circle cx="500" cy="500" r="164" fill="none" stroke="#fff" stroke-width="2" opacity=".65"/>
+                              <circle cx="500" cy="500" r="8" fill="#fff" filter="url(#softGlow)"/>
+                              <g fill="#fff" filter="url(#strongGlow)">
+                                <circle cx="500" cy="215" r="5"/><circle cx="785" cy="500" r="5"/><circle cx="500" cy="785" r="5"/><circle cx="215" cy="500" r="5"/><circle cx="700" cy="300" r="3"/><circle cx="300" cy="700" r="3"/>
+                              </g>
+                            </svg>
+
+                            <span id="user-level">1</span>
+                        </div>
+                        <div class="level-info">
+                            <div class="level-title">УРОВЕНЬ <span id="user-level-text">1</span> <span class="rank" id="user-rank">Первый эпизод</span></div>
+                            <div class="xp-bar-container"><div class="xp-bar-fill" id="user-xp-bar" style="width: 20%;"></div></div>
+                            <div class="xp-text"><span id="user-xp-current">0</span> / <span id="user-xp-next">100</span> XP</div>
+                        </div>
+                    </div>
+                </div>
             </div>
+            <!-- КОНЕЦ НОВОЙ СТРУКТУРЫ -->
 
             <div class="profile-tabs">
                 <button class="tab-btn active" id="tab-btn-profile" onclick="switchProfileTab('profile')"><svg><use href="#oa-profile"></use></svg> Профиль</button>
@@ -701,6 +747,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=127"></script>
+    <script src="app.js?v=128"></script>
 </body>
 </html>
