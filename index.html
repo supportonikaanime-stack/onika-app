@@ -141,55 +141,102 @@
         .coin-balance svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         
         /* ==========================================
-           ВЕКТОРНЫЙ ДИЗАЙН УРОВНЯ (SVG)
+           МАГИЧЕСКИЙ АРТЕФАКТ (СЛОЖНЫЙ SVG)
            ========================================== */
-        .level-row { display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 12px; text-align: left; cursor: pointer; transition: 0.2s; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1); }
+        .level-row { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            background: rgba(10, 10, 15, 0.6); 
+            padding: 12px; 
+            border-radius: 16px; 
+            text-align: left; 
+            cursor: pointer; 
+            transition: 0.2s; 
+            backdrop-filter: blur(10px); 
+            border: 1px solid rgba(91, 91, 255, 0.3); 
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(91, 91, 255, 0.1); 
+        }
         .level-row:active { transform: scale(0.98); }
         
         .level-badge { 
-            width: 55px; 
-            height: 55px; 
+            width: 60px; 
+            height: 60px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
             flex-shrink: 0; 
             position: relative; 
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(91,91,255,0.2) 0%, rgba(0,0,0,0) 70%);
         }
         
-        /* Вращающийся SVG */
-        .level-badge svg.level-aura { 
+        /* Свечение за артефактом */
+        .level-badge::before {
+            content: '';
             position: absolute;
-            width: 120%;
-            height: 120%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(91, 91, 255, 0.4) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: auraPulse 2s infinite alternate;
+            z-index: 0;
+        }
+
+        @keyframes auraPulse {
+            0% { transform: scale(0.8); opacity: 0.4; }
+            100% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        /* Сам артефакт */
+        .level-aura { 
+            position: absolute;
+            width: 140%;
+            height: 140%;
             z-index: 1;
-            animation: spinAura 15s linear infinite;
-            filter: drop-shadow(0 0 5px #5b5bff);
+            animation: spinAura 20s linear infinite;
+            filter: drop-shadow(0 0 8px #5b5bff);
+        }
+
+        /* Внутреннее кольцо вращается в другую сторону */
+        .level-aura-inner {
+            position: absolute;
+            width: 110%;
+            height: 110%;
+            z-index: 1;
+            animation: spinAuraReverse 15s linear infinite;
+            filter: drop-shadow(0 0 5px #b44aff);
         }
         
         @keyframes spinAura {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+        @keyframes spinAuraReverse {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
+        }
         
-        /* Цифра поверх SVG */
+        /* Цифра поверх */
         .level-badge span { 
             position: relative;
             z-index: 2;
-            font-size: 22px; 
+            font-size: 26px; 
             font-weight: 900; 
             color: #fff; 
-            text-shadow: 0 0 10px rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,1);
+            text-shadow: 
+                -1px -1px 0 #000,  
+                 1px -1px 0 #000,
+                -1px  1px 0 #000,
+                 1px  1px 0 #000,
+                 0 0 15px rgba(91, 91, 255, 0.8);
         }
         /* ========================================== */
         
         .level-info { flex: 1; min-width: 0; }
-        .level-title { font-size: 12px; color: #fff; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
-        .level-title .rank { color: #b44aff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; max-width: 140px; }
-        .xp-bar-container { width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
-        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 3px; box-shadow: 0 0 10px #00f5ff; }
-        .xp-text { font-size: 10px; color: #888; text-align: right; }
+        .level-title { font-size: 13px; color: #fff; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+        .level-title .rank { color: #b44aff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; max-width: 140px; text-shadow: 0 0 10px rgba(180, 74, 255, 0.5); }
+        .xp-bar-container { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.05); }
+        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 4px; box-shadow: 0 0 10px #00f5ff; }
+        .xp-text { font-size: 11px; color: #aaa; text-align: right; font-weight: 500; }
         
         .profile-tabs { display: flex; background: #14141f; border-radius: 15px; padding: 5px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.05); }
         .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: #888; font-size: 14px; font-weight: 600; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: 0.2s; }
@@ -452,21 +499,46 @@
 
                         <div class="level-row" onclick="openLevelModal()">
                             <div class="level-badge">
-                                <!-- ВЕКТОРНЫЙ SVG (вместо картинки) -->
+                                <!-- СЛОЖНЫЙ МАГИЧЕСКИЙ АРТЕФАКТ -->
                                 <svg class="level-aura" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
                                     <defs>
-                                        <radialGradient id="auraGrad" cx="50%" cy="50%" r="50%">
-                                            <stop offset="0%" stop-color="#b44aff" stop-opacity="0.8" />
+                                        <linearGradient id="neonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stop-color="#00f5ff" />
+                                            <stop offset="100%" stop-color="#b44aff" />
+                                        </linearGradient>
+                                        <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+                                            <stop offset="0%" stop-color="#5b5bff" stop-opacity="0.8" />
                                             <stop offset="100%" stop-color="#5b5bff" stop-opacity="0" />
                                         </radialGradient>
                                     </defs>
-                                    <!-- 8-конечная звезда/вспышка -->
-                                    <path d="M50 5 L53 35 L95 50 L53 65 L50 95 L47 65 L5 50 L47 35 Z" fill="url(#auraGrad)" />
-                                    <path d="M50 15 L52 40 L85 50 L52 60 L50 85 L48 60 L15 50 L48 40 Z" fill="#5b5bff" opacity="0.6"/>
-                                    <!-- Кольцо с точками -->
-                                    <circle cx="50" cy="50" r="30" fill="none" stroke="#5b5bff" stroke-width="1" opacity="0.4" />
-                                    <circle cx="50" cy="50" r="35" fill="none" stroke="#b44aff" stroke-width="0.5" opacity="0.3" stroke-dasharray="2 4"/>
+                                    
+                                    <!-- Центральное свечение -->
+                                    <circle cx="50" cy="50" r="40" fill="url(#coreGlow)" />
+                                    
+                                    <!-- Внешнее кольцо с шипами -->
+                                    <path d="M50 5 L55 20 L80 20 L65 35 L75 60 L55 50 L50 90 L45 50 L25 60 L35 35 L20 20 L45 20 Z" fill="none" stroke="url(#neonGrad)" stroke-width="1.5" opacity="0.8" />
+                                    
+                                    <!-- Внутреннее пунктирное кольцо -->
+                                    <circle cx="50" cy="50" r="28" fill="none" stroke="#00f5ff" stroke-width="1" stroke-dasharray="4 6" opacity="0.6" />
+                                    
+                                    <!-- Руны/Точки по кругу -->
+                                    <circle cx="50" cy="22" r="2" fill="#fff" />
+                                    <circle cx="50" cy="78" r="2" fill="#fff" />
+                                    <circle cx="22" cy="50" r="2" fill="#fff" />
+                                    <circle cx="78" cy="50" r="2" fill="#fff" />
+                                    <circle cx="30" cy="30" r="1.5" fill="#b44aff" />
+                                    <circle cx="70" cy="30" r="1.5" fill="#b44aff" />
+                                    <circle cx="30" cy="70" r="1.5" fill="#b44aff" />
+                                    <circle cx="70" cy="70" r="1.5" fill="#b44aff" />
                                 </svg>
+
+                                <!-- Внутренний элемент (вращается в другую сторону) -->
+                                <svg class="level-aura-inner" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                    <!-- 4-конечная звезда -->
+                                    <path d="M50 15 L53 47 L85 50 L53 53 L50 85 L47 53 L15 50 L47 47 Z" fill="#b44aff" opacity="0.4" />
+                                    <path d="M50 25 L52 48 L75 50 L52 52 L50 75 L48 52 L25 50 L48 48 Z" fill="#00f5ff" opacity="0.6" />
+                                </svg>
+
                                 <span id="user-level">1</span>
                             </div>
                             <div class="level-info">
@@ -594,6 +666,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=120"></script>
+    <script src="app.js?v=121"></script>
 </body>
 </html>
