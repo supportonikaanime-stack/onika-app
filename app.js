@@ -290,6 +290,9 @@ async function loadProfileData() {
     setElWidth('modal-xp-bar', progressPercent + '%'); 
     setElText('modal-ach-earned', stats.unlockedAchievements.length); 
     
+    // Обновляем цифру в модальном окне
+    setElText('modal-icon-level', currentLevel); 
+
     const nextAch = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id)); 
     if (nextAch) {
         setElText('next-ach-name', nextAch.name); 
@@ -540,7 +543,6 @@ async function openFriendProfile(id, name) {
             if (b) friendBanner = `style="background-image: url('${safeUrl(b.image_url)}');"`;
         }
 
-        // СТРУКТУРА КАК В ПРОФИЛЕ
         container.innerHTML = `
             <div class="user-card-wrapper">
                 <div class="user-card-top" ${friendBanner}>
@@ -699,12 +701,11 @@ function renderEpisodesSelection() {
     container.innerHTML = html; 
 }
 function playEpisode(epNum) { 
-    addXP(20); 
     let stats = getStats(); 
     stats.episodesWatched += 1; 
     stats.minutesWatched += 24; 
     saveStats(stats); 
-    if (tg) tg.showAlert(`🎬 Просмотр:\n${currentAnimeForPlayer.title}\n${selectedVoice}\n${selectedPlayer}\nСерия: ${epNum}\n\n(+20 XP)`); 
+    if (tg) tg.showAlert(`🎬 Просмотр:\n${currentAnimeForPlayer.title}\n${selectedVoice}\n${selectedPlayer}\nСерия: ${epNum}`); 
     currentAnimeForPlayer = null;
     switchTab('home');
 }
@@ -828,7 +829,7 @@ function setAnimeStatus(status) {
     }
     
     stats.favedAnime = stats.favedAnime.filter(a => a.id !== id);
-    if (status !== '') { stats.favedAnime.push({ id: id, status: status }); addXP(10); showToast('Статус обновлен!'); } 
+    if (status !== '') { stats.favedAnime.push({ id: id, status: status }); showToast('Статус обновлен!'); } 
     else { showToast('Удалено'); }
     saveStats(stats); closeModal('statusModal');
     
@@ -915,7 +916,7 @@ function getStats() {
     if (!stats.unlockedAchievements) stats.unlockedAchievements = []; if (!stats.favedAnime) stats.favedAnime = []; if (!stats.watchedToday) stats.watchedToday = []; 
     if (stats.coins === undefined) stats.coins = 0; 
     if (!stats.cachedAnime) stats.cachedAnime = {};
-    if (stats.totalMinutesOnSite === undefined) stats.totalMinutesOnSite = 0; // Инициализация счетчика времени
+    if (stats.totalMinutesOnSite === undefined) stats.totalMinutesOnSite = 0;
     return stats; 
 }
 function saveStats(stats) { localStorage.setItem('onika_stats', JSON.stringify(stats)); }
