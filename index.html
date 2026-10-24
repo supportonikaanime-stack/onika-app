@@ -143,7 +143,6 @@
         .level-row { display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 12px; text-align: left; cursor: pointer; transition: 0.2s; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1); }
         .level-row:active { transform: scale(0.98); }
         
-        /* ИСПРАВЛЕНИЕ 1: Красивый CSS-кружок для уровня вместо картинки */
         .level-badge { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; border-radius: 50%; background: linear-gradient(135deg, #5b5bff, #b44aff); box-shadow: 0 0 15px rgba(91, 91, 255, 0.5); border: 2px solid rgba(255,255,255,0.2); }
         .level-badge span { font-size: 20px; font-weight: 900; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         
@@ -415,7 +414,6 @@
 
                         <div class="level-row" onclick="openLevelModal()">
                             <div class="level-badge">
-                                <!-- ИСПРАВЛЕНИЕ 1: Убрали img, теперь стильный CSS-кружок -->
                                 <span id="user-level">1</span>
                             </div>
                             <div class="level-info">
@@ -543,6 +541,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=116"></script>
+    <script src="app.js?v=117"></script>
 </body>
 </html>
