@@ -61,18 +61,21 @@ const API_Shikimori = {
         return d.data;
     },
     async getCatalog(page, limit, filters) {
-        // ИСПРАВЛЕНИЕ: Передаем фильтры прямо в GraphQL запрос
-        let searchStr = filters.search ? `,search:"${filters.search}"` : '';
-        let genreStr = '';
+        // Собираем GraphQL строку динамически
+        let args = [`page:${page}`, `limit:${limit}`];
+        
+        if (filters.search) args.push(`search:"${filters.search}"`);
         if (filters.genre) {
             const genreId = GENRES.find(g => g.name === filters.genre)?.id;
-            if (genreId) genreStr = `,genre:${genreId}`;
+            if (genreId) args.push(`genre:${genreId}`);
         }
-        let seasonStr = filters.year ? `,season:"${filters.year}"` : '';
-        let statusStr = filters.status ? `,status:${filters.status}` : '';
-        let orderStr = filters.sort ? `,order:${filters.sort}` : ',order:popularity';
-        
-        const q = `{animes(page:${page},limit:${limit}${searchStr}${genreStr}${seasonStr}${statusStr}${orderStr}){id name russian score episodes status poster{originalUrl} genres{name}}}`;
+        // Shikimori GraphQL принимает year как строку в season
+        if (filters.year) args.push(`season:"${filters.year}"`); 
+        if (filters.status) args.push(`status:${filters.status}`);
+        if (filters.sort) args.push(`order:${filters.sort}`);
+        else args.push('order:popularity');
+
+        const q = `{animes(${args.join(',')}){id name russian score episodes status poster{originalUrl} genres{name}}}`;
         const d = await this.fetch(q);
         return d.animes.map(this.convert);
     },
@@ -149,26 +152,33 @@ function switchTab(tabName, element) {
     const screen = document.getElementById(`screen-${tabName}`);
     if (screen) screen.classList.add('active');
 
+    // ИСПРАВЛЕНИЕ: Если элемент передан, используем его. Если нет, ищем по индексу.
     if (element) {
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         element.classList.add('active');
     } else {
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         const navItems = document.querySelectorAll('.nav-item');
-        if (tabName === 'home') navItems[0]?.classList.add('active');
-        if (tabName === 'catalog') navItems[1]?.classList.add('active');
-        if (tabName === 'my') navItems[2]?.classList.add('active');
-        if (tabName === 'friends') navItems[3]?.classList.add('active');
-        if (tabName === 'profile') navItems[4]?.classList.add('active');
+        if (tabName === 'home' && navItems[0]) navItems[0].classList.add('active');
+        if (tabName === 'catalog' && navItems[1]) navItems[1].classList.add('active');
+        if (tabName === 'my' && navItems[2]) navItems[2].classList.add('active');
+        if (tabName === 'friends' && navItems[3]) navItems[3].classList.add('active');
+        if (tabName === 'profile' && navItems[4]) navItems[4].classList.add('active');
     }
 
+    // Дальнейшая логика загрузки...
     if (tabName === 'profile') loadProfileData();
-    if (tabName === 'catalog' && document.getElementById('catalog-grid').children.length === 0) {
-        initCatalogFilters();
-        loadCatalog(true);
+    if (tabName === 'catalog') {
+        if (document.getElementById('catalog-grid').children.length === 0) {
+            initCatalogFilters();
+            loadCatalog(true);
+        }
     }
     if (tabName === 'my') renderMyList();
-    if (tabName === 'voice') { document.getElementById('voice-title').textContent = 'Выбор озвучки'; renderVoiceSelection(); }
+    if (tabName === 'voice') { 
+        document.getElementById('voice-title').textContent = 'Выбор озвучки'; 
+        renderVoiceSelection(); 
+    }
     if (tabName === 'player') document.getElementById('player-title').textContent = 'Выбор плеера';
     if (tabName === 'episodes') document.getElementById('eps-title').textContent = 'Выбор серии';
     if (tabName === 'friends') loadFriends();
@@ -538,7 +548,6 @@ async function openFriendProfile(id, name) {
                         <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 6px 15px; display: inline-block; margin: 5px 0 15px;"><span style="color: #ccc; font-size: 12px;">ID:</span> <span style="color: #fff; font-weight: bold;">${escapeHTML(friend.tg_id)}</span></div>
                         <div class="level-row">
                             <div class="level-badge">
-                                <!-- ИСПРАВЛЕНИЕ 1: CSS кружок -->
                                 <span>${lvl}</span>
                             </div>
                             <div class="level-info">
@@ -660,7 +669,6 @@ async function loadCatalog(reset = false) {
     const loadMoreBtn = document.getElementById('load-more-btn');
     if (reset) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Загрузка...</div>'; hasMoreCatalog = true; catalogPage = 1; }
     try {
-        // ИСПРАВЛЕНИЕ: Теперь фильтры передаются в API
         const items = await API.getCatalog(catalogPage, 50, currentFilters);
         
         const displayItems = items.slice(0, 12);
@@ -873,7 +881,7 @@ let heroData = []; let currentSlide = 0; let slideInterval;
 
 async function loadHomePage() {
     try {
-        const [heroItems, popularItems, recItems] = await Promise.all([API.getRandom(5), API.getCatalog(1, 6, {}), API.getCatalog(2, 4, {})]);
+        const [heroItems, popularItems, recItems] = await Promise.all([API.getRandom(5), API.getCatalog(1, 6, { sort: 'popularity' }), API.getCatalog(2, 4, { sort: 'popularity' })]);
         heroData = heroItems.map(a => ({ id: a.id, title: a.title, img: a.images.jpg.image_url, score: a.score ? Number(a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year }));
         initHeroSlider();
 
