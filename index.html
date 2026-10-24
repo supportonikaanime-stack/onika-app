@@ -140,55 +140,47 @@
         }
         .coin-balance svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         
-        .level-row { display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 12px; text-align: left; cursor: pointer; transition: 0.2s; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1); }
+        /* ==========================================
+           ВЕКТОРНЫЙ ДИЗАЙН УРОВНЯ (SVG)
+           ========================================== */
+        .level-row { display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 12px; text-align: left; cursor: pointer; transition: 0.2s; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1); }
         .level-row:active { transform: scale(0.98); }
         
-        /* ==========================================
-           КОНЦЕПТ 1: МАГИЧЕСКИЙ ПОРТАЛ (Свечение и твои картинки)
-           ========================================== */
         .level-badge { 
-            width: 60px; 
-            height: 60px; 
+            width: 55px; 
+            height: 55px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
             flex-shrink: 0; 
             position: relative; 
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(91,91,255,0.2) 0%, rgba(0,0,0,0) 70%);
         }
         
-        /* Твоя картинка-рамка */
-        .level-badge img { 
+        /* Вращающийся SVG */
+        .level-badge svg.level-aura { 
             position: absolute;
-            width: 100%; 
-            height: 100%; 
-            object-fit: contain; 
+            width: 120%;
+            height: 120%;
             z-index: 1;
-            /* Убираем черный фон (работает, если у картинки черный фон) */
-            mix-blend-mode: screen; 
-            /* Добавляем магическое свечение */
-            filter: drop-shadow(0 0 8px rgba(91, 91, 255, 0.8)) drop-shadow(0 0 15px rgba(180, 74, 255, 0.4));
-            /* Анимация пульсации */
-            animation: magicPulse 3s infinite alternate;
+            animation: spinAura 15s linear infinite;
+            filter: drop-shadow(0 0 5px #5b5bff);
         }
         
-        @keyframes magicPulse {
-            0% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 5px rgba(91, 91, 255, 0.6)) drop-shadow(0 0 10px rgba(180, 74, 255, 0.3)); }
-            100% { transform: scale(1.05) rotate(5deg); filter: drop-shadow(0 0 12px rgba(91, 91, 255, 1)) drop-shadow(0 0 25px rgba(180, 74, 255, 0.6)); }
+        @keyframes spinAura {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
         
-        /* Цифра уровня с плотной черной обводкой, чтобы не сливалась */
+        /* Цифра поверх SVG */
         .level-badge span { 
             position: relative;
             z-index: 2;
-            font-size: 24px; 
+            font-size: 22px; 
             font-weight: 900; 
             color: #fff; 
-            text-shadow: 
-                -2px -2px 0 #000,  
-                 2px -2px 0 #000,
-                -2px  2px 0 #000,
-                 2px  2px 0 #000,
-                 0 4px 10px rgba(0,0,0,0.9); /* Дополнительная тень снизу */
+            text-shadow: 0 0 10px rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,1);
         }
         /* ========================================== */
         
@@ -460,7 +452,21 @@
 
                         <div class="level-row" onclick="openLevelModal()">
                             <div class="level-badge">
-                                <img id="user-level-image" src="lvl1.png" alt="Level">
+                                <!-- ВЕКТОРНЫЙ SVG (вместо картинки) -->
+                                <svg class="level-aura" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                    <defs>
+                                        <radialGradient id="auraGrad" cx="50%" cy="50%" r="50%">
+                                            <stop offset="0%" stop-color="#b44aff" stop-opacity="0.8" />
+                                            <stop offset="100%" stop-color="#5b5bff" stop-opacity="0" />
+                                        </radialGradient>
+                                    </defs>
+                                    <!-- 8-конечная звезда/вспышка -->
+                                    <path d="M50 5 L53 35 L95 50 L53 65 L50 95 L47 65 L5 50 L47 35 Z" fill="url(#auraGrad)" />
+                                    <path d="M50 15 L52 40 L85 50 L52 60 L50 85 L48 60 L15 50 L48 40 Z" fill="#5b5bff" opacity="0.6"/>
+                                    <!-- Кольцо с точками -->
+                                    <circle cx="50" cy="50" r="30" fill="none" stroke="#5b5bff" stroke-width="1" opacity="0.4" />
+                                    <circle cx="50" cy="50" r="35" fill="none" stroke="#b44aff" stroke-width="0.5" opacity="0.3" stroke-dasharray="2 4"/>
+                                </svg>
                                 <span id="user-level">1</span>
                             </div>
                             <div class="level-info">
@@ -588,6 +594,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=119"></script>
+    <script src="app.js?v=120"></script>
 </body>
 </html>
