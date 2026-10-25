@@ -222,16 +222,16 @@ function getLevelColor(level) {
     return '#ffd700'; // Золотой
 }
 
-// Функция для генерации 3D тени
+// УМЕНЬШЕННАЯ 3D ТЕНЬ (Чтобы цифра не вылезала)
 function get3DTextShadow(color) {
     // Базовый цвет (верхняя грань)
     let shadow = `1px 1px 0 ${color}, `;
-    // Глубина (создаем объем)
-    for (let i = 2; i <= 6; i++) {
+    // Глубина (создаем объем, но меньше)
+    for (let i = 2; i <= 4; i++) {
         shadow += `${i}px ${i}px 0 #111, `;
     }
     // Мягкая падающая тень
-    shadow += `6px 6px 10px rgba(0,0,0,0.8)`;
+    shadow += `4px 4px 6px rgba(0,0,0,0.8)`;
     return shadow;
 }
 
@@ -309,7 +309,8 @@ async function loadProfileData() {
     
     const profileLevelSvg = document.getElementById('profile-level-svg');
     if (profileLevelSvg) {
-        profileLevelSvg.style.filter = `drop-shadow(0 0 15px ${levelColor}) drop-shadow(0 0 30px ${levelColor}80)`;
+        // Уменьшенное свечение
+        profileLevelSvg.style.filter = `drop-shadow(0 0 8px ${levelColor}) drop-shadow(0 0 15px ${levelColor}80)`;
     }
     const profileBadgeContainer = document.getElementById('profile-level-badge-container');
     if (profileBadgeContainer) {
@@ -340,7 +341,7 @@ async function loadProfileData() {
     }
     const modalLevelSvg = document.getElementById('modal-level-svg');
     if (modalLevelSvg) {
-        modalLevelSvg.style.filter = `drop-shadow(0 0 15px ${levelColor}) drop-shadow(0 0 30px ${levelColor}80)`;
+        modalLevelSvg.style.filter = `drop-shadow(0 0 8px ${levelColor}) drop-shadow(0 0 15px ${levelColor}80)`;
     }
     const modalBadgeContainer = document.getElementById('modal-level-badge-container');
     if (modalBadgeContainer) {
