@@ -213,18 +213,19 @@ function copyMyId() {
     navigator.clipboard.writeText(MY_TG_ID).then(() => { showToast('📋 ID скопирован!'); }).catch(() => {});
 }
 
-// Функция для получения цвета уровня
+// Функция для получения цвета уровня (от серого до золотого)
 function getLevelColor(level) {
+    if (level <= 10) return '#888888'; // Серый
     if (level <= 20) return '#a3ff00'; // Салатовый
     if (level <= 40) return '#00d2ff'; // Голубой
-    if (level <= 60) return '#ff3d00'; // Алый
-    if (level <= 80) return '#b44aff'; // Фиолетовый
+    if (level <= 60) return '#b44aff'; // Фиолетовый
+    if (level <= 80) return '#ff8c00'; // Оранжевый
     return '#ffd700'; // Золотой
 }
 
 // Функция для получения простого свечения (без тени)
 function getLevelGlow(color) {
-    return `0 0 10px ${color}80`; // Легкое свечение
+    return `0 0 15px ${color}80`; // Легкое свечение
 }
 
 async function loadProfileData() {
@@ -292,17 +293,13 @@ async function loadProfileData() {
     setElText('user-level-text', currentLevel); 
     setElText('user-rank', rankTitle); 
 
-    // МЕНЯЕМ ЦВЕТ ЦИФРЫ И ИКОНКИ В ПРОФИЛЕ (Без 3D)
+    // МЕНЯЕМ ЦВЕТ ЦИФРЫ И СВЕЧЕНИЕ В ПРОФИЛЕ
     const profileLevelNum = document.getElementById('user-level');
     if (profileLevelNum) {
         profileLevelNum.style.color = levelColor;
         profileLevelNum.style.textShadow = getLevelGlow(levelColor);
     }
     
-    const profileLevelSvg = document.getElementById('profile-level-svg');
-    if (profileLevelSvg) {
-        profileLevelSvg.style.filter = `drop-shadow(0 0 8px ${levelColor}) drop-shadow(0 0 15px ${levelColor}80)`;
-    }
     const profileBadgeContainer = document.getElementById('profile-level-badge-container');
     if (profileBadgeContainer) {
         profileBadgeContainer.style.setProperty('--aura-color', levelColor);
@@ -327,16 +324,12 @@ async function loadProfileData() {
     setElText('modal-ach-earned', stats.unlockedAchievements.length); 
     setElText('modal-ach-total', totalAch);
     
-    // Обновляем цифру и цвет в модальном окне (Без 3D)
+    // Обновляем цифру и цвет в модальном окне
     const modalLevelNum = document.getElementById('modal-icon-level');
     if (modalLevelNum) {
         modalLevelNum.textContent = currentLevel;
         modalLevelNum.style.color = levelColor;
         modalLevelNum.style.textShadow = getLevelGlow(levelColor);
-    }
-    const modalLevelSvg = document.getElementById('modal-level-svg');
-    if (modalLevelSvg) {
-        modalLevelSvg.style.filter = `drop-shadow(0 0 8px ${levelColor}) drop-shadow(0 0 15px ${levelColor}80)`;
     }
     const modalBadgeContainer = document.getElementById('modal-level-badge-container');
     if (modalBadgeContainer) {
@@ -616,88 +609,8 @@ async function openFriendProfile(id, name) {
                 <div class="user-card-bottom">
                     <div class="level-row">
                         <div class="level-badge">
-                            <!-- SVG друга -->
-                            <svg class="level-emblem" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
-                              <defs>
-                                <radialGradient id="glow" cx="50%" cy="50%">
-                                  <stop offset="0" stop-color="#fff" stop-opacity=".95"/>
-                                  <stop offset=".55" stop-color="#fff" stop-opacity=".45"/>
-                                  <stop offset="1" stop-color="#fff" stop-opacity="0"/>
-                                </radialGradient>
-                                <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
-                                  <feGaussianBlur stdDeviation="5" result="blur"/>
-                                  <feMerge>
-                                    <feMergeNode in="blur"/>
-                                    <feMergeNode in="SourceGraphic"/>
-                                  </feMerge>
-                                </filter>
-                                <filter id="strongGlow" x="-100%" y="-100%" width="300%" height="300%">
-                                  <feGaussianBlur stdDeviation="12" result="blur"/>
-                                  <feMerge>
-                                    <feMergeNode in="blur"/>
-                                    <feMergeNode in="SourceGraphic"/>
-                                  </feMerge>
-                                </filter>
-                                <g id="ray">
-                                  <path d="M500 72 L500 210" stroke="#fff" stroke-width="2" opacity=".5"/>
-                                  <path d="M500 92 L488 150 L500 137 L512 150 Z" fill="none" stroke="#fff" stroke-width="2"/>
-                                </g>
-                                <g id="diamond">
-                                  <path d="M500 174 L514 198 L500 222 L486 198 Z" fill="none" stroke="#fff" stroke-width="3"/>
-                                  <path d="M500 183 L507 198 L500 211 L493 198 Z" fill="#fff" opacity=".35"/>
-                                </g>
-                                <g id="crystal">
-                                  <path d="M500 66 L532 155 L500 137 L468 155 Z" fill="none" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
-                                  <path d="M500 88 L515 143 L500 128 L485 143 Z" fill="none" stroke="#fff" stroke-width="2"/>
-                                  <path d="M500 66 L500 137" stroke="#fff" stroke-width="2"/>
-                                </g>
-                                <g id="diagonal">
-                                  <path d="M500 116 L527 170 L500 157 L473 170 Z" fill="none" stroke="#fff" stroke-width="3"/>
-                                  <path d="M500 132 L512 161 L500 153 L488 161 Z" fill="#fff" opacity=".35"/>
-                                </g>
-                              </defs>
-                              <circle cx="500" cy="500" r="390" fill="url(#glow)" opacity=".18" filter="url(#strongGlow)"/>
-                              <g opacity=".55" stroke="#fff" fill="none">
-                                <circle cx="500" cy="500" r="350" stroke-width="2"/>
-                                <circle cx="500" cy="500" r="330" stroke-width="1"/>
-                                <circle cx="500" cy="500" r="300" stroke-width="3"/>
-                                <circle cx="500" cy="500" r="270" stroke-width="1"/>
-                                <circle cx="500" cy="500" r="245" stroke-width="2"/>
-                                <path d="M500 105 V895"/>
-                                <path d="M105 500 H895"/>
-                                <path d="M220 220 L780 780"/>
-                                <path d="M780 220 L220 780"/>
-                                <path d="M155 355 L845 645"/>
-                                <path d="M155 645 L845 355"/>
-                                <path d="M355 155 L645 845"/>
-                                <path d="M645 155 L355 845"/>
-                              </g>
-                              <g>
-                                <use href="#ray"/><use href="#ray" transform="rotate(22.5 500 500)"/><use href="#ray" transform="rotate(45 500 500)"/><use href="#ray" transform="rotate(67.5 500 500)"/><use href="#ray" transform="rotate(90 500 500)"/><use href="#ray" transform="rotate(112.5 500 500)"/><use href="#ray" transform="rotate(135 500 500)"/><use href="#ray" transform="rotate(157.5 500 500)"/><use href="#ray" transform="rotate(180 500 500)"/><use href="#ray" transform="rotate(202.5 500 500)"/><use href="#ray" transform="rotate(225 500 500)"/><use href="#ray" transform="rotate(247.5 500 500)"/><use href="#ray" transform="rotate(270 500 500)"/><use href="#ray" transform="rotate(292.5 500 500)"/><use href="#ray" transform="rotate(315 500 500)"/><use href="#ray" transform="rotate(337.5 500 500)"/>
-                              </g>
-                              <g>
-                                <use href="#diamond"/><use href="#diamond" transform="rotate(30 500 500)"/><use href="#diamond" transform="rotate(60 500 500)"/><use href="#diamond" transform="rotate(90 500 500)"/><use href="#diamond" transform="rotate(120 500 500)"/><use href="#diamond" transform="rotate(150 500 500)"/><use href="#diamond" transform="rotate(180 500 500)"/><use href="#diamond" transform="rotate(210 500 500)"/><use href="#diamond" transform="rotate(240 500 500)"/><use href="#diamond" transform="rotate(270 500 500)"/><use href="#diamond" transform="rotate(300 500 500)"/><use href="#diamond" transform="rotate(330 500 500)"/>
-                              </g>
-                              <g filter="url(#softGlow)">
-                                <use href="#crystal"/><use href="#crystal" transform="rotate(90 500 500)"/><use href="#crystal" transform="rotate(180 500 500)"/><use href="#crystal" transform="rotate(270 500 500)"/>
-                              </g>
-                              <g opacity=".9">
-                                <use href="#diagonal"/><use href="#diagonal" transform="rotate(45 500 500)"/><use href="#diagonal" transform="rotate(90 500 500)"/><use href="#diagonal" transform="rotate(135 500 500)"/><use href="#diagonal" transform="rotate(180 500 500)"/><use href="#diagonal" transform="rotate(225 500 500)"/><use href="#diagonal" transform="rotate(270 500 500)"/><use href="#diagonal" transform="rotate(315 500 500)"/>
-                              </g>
-                              <g fill="none" stroke="#fff" filter="url(#softGlow)">
-                                <circle cx="500" cy="500" r="235" stroke-width="9"/>
-                                <circle cx="500" cy="500" r="260" stroke-width="3"/>
-                                <circle cx="500" cy="500" r="285" stroke-width="2"/>
-                              </g>
-                              <path d="M500 240 L514 266 L540 250 L548 280 L579 271 L575 302 L607 305 L590 332 L618 345 L595 365 L620 390 L590 400 L605 430 L575 435 L582 468 L550 460 L540 492 L514 478 L500 505 L486 478 L460 492 L450 460 L418 468 L425 435 L395 430 L410 400 L380 390 L405 365 L382 345 L410 332 L393 305 L425 302 L421 271 L452 280 L460 250 L486 266 Z" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>
-                              <circle cx="500" cy="500" r="190" fill="none" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
-                              <circle cx="500" cy="500" r="164" fill="none" stroke="#fff" stroke-width="2" opacity=".65"/>
-                              <circle cx="500" cy="500" r="8" fill="#fff" filter="url(#softGlow)"/>
-                              <g fill="#fff" filter="url(#strongGlow)">
-                                <circle cx="500" cy="215" r="5"/><circle cx="785" cy="500" r="5"/><circle cx="500" cy="785" r="5"/><circle cx="215" cy="500" r="5"/><circle cx="700" cy="300" r="3"/><circle cx="300" cy="700" r="3"/>
-                              </g>
-                            </svg>
-                            <span style="color: ${friendColor}; text-shadow: ${getLevelGlow(friendColor)};">${lvl}</span>
+                            <!-- ТЕПЕРЬ ПРОСТО КОНТЕЙНЕР ДЛЯ ЦИФРЫ -->
+                            <span class="level-number" style="color: ${friendColor}; text-shadow: ${getLevelGlow(friendColor)};">${lvl}</span>
                         </div>
                         <div class="level-info">
                             <div class="level-title">УРОВЕНЬ ${lvl} <span class="rank">${rank}</span></div>
@@ -1215,41 +1128,64 @@ function openAchievementsModal() {
     const container = document.getElementById('achievements-list-container'); 
     let html = ''; 
     
-    const sortedAch = [...ACHIEVEMENTS].sort((a, b) => {
-        const order = { common: 1, rare: 2, epic: 3, legendary: 4 };
-        return order[a.rarity] - order[b.rarity];
-    });
+    // Группируем достижения по редкости
+    const rarities = [
+        { key: 'common', name: 'Обычные', color: '#ccc', class: 'common' },
+        { key: 'rare', name: 'Редкие', color: '#00d2ff', class: 'rare' },
+        { key: 'epic', name: 'Эпические', color: '#b44aff', class: 'epic' },
+        { key: 'legendary', name: 'Легендарные', color: '#ffd700', class: 'legendary' }
+    ];
 
-    sortedAch.forEach(ach => { 
-        const isDone = stats.unlockedAchievements.includes(ach.id); 
-        const rarityStyle = RARITY_STYLES[ach.rarity];
-        const progressCurrent = ach.progress(stats);
-        const progressPercent = (progressCurrent / ach.max) * 100;
+    rarities.forEach(rarity => {
+        // Фильтруем достижения по текущей редкости
+        const list = ACHIEVEMENTS.filter(a => a.rarity === rarity.key);
         
-        const iconSvg = `<svg width="100%" height="100%"><use href="#${rarityStyle.icon}"></use></svg>`;
+        if (list.length === 0) return; // Пропускаем пустые категории
 
+        // Считаем сколько выполнено в этой категории
+        const completedCount = list.filter(a => stats.unlockedAchievements.includes(a.id)).length;
+
+        // Добавляем заголовок категории
         html += `
-            <div class="ach-list-item ${rarityStyle.class} ${isDone ? 'completed' : ''}">
-                <div class="ach-list-icon" style="color: ${rarityStyle.color}">
-                    ${iconSvg}
-                </div>
-                <div class="ach-list-info">
-                    <h4>${ach.name}</h4>
-                    <p>${ach.desc}</p>
-                    ${!isDone ? `
-                        <div class="ach-progress-mini">
-                            <div style="width: ${progressPercent}%; background: ${rarityStyle.color}"></div>
-                        </div>
-                        <div style="font-size: 10px; color: #888; margin-top: 2px;">${progressCurrent} / ${ach.max}</div>
-                    ` : ''}
-                </div>
-                <div class="ach-reward-badge">
-                    +${ach.xp} XP, +${ach.coins} <svg style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;"><use href="#oa-coin"></use></svg>
-                </div>
-                ${isDone ? '<div class="ach-status-icon" style="color: #ffd700;"><svg style="width:20px;height:20px;"><use href="#oa-check"></use></svg></div>' : ''}
+            <div class="ach-category-header ${rarity.class}">
+                <span style="color: ${rarity.color};">●</span> 
+                ${rarity.name}
+                <span class="count">${completedCount} / ${list.length}</span>
             </div>
-        `; 
-    }); 
+        `;
+
+        // Выводим достижения этой категории
+        list.forEach(ach => { 
+            const isDone = stats.unlockedAchievements.includes(ach.id); 
+            const rarityStyle = RARITY_STYLES[ach.rarity];
+            const progressCurrent = ach.progress(stats);
+            const progressPercent = (progressCurrent / ach.max) * 100;
+            
+            const iconSvg = `<svg width="100%" height="100%"><use href="#${rarityStyle.icon}"></use></svg>`;
+
+            html += `
+                <div class="ach-list-item ${rarityStyle.class} ${isDone ? 'completed' : ''}">
+                    <div class="ach-list-icon" style="color: ${rarityStyle.color}">
+                        ${iconSvg}
+                    </div>
+                    <div class="ach-list-info">
+                        <h4>${ach.name}</h4>
+                        <p>${ach.desc}</p>
+                        ${!isDone ? `
+                            <div class="ach-progress-mini">
+                                <div style="width: ${progressPercent}%; background: ${rarityStyle.color}"></div>
+                            </div>
+                            <div style="font-size: 10px; color: #888; margin-top: 2px;">${progressCurrent} / ${ach.max}</div>
+                        ` : ''}
+                    </div>
+                    <div class="ach-reward-badge">
+                        +${ach.xp} XP, +${ach.coins} <svg style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;"><use href="#oa-coin"></use></svg>
+                    </div>
+                    ${isDone ? '<div class="ach-status-icon" style="color: #ffd700;"><svg style="width:20px;height:20px;"><use href="#oa-check"></use></svg></div>' : ''}
+                </div>
+            `; 
+        });
+    });
     
     container.innerHTML = html; 
     document.getElementById('achievementsModal').classList.add('active'); 
