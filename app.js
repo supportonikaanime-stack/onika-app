@@ -222,17 +222,9 @@ function getLevelColor(level) {
     return '#ffd700'; // Золотой
 }
 
-// УМЕНЬШЕННАЯ 3D ТЕНЬ (Чтобы цифра не вылезала)
-function get3DTextShadow(color) {
-    // Базовый цвет (верхняя грань)
-    let shadow = `1px 1px 0 ${color}, `;
-    // Глубина (создаем объем, но меньше)
-    for (let i = 2; i <= 4; i++) {
-        shadow += `${i}px ${i}px 0 #111, `;
-    }
-    // Мягкая падающая тень
-    shadow += `4px 4px 6px rgba(0,0,0,0.8)`;
-    return shadow;
+// Функция для получения простого свечения (без тени)
+function getLevelGlow(color) {
+    return `0 0 10px ${color}80`; // Легкое свечение
 }
 
 async function loadProfileData() {
@@ -300,16 +292,15 @@ async function loadProfileData() {
     setElText('user-level-text', currentLevel); 
     setElText('user-rank', rankTitle); 
 
-    // МЕНЯЕМ ЦВЕТ ЦИФРЫ И ИКОНКИ В ПРОФИЛЕ (Добавляем 3D)
+    // МЕНЯЕМ ЦВЕТ ЦИФРЫ И ИКОНКИ В ПРОФИЛЕ (Без 3D)
     const profileLevelNum = document.getElementById('user-level');
     if (profileLevelNum) {
         profileLevelNum.style.color = levelColor;
-        profileLevelNum.style.textShadow = get3DTextShadow(levelColor);
+        profileLevelNum.style.textShadow = getLevelGlow(levelColor);
     }
     
     const profileLevelSvg = document.getElementById('profile-level-svg');
     if (profileLevelSvg) {
-        // Уменьшенное свечение
         profileLevelSvg.style.filter = `drop-shadow(0 0 8px ${levelColor}) drop-shadow(0 0 15px ${levelColor}80)`;
     }
     const profileBadgeContainer = document.getElementById('profile-level-badge-container');
@@ -332,12 +323,12 @@ async function loadProfileData() {
     setElWidth('modal-xp-bar', progressPercent + '%'); 
     setElText('modal-ach-earned', stats.unlockedAchievements.length); 
     
-    // Обновляем цифру и цвет в модальном окне (Добавляем 3D)
+    // Обновляем цифру и цвет в модальном окне (Без 3D)
     const modalLevelNum = document.getElementById('modal-icon-level');
     if (modalLevelNum) {
         modalLevelNum.textContent = currentLevel;
         modalLevelNum.style.color = levelColor;
-        modalLevelNum.style.textShadow = get3DTextShadow(levelColor);
+        modalLevelNum.style.textShadow = getLevelGlow(levelColor);
     }
     const modalLevelSvg = document.getElementById('modal-level-svg');
     if (modalLevelSvg) {
@@ -700,7 +691,7 @@ async function openFriendProfile(id, name) {
                                 <circle cx="500" cy="215" r="5"/><circle cx="785" cy="500" r="5"/><circle cx="500" cy="785" r="5"/><circle cx="215" cy="500" r="5"/><circle cx="700" cy="300" r="3"/><circle cx="300" cy="700" r="3"/>
                               </g>
                             </svg>
-                            <span style="color: ${friendColor}; text-shadow: ${get3DTextShadow(friendColor)};">${lvl}</span>
+                            <span style="color: ${friendColor}; text-shadow: ${getLevelGlow(friendColor)};">${lvl}</span>
                         </div>
                         <div class="level-info">
                             <div class="level-title">УРОВЕНЬ ${lvl} <span class="rank">${rank}</span></div>
