@@ -198,7 +198,7 @@
         .ach-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
         
         /* ИКОНКА ДОСТИЖЕНИЙ В ПРОФИЛЕ */
-        .ach-icon-big { width: 60px; height: 60px; background: rgba(255, 215, 0, 0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }
+        .ach-icon-big { width: 60px; height: 60px; background: rgba(255, 215, 0, 0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
         .ach-icon-big svg { width: 100%; height: 100%; animation: achPulse 3s infinite alternate; }
         @keyframes achPulse { 0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(155, 92, 255, 0.5)); } 100% { transform: scale(1.05); filter: drop-shadow(0 0 8px rgba(155, 92, 255, 0.8)); } }
         
@@ -260,7 +260,7 @@
 
         .ach-list-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; border-radius: 50%; }
         .ach-list-icon svg { width: 100%; height: 100%; }
-        .ach-list-icon img { width: 100%; height: 100%; object-fit: contain; background: #fff; } /* Белый фон и contain для картинок */
+        .ach-list-icon img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
         
         .ach-list-info { flex: 1; }
         .ach-list-info h4 { font-size: 14px; color: #fff; margin-bottom: 2px; }
@@ -340,7 +340,7 @@
       <symbol id="oa-dice" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="8" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="8" cy="16" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="1.5" fill="currentColor" stroke="none"/></symbol>
       <symbol id="oa-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v12m-3-9h6m-6 6h6"/></symbol>
 
-      <!-- ИКОНКИ ДОСТИЖЕНИЙ -->
+      <!-- ИКОНКИ ДОСТИЖЕНИЙ (SVG для тех, у кого нет картинок) -->
       <symbol id="ach-icon-crystal" viewBox="0 0 55 55" fill="none">
           <defs>
               <linearGradient id="orbitalGradient" x1="8" y1="8" x2="48" y2="48" gradientUnits="userSpaceOnUse">
@@ -534,7 +534,8 @@
         <button onclick="switchTab('profile')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
             <div class="ach-icon-big" style="width: 50px; height: 50px;">
-                <svg viewBox="0 0 55 55" fill="none"><use href="#ach-icon-crystal"></use></svg>
+                <!-- ЗАМЕНИЛИ SVG НА ВАШУ КАРТИНКУ -->
+                <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; background: #fff;">
             </div>
             <div>
                 <h1 style="font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 2px;">Достижения</h1>
@@ -591,7 +592,8 @@
             <div class="achievements-card" id="profile-content-tab" onclick="openAchievementsPage()">
                 <div class="ach-header">
                     <div class="ach-icon-big">
-                        <svg viewBox="0 0 55 55" fill="none"><use href="#ach-icon-crystal"></use></svg>
+                        <!-- ЗАМЕНИЛИ SVG НА ВАШУ КАРТИНКУ -->
+                        <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; background: #fff;">
                     </div>
                     <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p><span id="ach-points">0</span> очков</p></div>
                     <div class="ach-total"><span id="ach-earned">0</span>/<span id="ach-total-count">12</span></div>
@@ -701,6 +703,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=143"></script>
+    <script src="app.js?v=144"></script>
 </body>
 </html>
