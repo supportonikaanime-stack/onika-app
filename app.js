@@ -313,15 +313,19 @@ async function loadProfileData() {
     setElWidth('user-xp-bar', progressPercent + '%'); 
     setElText('user-coins', stats.coins || 0);
 
+    const totalAch = ACHIEVEMENTS.length;
     setElText('ach-points', stats.unlockedAchievements.length * 10); 
     setElText('ach-earned', stats.unlockedAchievements.length); 
-    setElWidth('ach-bar', (stats.unlockedAchievements.length / 50) * 100 + '%'); 
+    setElText('ach-total-count', totalAch);
+    setElWidth('ach-bar', (stats.unlockedAchievements.length / totalAch) * 100 + '%'); 
+    
     setElText('modal-level-num', currentLevel); 
     setElText('modal-rank', rankTitle); 
     setElText('modal-xp-cur', xpCurrentLevel); 
     setElText('modal-xp-next', 100); 
     setElWidth('modal-xp-bar', progressPercent + '%'); 
     setElText('modal-ach-earned', stats.unlockedAchievements.length); 
+    setElText('modal-ach-total', totalAch);
     
     // Обновляем цифру и цвет в модальном окне (Без 3D)
     const modalLevelNum = document.getElementById('modal-icon-level');
@@ -342,7 +346,7 @@ async function loadProfileData() {
     const nextAch = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id)); 
     if (nextAch) {
         setElText('next-ach-name', nextAch.name); 
-        setElText('next-ach-reward', nextAch.reward);
+        setElText('next-ach-reward', nextAch.coins);
     } else {
         setElText('next-ach-name', 'Все выполнено!'); 
         setElText('next-ach-reward', '0');
@@ -419,6 +423,7 @@ async function buyBanner(bannerId, price) {
 
     try {
         stats.coins -= price;
+        stats.hasPurchasedBanner = true; // Устанавливаем флаг для достижения
         saveStats(stats);
 
         await supabaseClient.from('user_banners').insert({ tg_id: MY_TG_ID, banner_id: bannerId });
@@ -433,6 +438,7 @@ async function buyBanner(bannerId, price) {
         
         saveStats(stats);
         syncProfileToDB();
+        checkAchievements(stats); // Проверяем достижения
 
         showToast('✅ Баннер получен!');
         openShopModal(); 
@@ -880,6 +886,7 @@ function setAnimeStatus(status) {
     if (status !== '') { stats.favedAnime.push({ id: id, status: status }); showToast('Статус обновлен!'); } 
     else { showToast('Удалено'); }
     saveStats(stats); closeModal('statusModal');
+    checkAchievements(stats); // Проверяем достижения (например, добавление в избранное)
     
     const heartBtn = document.querySelector('#detail-content button[onclick^="openStatusModal"]');
     if (heartBtn) { 
@@ -948,58 +955,219 @@ function renderMyListCard(anime, grid) {
 // ==========================================
 // 10. СИСТЕМА ДОСТИЖЕНИЙ И XP
 // ==========================================
+
+const RARITY_STYLES = {
+    common: { color: '#ccc', class: 'common', icon: 'ach-icon-crystal' },
+    rare: { color: '#00d2ff', class: 'rare', icon: 'ach-icon-crystal' },
+    epic: { color: '#b44aff', class: 'epic', icon: 'ach-icon-flower' },
+    legendary: { color: '#ffd700', class: 'legendary', icon: 'ach-icon-flower' }
+};
+
 const ACHIEVEMENTS = [
-    { id: 1, name: "Первый шаг", desc: "Зарегистрироваться на сайте", icon: "oa-home", reward: 50, check: (s) => true },
-    { id: 2, name: "Дебютный просмотр", desc: "Посмотреть первый эпизод", icon: "oa-level", reward: 20, check: (s) => s.episodesWatched >= 1 },
-    { id: 3, name: "Марафонец", desc: "Посмотреть 10 эпизодов за день", icon: "oa-level", reward: 100, check: (s) => s.episodesWatched >= 10 },
-    { id: 4, name: "Ночной страж", desc: "Посмотреть аниме после 3:00", icon: "oa-check", reward: 30, check: () => { let h = new Date().getHours(); return h >= 3 && h < 6; } },
-    { id: 33, name: "Ежедневный визит", desc: "Заходить 7 дней подряд", icon: "oa-check", reward: 70, check: (s) => s.daysStreak >= 7 },
-    { id: 36, name: "Первый уровень", desc: "Достичь 10 уровня", icon: "oa-level", reward: 200, check: (s) => Math.floor(s.xp / 100) + 1 >= 10 }
+    // --- Обычные (Common) ---
+    { 
+        id: 'c1', 
+        name: "Киносеанс", 
+        desc: "Посмотреть любое аниме полностью", 
+        rarity: 'common', 
+        xp: 10, coins: 100, 
+        check: (s) => s.episodesWatched >= 1, 
+        progress: (s) => Math.min(s.episodesWatched, 1),
+        max: 1
+    },
+    { 
+        id: 'c2', 
+        name: "Марафонец", 
+        desc: "Провести на сайте более 3 часов", 
+        rarity: 'common', 
+        xp: 20, coins: 100, 
+        check: (s) => s.totalMinutesOnSite >= 180,
+        progress: (s) => Math.min(s.totalMinutesOnSite, 180),
+        max: 180
+    },
+    { 
+        id: 'c3', 
+        name: "Постоянный гость", 
+        desc: "Заходить на сайт 7 дней подряд", 
+        rarity: 'common', 
+        xp: 30, coins: 200, 
+        check: (s) => s.daysStreak >= 7,
+        progress: (s) => Math.min(s.daysStreak, 7),
+        max: 7
+    },
+    { 
+        id: 'c4', 
+        name: "Новичок", 
+        desc: "Достичь 10 уровня", 
+        rarity: 'common', 
+        xp: 50, coins: 500, 
+        check: (s) => Math.floor(s.xp / 100) + 1 >= 10,
+        progress: (s) => Math.min(Math.floor(s.xp / 100) + 1, 10),
+        max: 10
+    },
+
+    // --- Редкие (Rare) ---
+    { 
+        id: 'r1', 
+        name: "Коллекционер", 
+        desc: "Посмотреть 10 аниме", 
+        rarity: 'rare', 
+        xp: 50, coins: 300, 
+        check: (s) => s.episodesWatched >= 10,
+        progress: (s) => Math.min(s.episodesWatched, 10),
+        max: 10
+    },
+    { 
+        id: 'r2', 
+        name: "Опытный зритель", 
+        desc: "Достичь 20 уровня", 
+        rarity: 'rare', 
+        xp: 100, coins: 600, 
+        check: (s) => Math.floor(s.xp / 100) + 1 >= 20,
+        progress: (s) => Math.min(Math.floor(s.xp / 100) + 1, 20),
+        max: 20
+    },
+    { 
+        id: 'r3', 
+        name: "Знаток", 
+        desc: "Достичь 40 уровня", 
+        rarity: 'rare', 
+        xp: 100, coins: 750, 
+        check: (s) => Math.floor(s.xp / 100) + 1 >= 40,
+        progress: (s) => Math.min(Math.floor(s.xp / 100) + 1, 40),
+        max: 40
+    },
+    { 
+        id: 'r4', 
+        name: "Перфекционист", 
+        desc: "Выполнить все Обычные достижения", 
+        rarity: 'rare', 
+        xp: 110, coins: 800, 
+        check: (s) => ACHIEVEMENTS.filter(a => a.rarity === 'common').every(a => s.unlockedAchievements.includes(a.id)),
+        progress: (s) => ACHIEVEMENTS.filter(a => a.rarity === 'common').filter(a => s.unlockedAchievements.includes(a.id)).length,
+        max: 4
+    },
+
+    // --- Эпические (Epic) ---
+    { 
+        id: 'e1', 
+        name: "Заядлый анимешник", 
+        desc: "Посмотреть 20 аниме", 
+        rarity: 'epic', 
+        xp: 200, coins: 600, 
+        check: (s) => s.episodesWatched >= 20,
+        progress: (s) => Math.min(s.episodesWatched, 20),
+        max: 20
+    },
+    { 
+        id: 'e2', 
+        name: "Верный фанат", 
+        desc: "Заходить на сайт 30 дней подряд", 
+        rarity: 'epic', 
+        xp: 500, coins: 1000, 
+        check: (s) => s.daysStreak >= 30,
+        progress: (s) => Math.min(s.daysStreak, 30),
+        max: 30
+    },
+    { 
+        id: 'e3', 
+        name: "Модник", 
+        desc: "Приобрести любой аксессуар в магазине", 
+        rarity: 'epic', 
+        xp: 500, coins: 1000, 
+        check: (s) => s.hasPurchasedBanner === true,
+        progress: (s) => s.hasPurchasedBanner ? 1 : 0,
+        max: 1
+    },
+    { 
+        id: 'e4', 
+        name: "Фанат", 
+        desc: "Добавить в избранное 50 аниме", 
+        rarity: 'epic', 
+        xp: 500, coins: 1000, 
+        check: (s) => s.favedAnime.length >= 50,
+        progress: (s) => Math.min(s.favedAnime.length, 50),
+        max: 50
+    }
 ];
+
 const LEVEL_TITLES = ["Первый эпизод", "Любопытный зритель", "Случайный странник", "Ученик манги", "Читатель субтитров", "Собиратель тайтлов", "Ночной марафонец", "Ценитель опенингов", "Знаток сейю", "Ловец спойлеров", "Страж таймлайна", "Искатель шедевров", "Коллекционер жанров", "Следопыт сезона", "Архивариус эпизодов", "Пилот меха", "Ученик додзё", "Начинающий маг", "Дух сакуры", "Странник измерений", "Хранитель клинка", "Проводник сюжета", "Алхимик эмоций", "Писец рецензий", "Охотник за онгоингами", "Мастер бинджвотча", "Сэнпай сайта", "Хранитель лора", "Ткач теорий", "Лунный самурай", "Небесный курьер", "Хранитель опенингов", "Повелитель плейлистов", "Критик с катаной", "Мудрец субтитров", "Дубляжный маг", "Страж спойлеров", "Картограф арок", "Коллекционер аватарок", "Ловец редких тайтлов", "Хроникёр сезонов", "Мастер клиффхэнгеров", "Дуэлянт мнений", "Хранитель уютного уголка", "Рыцарь романтики", "Тень сёнэна", "Адепт исэкая", "Архимаг тайтлов", "Небесный отаку", "Странник по мирам", "Хранитель легенд", "Мастер сюжетных поворотов", "Голос фандома", "Судья сезона", "Хранитель аниме-реликвий", "Пилот звёздного поезда", "Лунный библиотекарь", "Самурай субботы", "Повелитель финальных титров", "Искатель скрытых жемчужин", "Маг рекомендаций", "Страж уютных вечеров", "Рыцарь онгоинга", "Дух обсуждений", "Хранитель мемов", "Мастер аниме-детектива", "Небесный критик", "Повелитель сезонных марафонов", "Хранитель канона", "Ткач фанфиков", "Оракул спойлеров", "Лунный сэнпай", "Самурай рейтингов", "Архивариус легенд", "Маг жанров", "Страж ночных просмотров", "Повелитель опенингов", "Хранитель тропов", "Рыцарь вечернего просмотра", "Дух фестиваля", "Мастер эмоциональных качелей", "Следопыт забытых тайтлов", "Хранитель аниме-хроник", "Небесный администратор", "Самурай финального эпизода", "Оракул сезонов", "Повелитель легендарных арок", "Хранитель аниме-вселенной", "Маг идеального топа", "Дух великого марафона", "Рыцарь вечного онгоинга", "Архимаг фандома", "Страж золотой коллекции", "Легенда аниме-сайта", "Небесный хранитель тайтлов", "Великий отаку-владыка", "Хранитель последнего эпизода", "Мастер пересмотров", "Дух аниме-сообщества", "Верховный хранитель сезонов"];
 
 function getStats() { 
     let stats = JSON.parse(localStorage.getItem('onika_stats')); 
-    if (!stats) { stats = { episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0, active_banner: null, active_banner_url: '', lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [], cachedAnime: {}, totalMinutesOnSite: 0 }; localStorage.setItem('onika_stats', JSON.stringify(stats)); } 
-    if (!stats.unlockedAchievements) stats.unlockedAchievements = []; if (!stats.favedAnime) stats.favedAnime = []; if (!stats.watchedToday) stats.watchedToday = []; 
+    if (!stats) { 
+        stats = { 
+            episodesWatched: 0, 
+            minutesWatched: 0, 
+            daysStreak: 1, 
+            xp: 0, 
+            coins: 0, 
+            active_banner: null, 
+            active_banner_url: '', 
+            lastVisit: new Date().toDateString(), 
+            unlockedAchievements: [], 
+            favedAnime: [], 
+            watchedToday: [], 
+            cachedAnime: {}, 
+            totalMinutesOnSite: 0,
+            hasPurchasedBanner: false
+        }; 
+        localStorage.setItem('onika_stats', JSON.stringify(stats)); 
+    } 
+    if (!stats.unlockedAchievements) stats.unlockedAchievements = []; 
+    if (!stats.favedAnime) stats.favedAnime = []; 
+    if (!stats.watchedToday) stats.watchedToday = []; 
     if (stats.coins === undefined) stats.coins = 0; 
     if (!stats.cachedAnime) stats.cachedAnime = {};
     if (stats.totalMinutesOnSite === undefined) stats.totalMinutesOnSite = 0;
+    if (stats.hasPurchasedBanner === undefined) stats.hasPurchasedBanner = false;
     return stats; 
 }
+
 function saveStats(stats) { localStorage.setItem('onika_stats', JSON.stringify(stats)); }
+
 function checkAchievements(stats) { 
     let changed = false; 
     ACHIEVEMENTS.forEach(ach => { 
         if (!stats.unlockedAchievements.includes(ach.id)) { 
-            if (ach.check(stats)) { stats.unlockedAchievements.push(ach.id); stats.coins += ach.reward; changed = true; showToast(`🏆 ${ach.name}! (+${ach.reward} 🪙)`); } 
+            if (ach.check(stats)) { 
+                stats.unlockedAchievements.push(ach.id); 
+                stats.coins += ach.coins; 
+                stats.xp += ach.xp; 
+                changed = true; 
+                showToast(`🏆 ${ach.name}! (+${ach.xp} XP, +${ach.coins} 🪙)`); 
+            } 
         } 
     }); 
     if (changed) saveStats(stats); 
 }
+
 function addXP(amount) { 
-    let stats = getStats(); const oldLevel = Math.floor(stats.xp / 100) + 1; stats.xp += amount; 
+    let stats = getStats(); 
+    const oldLevel = Math.floor(stats.xp / 100) + 1; 
+    stats.xp += amount; 
     const newLevel = Math.floor(stats.xp / 100) + 1; 
+    
     if (newLevel > oldLevel) { 
-        const rewardCoins = Math.floor(100 + Math.pow(newLevel, 2.5) * 2); stats.coins += rewardCoins;
+        const rewardCoins = Math.floor(100 + Math.pow(newLevel, 2.5) * 2); 
+        stats.coins += rewardCoins;
         showLevelUpPopup(newLevel, LEVEL_TITLES[Math.min(newLevel - 1, 99)], rewardCoins); 
         if (tg) tg.HapticFeedback.notificationOccurred('success'); 
-    } else { showToast(`+${amount} XP`); }
-    saveStats(stats); checkAchievements(stats); 
+    } else { 
+        showToast(`+${amount} XP`); 
+    }
+    saveStats(stats); 
+    checkAchievements(stats); 
 }
 
-// НОВАЯ ФУНКЦИЯ: Начисление XP за время на сайте
 function addXPForTime(minutes) {
     let stats = getStats();
     stats.totalMinutesOnSite = (stats.totalMinutesOnSite || 0) + minutes;
     
-    // Если накопился час
     if (stats.totalMinutesOnSite >= 60) {
         const hours = Math.floor(stats.totalMinutesOnSite / 60);
-        stats.totalMinutesOnSite = stats.totalMinutesOnSite % 60; // Остаток
+        stats.totalMinutesOnSite = stats.totalMinutesOnSite % 60; 
         saveStats(stats);
-        
-        // Начисляем 2 XP за каждый час
         addXP(hours * 2); 
         showToast(`⏱️ Вы провели на сайте ${hours} ч. (+${hours * 2} XP)`);
     } else {
@@ -1009,31 +1177,82 @@ function addXPForTime(minutes) {
 
 function showLevelUpPopup(level, rank, coins) { 
     const popup = document.getElementById('levelUpPopup'); 
-    document.getElementById('popup-level').textContent = level; document.getElementById('popup-rank').textContent = rank; document.getElementById('popup-coins').textContent = coins;
-    popup.classList.add('show'); setTimeout(() => popup.classList.remove('show'), 4000); 
+    document.getElementById('popup-level').textContent = level; 
+    document.getElementById('popup-rank').textContent = rank; 
+    document.getElementById('popup-coins').textContent = coins;
+    popup.classList.add('show'); 
+    setTimeout(() => popup.classList.remove('show'), 4000); 
 }
+
 function setElText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
 function setElWidth(id, width) { const el = document.getElementById(id); if (el) el.style.width = width; }
+
 function showToast(msg) { 
     const toast = document.createElement('div'); toast.textContent = msg; 
     toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#5b5bff;color:#fff;padding:10px 20px;border-radius:20px;font-weight:bold;z-index:99999;box-shadow:0 4px 15px rgba(0,0,0,0.5);animation:fade 0.3s ease;text-align:center;'; 
     document.body.appendChild(toast); setTimeout(() => toast.remove(), 2500); 
 }
+
 function switchProfileTab(tab) { 
-    const btnProfile = document.getElementById('tab-btn-profile'); const btnSettings = document.getElementById('tab-btn-settings'); 
-    const contentProfile = document.getElementById('profile-content-tab'); const contentSettings = document.getElementById('settings-content-tab'); 
-    if (tab === 'profile') { btnProfile.classList.add('active'); btnSettings.classList.remove('active'); contentProfile.style.display = 'block'; contentSettings.style.display = 'none'; } 
-    else { btnProfile.classList.remove('active'); btnSettings.classList.add('active'); contentProfile.style.display = 'none'; contentSettings.style.display = 'block'; } 
+    const btnProfile = document.getElementById('tab-btn-profile'); 
+    const btnSettings = document.getElementById('tab-btn-settings'); 
+    const contentProfile = document.getElementById('profile-content-tab'); 
+    const contentSettings = document.getElementById('settings-content-tab'); 
+    if (tab === 'profile') { 
+        btnProfile.classList.add('active'); btnSettings.classList.remove('active'); 
+        contentProfile.style.display = 'block'; contentSettings.style.display = 'none'; 
+    } else { 
+        btnProfile.classList.remove('active'); btnSettings.classList.add('active'); 
+        contentProfile.style.display = 'none'; contentSettings.style.display = 'block'; 
+    } 
 }
+
 function openLevelModal() { document.getElementById('levelModal').classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
 function openAchievementsModal() { 
-    const stats = getStats(); const container = document.getElementById('achievements-list-container'); let html = ''; 
-    ACHIEVEMENTS.forEach(ach => { 
+    const stats = getStats(); 
+    const container = document.getElementById('achievements-list-container'); 
+    let html = ''; 
+    
+    const sortedAch = [...ACHIEVEMENTS].sort((a, b) => {
+        const order = { common: 1, rare: 2, epic: 3, legendary: 4 };
+        return order[a.rarity] - order[b.rarity];
+    });
+
+    sortedAch.forEach(ach => { 
         const isDone = stats.unlockedAchievements.includes(ach.id); 
-        html += `<div class="ach-list-item ${isDone ? 'completed' : ''}"><div class="ach-list-icon"><svg><use href="#${ach.icon}"></use></svg></div><div class="ach-list-info"><h4>${ach.name}</h4><p>${ach.desc}</p></div><div style="color:#ffd700; font-weight:bold; margin-left: 10px; display: flex; align-items: center; gap: 4px;">+${ach.reward} <svg style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;"><use href="#oa-coin"></use></svg></div>${isDone ? '<div style="color:#ffd700; font-weight:bold; margin-left: 10px;"><svg style="width:16px;height:16px;"><use href="#oa-check"></use></svg></div>' : ''}</div>`; 
+        const rarityStyle = RARITY_STYLES[ach.rarity];
+        const progressCurrent = ach.progress(stats);
+        const progressPercent = (progressCurrent / ach.max) * 100;
+        
+        const iconSvg = `<svg width="100%" height="100%"><use href="#${rarityStyle.icon}"></use></svg>`;
+
+        html += `
+            <div class="ach-list-item ${rarityStyle.class} ${isDone ? 'completed' : ''}">
+                <div class="ach-list-icon" style="color: ${rarityStyle.color}">
+                    ${iconSvg}
+                </div>
+                <div class="ach-list-info">
+                    <h4>${ach.name}</h4>
+                    <p>${ach.desc}</p>
+                    ${!isDone ? `
+                        <div class="ach-progress-mini">
+                            <div style="width: ${progressPercent}%; background: ${rarityStyle.color}"></div>
+                        </div>
+                        <div style="font-size: 10px; color: #888; margin-top: 2px;">${progressCurrent} / ${ach.max}</div>
+                    ` : ''}
+                </div>
+                <div class="ach-reward-badge">
+                    +${ach.xp} XP, +${ach.coins} <svg style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;"><use href="#oa-coin"></use></svg>
+                </div>
+                ${isDone ? '<div class="ach-status-icon" style="color: #ffd700;"><svg style="width:20px;height:20px;"><use href="#oa-check"></use></svg></div>' : ''}
+            </div>
+        `; 
     }); 
-    container.innerHTML = html; document.getElementById('achievementsModal').classList.add('active'); 
+    
+    container.innerHTML = html; 
+    document.getElementById('achievementsModal').classList.add('active'); 
 }
 
 // ==========================================
