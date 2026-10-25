@@ -1132,12 +1132,12 @@ function switchProfileTab(tab) {
 function openLevelModal() { document.getElementById('levelModal').classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-// НОВАЯ ФУНКЦИЯ ДЛЯ ПЕРЕХОДА НА СТРАНИЦУ ДОСТИЖЕНИЙ
+// ФУНКЦИЯ ДЛЯ ПЕРЕХОДА НА СТРАНИЦУ ДОСТИЖЕНИЙ
 function openAchievementsPage() {
     switchTab('achievements');
 }
 
-// ПЕРЕИМЕНОВАННАЯ ФУНКЦИЯ ДЛЯ РЕНДЕРА СТРАНИЦЫ ДОСТИЖЕНИЙ
+// ФУНКЦИЯ ДЛЯ РЕНДЕРА СТРАНИЦЫ ДОСТИЖЕНИЙ
 function renderAchievementsPage() { 
     const stats = getStats(); 
     const container = document.getElementById('achievements-list-container'); 
