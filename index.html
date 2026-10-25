@@ -532,8 +532,8 @@
         <button onclick="switchTab('profile')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
             <div class="ach-icon-big" style="width: 50px; height: 50px;">
-                <!-- ЗАМЕНИЛИ SVG НА ВАШУ КАРТИНКУ -->
-                <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; background: #fff;">
+                <!-- ЗАМЕНИЛИ SVG НА ВАШУ КАРТИНКУ (без фона) -->
+                <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;">
             </div>
             <div>
                 <h1 style="font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 2px;">Достижения</h1>
@@ -590,8 +590,8 @@
             <div class="achievements-card" id="profile-content-tab" onclick="openAchievementsPage()">
                 <div class="ach-header">
                     <div class="ach-icon-big">
-                        <!-- ЗАМЕНИЛИ SVG НА ВАШУ КАРТИНКУ -->
-                        <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; background: #fff;">
+                        <!-- ЗАМЕНИЛИ SVG НА ВАШУ КАРТИНКУ (без фона) -->
+                        <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;">
                     </div>
                     <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p><span id="ach-points">0</span> очков</p></div>
                     <div class="ach-total"><span id="ach-earned">0</span>/<span id="ach-total-count">12</span></div>
@@ -701,6 +701,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=145"></script>
+    <script src="app.js?v=146"></script>
 </body>
 </html>
