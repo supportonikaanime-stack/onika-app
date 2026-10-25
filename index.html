@@ -118,9 +118,16 @@
         
         .id-container { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px 15px; display: inline-flex; align-items: center; gap: 10px; margin-bottom: 5px; cursor: pointer; backdrop-filter: blur(5px); }
         
-        /* БЕЙДЖ УРОВНЯ (ЛЕВИТАЦИЯ И ТЕНЬ) */
-        .level-row { display: flex; align-items: center; gap: 12px; background: rgba(10, 10, 15, 0.6); padding: 10px 12px; border-radius: 16px; text-align: left; cursor: pointer; transition: 0.2s; backdrop-filter: blur(10px); border: 1px solid rgba(91, 91, 255, 0.4); box-shadow: 0 4px 25px rgba(91, 91, 255, 0.15), inset 0 0 20px rgba(91, 91, 255, 0.1); }
-        .level-row:active { transform: scale(0.98); }
+        /* БЕЙДЖ УРОВНЯ БЕЗ ФОНА И РАМКИ */
+        .level-row { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            padding-top: 15px; 
+            border-top: 1px solid rgba(255, 255, 255, 0.08); /* Тонкая полоса сверху */
+            text-align: left; 
+            cursor: pointer; 
+        }
         
         .level-badge { 
             width: 72px; 
@@ -131,22 +138,11 @@
             flex-shrink: 0; 
             position: relative; 
         }
-        .level-badge::before { 
-            content: ''; 
-            position: absolute; 
-            width: 100%; 
-            height: 100%; 
-            background: radial-gradient(circle, var(--aura-color, rgba(91, 91, 255, 0.4)) 0%, transparent 65%); 
-            border-radius: 50%; 
-            animation: auraPulse 2.5s infinite alternate; 
-            z-index: 0; 
-        }
-        @keyframes auraPulse { 0% { transform: scale(0.95); opacity: 0.4; } 100% { transform: scale(1.1); opacity: 0.7; } }
         
         .level-number {
             position: relative; 
             z-index: 2; 
-            font-size: 42px; 
+            font-size: 46px; 
             font-weight: 900; 
             font-family: 'Nunito', sans-serif; 
             line-height: 1; 
@@ -154,17 +150,15 @@
             align-items: center; 
             justify-content: center;
             transition: color 0.3s, text-shadow 0.3s;
-            animation: floatNumber 3s ease-in-out infinite; /* Анимация левитации */
+            animation: floatNumber 3s ease-in-out infinite;
         }
         
-        /* Анимация левитации и тени */
         @keyframes floatNumber {
             0% { transform: translateY(0px); }
             50% { transform: translateY(-5px); }
             100% { transform: translateY(0px); }
         }
 
-        /* Псевдоэлемент для тени под цифрой */
         .level-number::after {
             content: '';
             position: absolute;
@@ -173,7 +167,7 @@
             transform: translateX(-50%);
             width: 30px;
             height: 6px;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.8);
             border-radius: 50%;
             filter: blur(4px);
             animation: shadowPulse 3s ease-in-out infinite;
@@ -187,11 +181,11 @@
         }
         
         .level-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-        .level-title { font-size: 12px; color: #fff; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; }
-        .level-title .rank { color: #b44aff; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 10px rgba(180, 74, 255, 0.8); }
-        .xp-bar-container { width: 100%; height: 6px; background: #222; border-radius: 3px; overflow: hidden; margin-bottom: 4px; border: 1px solid rgba(255,255,255,0.05); }
-        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 3px; box-shadow: 0 0 10px #00f5ff; }
-        .xp-text { font-size: 10px; color: #aaa; text-align: right; font-weight: 500; }
+        .level-title { font-size: 12px; color: #fff; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
+        .level-title .rank { color: #b44aff; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 10px rgba(180, 74, 255, 0.8); font-size: 14px;}
+        .xp-bar-container { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.05); }
+        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 4px; box-shadow: 0 0 10px #00f5ff; }
+        .xp-text { font-size: 12px; color: #aaa; text-align: right; font-weight: 600; }
         
         .profile-tabs { display: flex; background: #14141f; border-radius: 15px; padding: 5px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.05); }
         .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: #888; font-size: 14px; font-weight: 600; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: 0.2s; }
@@ -705,6 +699,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=141"></script>
+    <script src="app.js?v=142"></script>
 </body>
 </html>
