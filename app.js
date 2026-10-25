@@ -322,8 +322,6 @@ async function loadProfileData() {
     setElText('modal-xp-cur', xpCurrentLevel); 
     setElText('modal-xp-next', 100); 
     setElWidth('modal-xp-bar', progressPercent + '%'); 
-    setElText('modal-ach-earned', stats.unlockedAchievements.length); 
-    setElText('modal-ach-total', totalAch);
     
     // Обновляем цифру и цвет в модальном окне
     const modalLevelNum = document.getElementById('modal-icon-level');
@@ -886,7 +884,8 @@ const ACHIEVEMENTS = [
         xp: 10, coins: 100, 
         check: (s) => s.episodesWatched >= 1, 
         progress: (s) => Math.min(s.episodesWatched, 1),
-        max: 1
+        max: 1,
+        imgUrl: "cinema.png"
     },
     { 
         id: 'c2', 
@@ -896,7 +895,8 @@ const ACHIEVEMENTS = [
         xp: 20, coins: 100, 
         check: (s) => s.totalMinutesOnSite >= 180,
         progress: (s) => Math.min(s.totalMinutesOnSite, 180),
-        max: 180
+        max: 180,
+        imgUrl: "marathon.png"
     },
     { 
         id: 'c3', 
@@ -906,7 +906,8 @@ const ACHIEVEMENTS = [
         xp: 30, coins: 200, 
         check: (s) => s.daysStreak >= 7,
         progress: (s) => Math.min(s.daysStreak, 7),
-        max: 7
+        max: 7,
+        imgUrl: "guest.png"
     },
     { 
         id: 'c4', 
@@ -916,7 +917,8 @@ const ACHIEVEMENTS = [
         xp: 50, coins: 500, 
         check: (s) => Math.floor(s.xp / 100) + 1 >= 10,
         progress: (s) => Math.min(Math.floor(s.xp / 100) + 1, 10),
-        max: 10
+        max: 10,
+        imgUrl: "newbie.png"
     },
 
     // --- Редкие (Rare) ---
@@ -928,7 +930,8 @@ const ACHIEVEMENTS = [
         xp: 50, coins: 300, 
         check: (s) => s.episodesWatched >= 10,
         progress: (s) => Math.min(s.episodesWatched, 10),
-        max: 10
+        max: 10,
+        imgUrl: "collector.png"
     },
     { 
         id: 'r2', 
@@ -938,7 +941,8 @@ const ACHIEVEMENTS = [
         xp: 100, coins: 600, 
         check: (s) => Math.floor(s.xp / 100) + 1 >= 20,
         progress: (s) => Math.min(Math.floor(s.xp / 100) + 1, 20),
-        max: 20
+        max: 20,
+        imgUrl: "experienced.png"
     },
     { 
         id: 'r3', 
@@ -948,7 +952,8 @@ const ACHIEVEMENTS = [
         xp: 100, coins: 750, 
         check: (s) => Math.floor(s.xp / 100) + 1 >= 40,
         progress: (s) => Math.min(Math.floor(s.xp / 100) + 1, 40),
-        max: 40
+        max: 40,
+        imgUrl: "expert.png"
     },
     { 
         id: 'r4', 
@@ -970,7 +975,8 @@ const ACHIEVEMENTS = [
         xp: 200, coins: 600, 
         check: (s) => s.episodesWatched >= 20,
         progress: (s) => Math.min(s.episodesWatched, 20),
-        max: 20
+        max: 20,
+        imgUrl: "hardcore.png"
     },
     { 
         id: 'e2', 
@@ -980,7 +986,8 @@ const ACHIEVEMENTS = [
         xp: 500, coins: 1000, 
         check: (s) => s.daysStreak >= 30,
         progress: (s) => Math.min(s.daysStreak, 30),
-        max: 30
+        max: 30,
+        imgUrl: "fan.png"
     },
     { 
         id: 'e3', 
@@ -990,7 +997,8 @@ const ACHIEVEMENTS = [
         xp: 500, coins: 1000, 
         check: (s) => s.hasPurchasedBanner === true,
         progress: (s) => s.hasPurchasedBanner ? 1 : 0,
-        max: 1
+        max: 1,
+        imgUrl: "fashionista.png"
     },
     { 
         id: 'e4', 
@@ -1000,7 +1008,8 @@ const ACHIEVEMENTS = [
         xp: 500, coins: 1000, 
         check: (s) => s.favedAnime.length >= 50,
         progress: (s) => Math.min(s.favedAnime.length, 50),
-        max: 50
+        max: 50,
+        imgUrl: "fan_fav.png"
     }
 ];
 
@@ -1171,12 +1180,15 @@ function renderAchievementsPage() {
             const progressCurrent = ach.progress(stats);
             const progressPercent = (progressCurrent / ach.max) * 100;
             
-            const iconSvg = `<svg width="100%" height="100%"><use href="#${rarityStyle.icon}"></use></svg>`;
+            // Если есть imgUrl - выводим картинку, иначе SVG
+            const iconHtml = ach.imgUrl 
+                ? `<img src="${ach.imgUrl}" alt="${ach.name}">` 
+                : `<svg width="100%" height="100%"><use href="#${rarityStyle.icon}"></use></svg>`;
 
             html += `
                 <div class="ach-list-item ${rarityStyle.class} ${isDone ? 'completed' : ''}">
                     <div class="ach-list-icon" style="color: ${rarityStyle.color}">
-                        ${iconSvg}
+                        ${iconHtml}
                     </div>
                     <div class="ach-list-info">
                         <h4>${ach.name}</h4>
