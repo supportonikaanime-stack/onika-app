@@ -9,6 +9,7 @@
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@900&display=swap');
+        
         :root { --bg: #0a0a0f; --card: #1a1a20; --primary: #5b5bff; --text: #fff; --muted: #888; --nav-h: 65px; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background: var(--bg); color: var(--text); padding-bottom: calc(var(--nav-h) + 20px); overflow-x: hidden; }
@@ -144,6 +145,7 @@
         .settings-card { border-color: rgba(255,255,255,0.05); cursor: default; }
         .ach-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
         
+        /* ИКОНКА ДОСТИЖЕНИЙ В ПРОФИЛЕ */
         .ach-icon-big { width: 60px; height: 60px; background: rgba(255, 215, 0, 0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }
         .ach-icon-big svg { width: 100%; height: 100%; animation: achPulse 3s infinite alternate; }
         @keyframes achPulse { 0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(155, 92, 255, 0.5)); } 100% { transform: scale(1.05); filter: drop-shadow(0 0 8px rgba(155, 92, 255, 0.8)); } }
@@ -191,7 +193,7 @@
         .modal-xp-text { font-size: 12px; color: #aaa; text-align: right; margin-bottom: 20px; }
         .modal-desc { font-size: 14px; color: #ccc; line-height: 1.5; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; text-align: left; }
         
-        /* НОВЫЙ ДИЗАЙН ДОСТИЖЕНИЙ */
+        /* СТИЛИ ДЛЯ ДОСТИЖЕНИЙ В МОДАЛКЕ */
         .ach-list-item { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); text-align: left; opacity: 0.7; transition: 0.3s; }
         .ach-list-item.completed { opacity: 1; background: rgba(255,255,255,0.05); }
         
@@ -234,6 +236,7 @@
 </head>
 <body>
 
+    <!-- SVG СПРАЙТ (Навигация) -->
     <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
       <symbol id="oa-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
       <symbol id="oa-catalog" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></symbol>
@@ -332,8 +335,120 @@
       </symbol>
     </svg>
 
-    <!-- ... (Весь остальной HTML без изменений, кроме иконки в карточке достижений) ... -->
-    
+    <div class="level-up-popup" id="levelUpPopup">
+        <div class="icon"><svg><use href="#oa-level"></use></svg></div>
+        <div class="text">
+            <h4>Новый уровень: <span id="popup-level">2</span></h4>
+            <p>Звание: <span id="popup-rank">Любопытный зритель</span></p>
+        </div>
+        <div class="coins">+<span id="popup-coins">100</span> <svg><use href="#oa-coin"></use></svg></div>
+    </div>
+
+    <div id="screen-home" class="screen active">
+        <section class="hero-section" id="heroSection">
+            <div class="hero-slider" id="heroSlider"></div>
+            <div class="hero-dots" id="heroDots"></div>
+        </section>
+        <section class="content-section">
+            <div class="section-header"><h2>🔥 Популярное сейчас</h2></div>
+            <div class="horizontal-scroll" id="popular-list"></div>
+        </section>
+        <section class="tg-banner-section">
+            <a href="https://t.me/onikaanime" target="_blank" class="tg-banner">
+                <div class="tg-icon">✈️</div>
+                <div class="tg-text">
+                    <h3>Наш Telegram-канал</h3>
+                    <p>Новости, розыгрыши и анонсы</p>
+                </div>
+            </a>
+        </section>
+        <section class="content-section">
+            <div class="section-header"><h2>✨ Рекомендации для вас</h2></div>
+            <div class="grid-catalog" id="recommended-list"></div>
+        </section>
+    </div>
+
+    <div id="screen-catalog" class="screen">
+        <div style="padding: 20px 20px 10px 20px;">
+            <div style="display: flex; align-items: center; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 0 15px; margin-bottom: 15px;">
+                <span style="color: #888; display: flex; align-items: center;"><svg style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-search"></use></svg></span>
+                <input type="text" id="search-input" placeholder="Найти аниме..." oninput="searchAnime()" style="flex: 1; background: transparent; border: none; padding: 14px 10px; color: #fff; font-size: 15px; outline: none;">
+            </div>
+            <div onclick="openRandomAnime()" style="display: flex; align-items: center; justify-content: space-between; background: #14141f; border-radius: 16px; padding: 16px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="width: 45px; height: 45px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #a29bfe;"><svg style="width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-dice"></use></svg></div>
+                    <div>
+                        <div style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 2px;">Случайное аниме</div>
+                        <div style="font-size: 12px; color: #888;">Доверься судьбе</div>
+                    </div>
+                </div>
+                <div style="color: #888; font-size: 20px;">›</div>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;" id="genre-filters"></div>
+            <div style="display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 10px;" id="dropdown-filters">
+                <button class="filter-btn" onclick="openFilterModal('year')">Год ⌄</button>
+                <button class="filter-btn" onclick="openFilterModal('status')">Статус ⌄</button>
+                <button class="filter-btn" onclick="openFilterModal('sort')">Сортировка ⌄</button>
+            </div>
+        </div>
+        <div class="grid-catalog" id="catalog-grid"></div>
+        <div style="text-align: center; padding: 20px;">
+            <button id="load-more-btn" onclick="loadMoreCatalog()" style="display: none; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 12px 30px; border-radius: 20px; font-weight: bold; cursor: pointer;">Загрузить еще</button>
+        </div>
+    </div>
+
+    <div id="screen-my" class="screen">
+        <header class="profile-header" style="padding-bottom: 10px;"><h1>Моё</h1></header>
+        <div class="my-list-tabs" id="my-list-tabs">
+            <div class="my-list-tab active" onclick="filterMyList('all', this)">Все</div>
+            <div class="my-list-tab" onclick="filterMyList('watching', this)">Смотрю</div>
+            <div class="my-list-tab" onclick="filterMyList('planned', this)">В планах</div>
+            <div class="my-list-tab" onclick="filterMyList('completed', this)">Просмотрено</div>
+            <div class="my-list-tab" onclick="filterMyList('dropped', this)">Заброшено</div>
+            <div class="my-list-tab" onclick="filterMyList('favorite', this)">Любимое</div>
+        </div>
+        <div class="grid-catalog" id="my-grid" style="margin-top: 10px;"></div>
+    </div>
+
+    <div id="screen-friends" class="screen">
+        <header class="profile-header" style="padding-bottom: 10px;"><h1>Друзья</h1></header>
+        <div class="friends-search">
+            <input type="number" id="friend-search-input" placeholder="Введите Telegram ID друга...">
+            <button onclick="searchFriend()">Найти</button>
+        </div>
+        <div id="search-result-container" style="padding: 0 20px 20px;"></div>
+        <div id="friends-list-container"></div>
+    </div>
+
+    <div id="screen-friend-profile" class="screen" style="padding: 20px;">
+        <button onclick="switchTab('friends')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <div id="friend-profile-content"></div>
+    </div>
+
+    <div id="screen-detail" class="screen" style="padding: 20px;">
+        <button onclick="goBackFromDetail()" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <div id="detail-content"></div>
+    </div>
+
+    <div id="screen-voice" class="screen" style="padding: 20px;">
+        <button onclick="switchTab('detail')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <h1 id="voice-title" style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор озвучки</h1>
+        <div style="display: flex; flex-direction: column; gap: 12px;" id="voice-list"></div>
+    </div>
+
+    <div id="screen-player" class="screen" style="padding: 20px;">
+        <button onclick="switchTab('voice')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <h1 id="player-title" style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор плеера</h1>
+        <div style="display: flex; flex-direction: column; gap: 12px;" id="player-list"></div>
+    </div>
+
+    <div id="screen-episodes" class="screen" style="padding: 20px;">
+        <button onclick="switchTab('player')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <h1 id="eps-title" style="font-size: 24px; font-weight: 800; margin-bottom: 10px;">Выбор серии</h1>
+        <p style="color: #888; font-size: 14px; margin-bottom: 20px;">Озвучка: <span id="selected-voice-text" style="color: #fff;"></span> • Плеер: <span id="selected-player-text" style="color: #fff;"></span></p>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;" id="episodes-list"></div>
+    </div>
+
     <div id="screen-profile" class="screen">
         <header class="profile-header"><h1>Профиль</h1></header>
         <div class="profile-container">
@@ -362,7 +477,6 @@
                 <div class="user-card-bottom">
                     <div class="level-row" onclick="openLevelModal()">
                         <div class="level-badge" id="profile-level-badge-container">
-                            <!-- ТВОЙ SVG УРОВНЯ -->
                             <svg class="level-emblem" id="profile-level-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
                               <defs>
                                 <radialGradient id="glow" cx="50%" cy="50%">
@@ -463,7 +577,6 @@
             <div class="achievements-card" id="profile-content-tab" onclick="openAchievementsModal()">
                 <div class="ach-header">
                     <div class="ach-icon-big">
-                        <!-- Используем иконку кристалла для общего вида -->
                         <svg viewBox="0 0 55 55" fill="none"><use href="#ach-icon-crystal"></use></svg>
                     </div>
                     <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p><span id="ach-points">0</span> очков</p></div>
@@ -477,11 +590,126 @@
                 </div>
             </div>
 
-            <!-- ... (Остальные блоки профиля) ... -->
+            <div class="settings-card" id="settings-content-tab" style="display: none;">
+                <div style="padding: 20px;">
+                    <h3 style="margin-bottom: 15px; color: #fff;">Настройки</h3>
+                    <button class="settings-btn" onclick="openShopModal()">
+                        <span style="display:flex; align-items:center;"><svg><use href="#oa-shop"></use></svg> Магазин баннеров</span>
+                        <span style="color: #888;">›</span>
+                    </button>
+                    <button class="settings-btn" onclick="resetBanner()">
+                        <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять баннер</span>
+                        <span style="color: #888;">›</span>
+                    </button>
+                </div>
+            </div>
+            <div style="height: 20px;"></div>
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО ДОСТИЖЕНИЙ -->
+    <div class="modal-overlay" id="levelModal" onclick="closeModal('levelModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeModal('levelModal')"><svg><use href="#oa-close"></use></svg></button>
+            
+            <div class="modal-icon-large">
+                <div class="level-badge modal-level-badge" id="modal-level-badge-container">
+                    <svg class="level-emblem" id="modal-level-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+                      <defs>
+                        <radialGradient id="glow" cx="50%" cy="50%">
+                          <stop offset="0" stop-color="#fff" stop-opacity=".95"/>
+                          <stop offset=".55" stop-color="#fff" stop-opacity=".45"/>
+                          <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+                        </radialGradient>
+                        <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
+                          <feGaussianBlur stdDeviation="5" result="blur"/>
+                          <feMerge>
+                            <feMergeNode in="blur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                          </feMerge>
+                        </filter>
+                        <filter id="strongGlow" x="-100%" y="-100%" width="300%" height="300%">
+                          <feGaussianBlur stdDeviation="12" result="blur"/>
+                          <feMerge>
+                            <feMergeNode in="blur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                          </feMerge>
+                        </filter>
+                        <g id="ray">
+                          <path d="M500 72 L500 210" stroke="#fff" stroke-width="2" opacity=".5"/>
+                          <path d="M500 92 L488 150 L500 137 L512 150 Z" fill="none" stroke="#fff" stroke-width="2"/>
+                        </g>
+                        <g id="diamond">
+                          <path d="M500 174 L514 198 L500 222 L486 198 Z" fill="none" stroke="#fff" stroke-width="3"/>
+                          <path d="M500 183 L507 198 L500 211 L493 198 Z" fill="#fff" opacity=".35"/>
+                        </g>
+                        <g id="crystal">
+                          <path d="M500 66 L532 155 L500 137 L468 155 Z" fill="none" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
+                          <path d="M500 88 L515 143 L500 128 L485 143 Z" fill="none" stroke="#fff" stroke-width="2"/>
+                          <path d="M500 66 L500 137" stroke="#fff" stroke-width="2"/>
+                        </g>
+                        <g id="diagonal">
+                          <path d="M500 116 L527 170 L500 157 L473 170 Z" fill="none" stroke="#fff" stroke-width="3"/>
+                          <path d="M500 132 L512 161 L500 153 L488 161 Z" fill="#fff" opacity=".35"/>
+                        </g>
+                      </defs>
+                      <circle cx="500" cy="500" r="390" fill="url(#glow)" opacity=".18" filter="url(#strongGlow)"/>
+                      <g opacity=".55" stroke="#fff" fill="none">
+                        <circle cx="500" cy="500" r="350" stroke-width="2"/>
+                        <circle cx="500" cy="500" r="330" stroke-width="1"/>
+                        <circle cx="500" cy="500" r="300" stroke-width="3"/>
+                        <circle cx="500" cy="500" r="270" stroke-width="1"/>
+                        <circle cx="500" cy="500" r="245" stroke-width="2"/>
+                        <path d="M500 105 V895"/>
+                        <path d="M105 500 H895"/>
+                        <path d="M220 220 L780 780"/>
+                        <path d="M780 220 L220 780"/>
+                        <path d="M155 355 L845 645"/>
+                        <path d="M155 645 L845 355"/>
+                        <path d="M355 155 L645 845"/>
+                        <path d="M645 155 L355 845"/>
+                      </g>
+                      <g>
+                        <use href="#ray"/><use href="#ray" transform="rotate(22.5 500 500)"/><use href="#ray" transform="rotate(45 500 500)"/><use href="#ray" transform="rotate(67.5 500 500)"/><use href="#ray" transform="rotate(90 500 500)"/><use href="#ray" transform="rotate(112.5 500 500)"/><use href="#ray" transform="rotate(135 500 500)"/><use href="#ray" transform="rotate(157.5 500 500)"/><use href="#ray" transform="rotate(180 500 500)"/><use href="#ray" transform="rotate(202.5 500 500)"/><use href="#ray" transform="rotate(225 500 500)"/><use href="#ray" transform="rotate(247.5 500 500)"/><use href="#ray" transform="rotate(270 500 500)"/><use href="#ray" transform="rotate(292.5 500 500)"/><use href="#ray" transform="rotate(315 500 500)"/><use href="#ray" transform="rotate(337.5 500 500)"/>
+                      </g>
+                      <g>
+                        <use href="#diamond"/><use href="#diamond" transform="rotate(30 500 500)"/><use href="#diamond" transform="rotate(60 500 500)"/><use href="#diamond" transform="rotate(90 500 500)"/><use href="#diamond" transform="rotate(120 500 500)"/><use href="#diamond" transform="rotate(150 500 500)"/><use href="#diamond" transform="rotate(180 500 500)"/><use href="#diamond" transform="rotate(210 500 500)"/><use href="#diamond" transform="rotate(240 500 500)"/><use href="#diamond" transform="rotate(270 500 500)"/><use href="#diamond" transform="rotate(300 500 500)"/><use href="#diamond" transform="rotate(330 500 500)"/>
+                      </g>
+                      <g filter="url(#softGlow)">
+                        <use href="#crystal"/><use href="#crystal" transform="rotate(90 500 500)"/><use href="#crystal" transform="rotate(180 500 500)"/><use href="#crystal" transform="rotate(270 500 500)"/>
+                      </g>
+                      <g opacity=".9">
+                        <use href="#diagonal"/><use href="#diagonal" transform="rotate(45 500 500)"/><use href="#diagonal" transform="rotate(90 500 500)"/><use href="#diagonal" transform="rotate(135 500 500)"/><use href="#diagonal" transform="rotate(180 500 500)"/><use href="#diagonal" transform="rotate(225 500 500)"/><use href="#diagonal" transform="rotate(270 500 500)"/><use href="#diagonal" transform="rotate(315 500 500)"/>
+                      </g>
+                      <g fill="none" stroke="#fff" filter="url(#softGlow)">
+                        <circle cx="500" cy="500" r="235" stroke-width="9"/>
+                        <circle cx="500" cy="500" r="260" stroke-width="3"/>
+                        <circle cx="500" cy="500" r="285" stroke-width="2"/>
+                      </g>
+                      <path d="M500 240 L514 266 L540 250 L548 280 L579 271 L575 302 L607 305 L590 332 L618 345 L595 365 L620 390 L590 400 L605 430 L575 435 L582 468 L550 460 L540 492 L514 478 L500 505 L486 478 L460 492 L450 460 L418 468 L425 435 L395 430 L410 400 L380 390 L405 365 L382 345 L410 332 L393 305 L425 302 L421 271 L452 280 L460 250 L486 266 Z" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>
+                      <circle cx="500" cy="500" r="190" fill="none" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
+                      <circle cx="500" cy="500" r="164" fill="none" stroke="#fff" stroke-width="2" opacity=".65"/>
+                      <circle cx="500" cy="500" r="8" fill="#fff" filter="url(#softGlow)"/>
+                      <g fill="#fff" filter="url(#strongGlow)">
+                        <circle cx="500" cy="215" r="5"/><circle cx="785" cy="500" r="5"/><circle cx="500" cy="785" r="5"/><circle cx="215" cy="500" r="5"/><circle cx="700" cy="300" r="3"/><circle cx="300" cy="700" r="3"/>
+                      </g>
+                    </svg>
+                    <span id="modal-icon-level">1</span>
+                </div>
+            </div>
+            
+            <div class="modal-title">Уровень <span id="modal-level-num">1</span></div>
+            <div class="modal-subtitle">Звание: <span style="color: #b44aff; font-weight: bold;" id="modal-rank">Первый эпизод</span></div>
+            <div class="modal-xp-bar"><div class="modal-xp-fill" id="modal-xp-bar" style="width: 20%;"></div></div>
+            <div class="modal-xp-text"><span id="modal-xp-cur">0</span> / <span id="modal-xp-next">100</span> XP</div>
+            
+            <div class="modal-desc">
+                <b>Как фармить XP:</b><br>
+                📅 Ежедневный вход: +5 XP<br>
+                ⏱️ Время на сайте (за 1 час): +2 XP
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="achievementsModal" onclick="closeModal('achievementsModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('achievementsModal')"><svg><use href="#oa-close"></use></svg></button>
@@ -492,6 +720,63 @@
         </div>
     </div>
 
-    <!-- ... (Остальные модалки) ... -->
+    <div class="modal-overlay" id="filterModal" onclick="closeModal('filterModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeModal('filterModal')"><svg><use href="#oa-close"></use></svg></button>
+            <h2 class="modal-title" id="filter-modal-title">Выберите</h2>
+            <div id="filter-options-container" style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="statusModal" onclick="closeModal('statusModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeModal('statusModal')"><svg><use href="#oa-close"></use></svg></button>
+            <div class="modal-title">Добавить в список</div>
+            <div class="modal-subtitle" id="status-anime-title">Название аниме</div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="filter-option-btn" onclick="setAnimeStatus('watching')"><svg style="color: #3498db;"><use href="#oa-eye"></use></svg> Смотрю</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('planned')"><svg style="color: #f1c40f;"><use href="#oa-calendar"></use></svg> В планах</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('completed')"><svg style="color: #2ecc71;"><use href="#oa-check"></use></svg> Просмотрено</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('dropped')"><svg style="color: #e74c3c;"><use href="#oa-close"></use></svg> Заброшено</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('favorite')" style="color: #ff2d78;"><svg><use href="#oa-favorite"></use></svg> Любимое</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('')" style="color: #888;"><svg><use href="#oa-trash"></use></svg> Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="shopModal" onclick="closeModal('shopModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeModal('shopModal')"><svg><use href="#oa-close"></use></svg></button>
+            <div class="modal-icon-large"><svg><use href="#oa-shop"></use></svg></div>
+            <div class="modal-title">Магазин баннеров</div>
+            <div class="modal-subtitle">Твой баланс: <span id="shop-coins" style="color: #ffd700; font-weight: bold;">0</span> <svg style="width:14px;height:14px;display:inline;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.8;"><use href="#oa-coin"></use></svg></div>
+            <div id="shop-items-container" class="shop-grid"></div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('home', this)">
+            <span class="nav-icon"><svg><use href="#oa-home"></use></svg></span>
+            <span class="nav-text">Главная</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('catalog', this)">
+            <span class="nav-icon"><svg><use href="#oa-catalog"></use></svg></span>
+            <span class="nav-text">Каталог</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('my', this)">
+            <span class="nav-icon"><svg><use href="#oa-favorite"></use></svg></span>
+            <span class="nav-text">Моё</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('friends', this)">
+            <span class="nav-icon"><svg><use href="#oa-friends"></use></svg></span>
+            <span class="nav-text">Друзья</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('profile', this)">
+            <span class="nav-icon"><svg><use href="#oa-profile"></use></svg></span>
+            <span class="nav-text">Профиль</span>
+        </div>
+    </nav>
+
+    <script src="app.js?v=139"></script>
 </body>
 </html>
