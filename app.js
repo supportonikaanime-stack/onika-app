@@ -178,6 +178,7 @@ function switchTab(tabName, element) {
     if (tabName === 'player') document.getElementById('player-title').textContent = 'Выбор плеера';
     if (tabName === 'episodes') document.getElementById('eps-title').textContent = 'Выбор серии';
     if (tabName === 'friends') loadFriends();
+    if (tabName === 'achievements') renderAchievementsPage(); // Рендер страницы достижений
 }
 
 function goBackFromDetail() {
@@ -609,7 +610,6 @@ async function openFriendProfile(id, name) {
                 <div class="user-card-bottom">
                     <div class="level-row">
                         <div class="level-badge">
-                            <!-- ТЕПЕРЬ ПРОСТО КОНТЕЙНЕР ДЛЯ ЦИФРЫ -->
                             <span class="level-number" style="color: ${friendColor}; text-shadow: ${getLevelGlow(friendColor)};">${lvl}</span>
                         </div>
                         <div class="level-info">
@@ -1123,11 +1123,21 @@ function switchProfileTab(tab) {
 function openLevelModal() { document.getElementById('levelModal').classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-function openAchievementsModal() { 
+// НОВАЯ ФУНКЦИЯ ДЛЯ ПЕРЕХОДА НА СТРАНИЦУ ДОСТИЖЕНИЙ
+function openAchievementsPage() {
+    switchTab('achievements');
+}
+
+// ПЕРЕИМЕНОВАННАЯ ФУНКЦИЯ ДЛЯ РЕНДЕРА СТРАНИЦЫ ДОСТИЖЕНИЙ
+function renderAchievementsPage() { 
     const stats = getStats(); 
     const container = document.getElementById('achievements-list-container'); 
     let html = ''; 
     
+    // Обновляем заголовок страницы
+    setElText('page-ach-earned', stats.unlockedAchievements.length);
+    setElText('page-ach-total', ACHIEVEMENTS.length);
+
     // Группируем достижения по редкости
     const rarities = [
         { key: 'common', name: 'Обычные', color: '#ccc', class: 'common' },
@@ -1188,7 +1198,6 @@ function openAchievementsModal() {
     });
     
     container.innerHTML = html; 
-    document.getElementById('achievementsModal').classList.add('active'); 
 }
 
 // ==========================================
