@@ -118,7 +118,7 @@
         
         .id-container { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px 15px; display: inline-flex; align-items: center; gap: 10px; margin-bottom: 5px; cursor: pointer; backdrop-filter: blur(5px); }
         
-        /* БЕЙДЖ УРОВНЯ (ТЕПЕРЬ ПРОСТО ЦИФРА) */
+        /* БЕЙДЖ УРОВНЯ (ЛЕВИТАЦИЯ И ТЕНЬ) */
         .level-row { display: flex; align-items: center; gap: 12px; background: rgba(10, 10, 15, 0.6); padding: 10px 12px; border-radius: 16px; text-align: left; cursor: pointer; transition: 0.2s; backdrop-filter: blur(10px); border: 1px solid rgba(91, 91, 255, 0.4); box-shadow: 0 4px 25px rgba(91, 91, 255, 0.15), inset 0 0 20px rgba(91, 91, 255, 0.1); }
         .level-row:active { transform: scale(0.98); }
         
@@ -130,7 +130,6 @@
             justify-content: center; 
             flex-shrink: 0; 
             position: relative; 
-            /* Убрали вращающуюся SVG, теперь это просто контейнер для цифры */
         }
         .level-badge::before { 
             content: ''; 
@@ -147,7 +146,7 @@
         .level-number {
             position: relative; 
             z-index: 2; 
-            font-size: 42px; /* Размер цифры (72px контейнер) */
+            font-size: 42px; 
             font-weight: 900; 
             font-family: 'Nunito', sans-serif; 
             line-height: 1; 
@@ -155,6 +154,36 @@
             align-items: center; 
             justify-content: center;
             transition: color 0.3s, text-shadow 0.3s;
+            animation: floatNumber 3s ease-in-out infinite; /* Анимация левитации */
+        }
+        
+        /* Анимация левитации и тени */
+        @keyframes floatNumber {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* Псевдоэлемент для тени под цифрой */
+        .level-number::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 50%;
+            filter: blur(4px);
+            animation: shadowPulse 3s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes shadowPulse {
+            0% { transform: translateX(-50%) scale(1); opacity: 0.6; }
+            50% { transform: translateX(-50%) scale(0.8); opacity: 0.3; }
+            100% { transform: translateX(-50%) scale(1); opacity: 0.6; }
         }
         
         .level-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
@@ -222,7 +251,7 @@
         .modal-xp-text { font-size: 12px; color: #aaa; text-align: right; margin-bottom: 20px; }
         .modal-desc { font-size: 14px; color: #ccc; line-height: 1.5; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; text-align: left; }
         
-        /* СТИЛИ ДЛЯ ДОСТИЖЕНИЙ В МОДАЛКЕ */
+        /* СТИЛИ ДЛЯ ДОСТИЖЕНИЙ (СТРАНИЦА) */
         .ach-list-item { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); text-align: left; opacity: 0.7; transition: 0.3s; }
         .ach-list-item.completed { opacity: 1; background: rgba(255,255,255,0.05); }
         
@@ -245,7 +274,7 @@
         .ach-reward-badge { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: bold; color: #ffd700; margin-top: 5px; }
         .ach-status-icon { font-size: 20px; margin-left: 10px; flex-shrink: 0; }
 
-        /* СТИЛИ ДЛЯ ЗАГОЛОВКОВ КАТЕГОРИЙ ДОСТИЖЕНИЙ */
+        /* ЗАГОЛОВКИ КАТЕГОРИЙ ДОСТИЖЕНИЙ */
         .ach-category-header {
             display: flex;
             align-items: center;
@@ -504,6 +533,21 @@
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;" id="episodes-list"></div>
     </div>
 
+    <!-- НОВЫЙ ЭКРАН ДОСТИЖЕНИЙ -->
+    <div id="screen-achievements" class="screen" style="padding: 20px;">
+        <button onclick="switchTab('profile')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+            <div class="ach-icon-big" style="width: 50px; height: 50px;">
+                <svg viewBox="0 0 55 55" fill="none"><use href="#ach-icon-crystal"></use></svg>
+            </div>
+            <div>
+                <h1 style="font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 2px;">Достижения</h1>
+                <p style="color: #888; font-size: 14px;">Получено: <span id="page-ach-earned">0</span> из <span id="page-ach-total">12</span></p>
+            </div>
+        </div>
+        <div id="achievements-list-container" style="margin-top: 15px;"></div>
+    </div>
+
     <div id="screen-profile" class="screen">
         <header class="profile-header"><h1>Профиль</h1></header>
         <div class="profile-container">
@@ -531,7 +575,6 @@
 
                 <div class="user-card-bottom">
                     <div class="level-row" onclick="openLevelModal()">
-                        <!-- ТЕПЕРЬ ПРОСТО КОНТЕЙНЕР ДЛЯ ЦИФРЫ -->
                         <div class="level-badge" id="profile-level-badge-container">
                             <span id="user-level" class="level-number">1</span>
                         </div>
@@ -549,7 +592,7 @@
                 <button class="tab-btn" id="tab-btn-settings" onclick="switchProfileTab('settings')"><svg><use href="#oa-settings"></use></svg> Настройки</button>
             </div>
 
-            <div class="achievements-card" id="profile-content-tab" onclick="openAchievementsModal()">
+            <div class="achievements-card" id="profile-content-tab" onclick="openAchievementsPage()">
                 <div class="ach-header">
                     <div class="ach-icon-big">
                         <svg viewBox="0 0 55 55" fill="none"><use href="#ach-icon-crystal"></use></svg>
@@ -587,7 +630,6 @@
             <button class="modal-close" onclick="closeModal('levelModal')"><svg><use href="#oa-close"></use></svg></button>
             
             <div class="modal-icon-large">
-                <!-- ТЕПЕРЬ ПРОСТО КОНТЕЙНЕР ДЛЯ ЦИФРЫ -->
                 <div class="level-badge modal-level-badge" id="modal-level-badge-container">
                     <span id="modal-icon-level" class="level-number">1</span>
                 </div>
@@ -603,16 +645,6 @@
                 📅 Ежедневный вход: +5 XP<br>
                 ⏱️ Время на сайте (за 1 час): +2 XP
             </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="achievementsModal" onclick="closeModal('achievementsModal')">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal('achievementsModal')"><svg><use href="#oa-close"></use></svg></button>
-            <div class="modal-icon-large"><svg><use href="#oa-achievement"></use></svg></div>
-            <div class="modal-title">Достижения</div>
-            <div class="modal-subtitle">Получено: <span id="modal-ach-earned">0</span> из <span id="modal-ach-total">12</span></div>
-            <div id="achievements-list-container" style="margin-top: 15px;"></div>
         </div>
     </div>
 
@@ -673,6 +705,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=140"></script>
+    <script src="app.js?v=141"></script>
 </body>
 </html>
