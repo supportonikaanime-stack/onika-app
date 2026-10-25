@@ -246,21 +246,19 @@
         .modal-desc { font-size: 14px; color: #ccc; line-height: 1.5; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; text-align: left; }
         
         /* СТИЛИ ДЛЯ ДОСТИЖЕНИЙ (СТРАНИЦА) */
-        .ach-list-item { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); text-align: left; opacity: 0.7; transition: 0.3s; }
-        .ach-list-item.completed { opacity: 1; background: rgba(255,255,255,0.05); }
+        .ach-list-item { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); text-align: left; opacity: 0.6; transition: 0.3s; }
+        .ach-list-item.completed { opacity: 1; background: rgba(255,255,255,0.08); }
         
-        .ach-list-item.common { border-color: rgba(200, 200, 200, 0.2); }
-        .ach-list-item.common.completed { border-color: #ccc; box-shadow: 0 0 15px rgba(200, 200, 200, 0.3); }
-        .ach-list-item.rare { border-color: rgba(0, 210, 255, 0.2); }
-        .ach-list-item.rare.completed { border-color: #00d2ff; box-shadow: 0 0 15px rgba(0, 210, 255, 0.3); }
-        .ach-list-item.epic { border-color: rgba(180, 74, 255, 0.2); }
-        .ach-list-item.epic.completed { border-color: #b44aff; box-shadow: 0 0 15px rgba(180, 74, 255, 0.4); }
-        .ach-list-item.legendary { border-color: rgba(255, 215, 0, 0.2); }
-        .ach-list-item.legendary.completed { border-color: #ffd700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+        /* ПОДСВЕТКА ПОЛУЧЕННЫХ ДОСТИЖЕНИЙ */
+        .ach-list-item.common.completed { border-color: rgba(200, 200, 200, 0.6); box-shadow: 0 0 15px rgba(200, 200, 200, 0.2); }
+        .ach-list-item.rare.completed { border-color: rgba(0, 210, 255, 0.8); box-shadow: 0 0 20px rgba(0, 210, 255, 0.3); }
+        .ach-list-item.epic.completed { border-color: rgba(180, 74, 255, 0.8); box-shadow: 0 0 20px rgba(180, 74, 255, 0.4); }
+        .ach-list-item.legendary.completed { border-color: rgba(255, 215, 0, 0.9); box-shadow: 0 0 25px rgba(255, 215, 0, 0.5); }
 
-        .ach-list-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; border-radius: 50%; }
+        .ach-list-icon { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; border-radius: 50%; }
         .ach-list-icon svg { width: 100%; height: 100%; }
-        .ach-list-icon img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+        /* УБРАН БЕЛЫЙ ФОН У КАРТИНОК */
+        .ach-list-icon img { width: 100%; height: 100%; object-fit: contain; }
         
         .ach-list-info { flex: 1; }
         .ach-list-info h4 { font-size: 14px; color: #fff; margin-bottom: 2px; }
@@ -703,6 +701,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=144"></script>
+    <script src="app.js?v=145"></script>
 </body>
 </html>
