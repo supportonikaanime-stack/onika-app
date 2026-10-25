@@ -182,7 +182,7 @@
         }
         
         /* ==========================================
-           БЕЙДЖ УРОВНЯ (ПРОФИЛЬ)
+           БЕЙДЖ УРОВНЯ (ПРОФИЛЬ) С 3D ЦИФРОЙ
            ========================================== */
         .level-row { 
             display: flex; 
@@ -216,7 +216,7 @@
             position: absolute;
             width: 100%;
             height: 100%;
-            background: radial-gradient(circle, rgba(91, 91, 255, 0.5) 0%, transparent 70%);
+            background: radial-gradient(circle, var(--aura-color, rgba(91, 91, 255, 0.5)) 0%, transparent 70%);
             border-radius: 50%;
             animation: auraPulse 2.5s infinite alternate;
             z-index: 0;
@@ -233,7 +233,6 @@
             width: 100%;
             height: 100%;
             z-index: 1;
-            filter: drop-shadow(0 0 12px rgba(91, 91, 255, 0.9)) drop-shadow(0 0 25px rgba(180, 74, 255, 0.6));
             animation: spinEmblem 25s linear infinite;
         }
         
@@ -242,25 +241,19 @@
             to { transform: rotate(360deg); }
         }
         
-        /* ЦИФРА 20px С ЧЕТКОЙ ЧЕРНОЙ ОБВОДКОЙ (Цвет будет меняться через JS) */
+        /* 3D ЦИФРА (Базовый стиль, цвет будет меняться в JS) */
         .level-badge span { 
             position: relative;
             z-index: 2;
-            font-size: 20px; 
+            font-size: 22px; 
             font-weight: 900; 
-            color: #fff; /* Будет переопределено в JS */
+            color: #fff; 
             line-height: 1; 
             display: flex; 
             align-items: center; 
             justify-content: center;
-            /* Имитация четкой обводки с помощью теней */
-            text-shadow: 
-                -1.5px -1.5px 0 #000,  
-                 1.5px -1.5px 0 #000,
-                -1.5px  1.5px 0 #000,
-                 1.5px  1.5px 0 #000,
-                 0 2px 4px rgba(0,0,0,0.8);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* 3D эффект будет задан через JS (тени) */
         }
         
         .level-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
@@ -330,11 +323,10 @@
         .modal-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
         
         /* ==========================================
-           МОДАЛЬНОЕ ОКНО: ИКОНКА 120x120
+           МОДАЛЬНОЕ ОКНО: ИКОНКА 120x120 С 3D ЦИФРОЙ
            ========================================== */
         .modal-icon-large { display: flex; justify-content: center; margin-bottom: 15px; color: var(--primary); position: relative; }
         
-        /* Отдельный класс для большого бейджа в модалке */
         .modal-level-badge {
             width: 120px !important;
             height: 120px !important;
@@ -345,7 +337,7 @@
         }
         
         .modal-level-badge span {
-            font-size: 42px !important; /* Большая цифра */
+            font-size: 46px !important; /* Большая цифра */
         }
         /* ========================================== */
         
@@ -856,6 +848,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=133"></script>
+    <script src="app.js?v=134"></script>
 </body>
 </html>
