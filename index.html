@@ -276,8 +276,34 @@
         .settings-card { border-color: rgba(255,255,255,0.05); cursor: default; }
         
         .ach-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
-        .ach-icon-big { width: 60px; height: 60px; background: rgba(255, 215, 0, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #ffd700; }
-        .ach-icon-big svg { width: 32px; height: 32px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        
+        /* ==========================================
+           НОВАЯ ИКОНКА ДОСТИЖЕНИЙ (SVG МЕДАЛЬ)
+           ========================================== */
+        .ach-icon-big { 
+            width: 60px; 
+            height: 60px; 
+            background: rgba(255, 215, 0, 0.05); /* Легкий фон */
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            position: relative;
+        }
+        
+        .ach-icon-big svg {
+            width: 100%;
+            height: 100%;
+            /* Анимация пульсации */
+            animation: achPulse 3s infinite alternate;
+        }
+
+        @keyframes achPulse {
+            0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(155, 92, 255, 0.5)); }
+            100% { transform: scale(1.05); filter: drop-shadow(0 0 8px rgba(155, 92, 255, 0.8)); }
+        }
+        /* ========================================== */
+        
         .ach-info h3 { font-size: 14px; color: #ffd700; margin-bottom: 4px; letter-spacing: 1px; }
         .ach-info p { font-size: 13px; color: #888; }
         .ach-total { margin-left: auto; font-size: 16px; font-weight: bold; color: #fff; }
@@ -650,7 +676,44 @@
 
             <div class="achievements-card" id="profile-content-tab" onclick="openAchievementsModal()">
                 <div class="ach-header">
-                    <div class="ach-icon-big"><svg><use href="#oa-achievement"></use></svg></div>
+                    <!-- НОВАЯ ИКОНКА ДОСТИЖЕНИЙ -->
+                    <div class="ach-icon-big">
+                        <svg viewBox="0 0 55 55" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <defs>
+                            <linearGradient id="orbitalGradient" x1="8" y1="8" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+                              <stop stop-color="#55C7FF"/>
+                              <stop offset="0.5" stop-color="#9B5CFF"/>
+                              <stop offset="1" stop-color="#FF4FD8"/>
+                            </linearGradient>
+                            <linearGradient id="crystalGradient" x1="27.5" y1="13" x2="27.5" y2="39" gradientUnits="userSpaceOnUse">
+                              <stop stop-color="#FFF6B0"/>
+                              <stop offset="0.45" stop-color="#FFD166"/>
+                              <stop offset="1" stop-color="#FF65C3"/>
+                            </linearGradient>
+                            <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+                              <feGaussianBlur stdDeviation="1.7" result="blur"/>
+                              <feMerge>
+                                <feMergeNode in="blur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                              </feMerge>
+                            </filter>
+                          </defs>
+                          <circle cx="27.5" cy="25" r="20" stroke="url(#orbitalGradient)" stroke-width="2" opacity=".3" filter="url(#glow)"/>
+                          <ellipse cx="27.5" cy="25" rx="21" ry="9" transform="rotate(-25 27.5 25)" stroke="url(#orbitalGradient)" stroke-width="1.4" opacity=".9"/>
+                          <ellipse cx="27.5" cy="25" rx="21" ry="9" transform="rotate(25 27.5 25)" stroke="#9B5CFF" stroke-width=".8" opacity=".45"/>
+                          <circle cx="27.5" cy="25" r="15.5" fill="#111321" stroke="url(#orbitalGradient)" stroke-width="2.2" filter="url(#glow)"/>
+                          <circle cx="27.5" cy="25" r="12.5" stroke="#BFA7FF" stroke-width=".8" opacity=".65"/>
+                          <path d="M27.5 12.5 L36 20 L33.5 34 L27.5 40 L21.5 34 L19 20 Z" fill="url(#crystalGradient)" stroke="#FFF4B0" stroke-width="1" stroke-linejoin="round" filter="url(#glow)"/>
+                          <path d="M27.5 12.5 V40" stroke="#FFFBE0" stroke-width=".8" opacity=".8"/>
+                          <path d="M19 20 L27.5 24 L36 20" stroke="#FFFBE0" stroke-width=".8" opacity=".8"/>
+                          <path d="M21.5 34 L27.5 24 L33.5 34" stroke="#FFB7E8" stroke-width=".8" opacity=".8"/>
+                          <circle cx="27.5" cy="24" r="2" fill="#FFFBE0" filter="url(#glow)"/>
+                          <path d="M20 38 L18.5 51 L25 47.5 L28 51 L29 38 Z" fill="url(#orbitalGradient)" stroke="#9B5CFF" stroke-width="1.1" stroke-linejoin="round"/>
+                          <path d="M26 38 L27 51 L30 47.5 L36.5 51 L35 38 Z" fill="url(#orbitalGradient)" stroke="#FF4FD8" stroke-width="1.1" stroke-linejoin="round"/>
+                          <path d="M8 13 L9.2 16 L12 17 L9.2 18 L8 21 L6.8 18 L4 17 L6.8 16 Z" fill="#55C7FF"/>
+                          <path d="M47 10 L48 12.5 L50.5 13.5 L48 14.5 L47 17 L46 14.5 L43.5 13.5 L46 12.5 Z" fill="#FF4FD8"/>
+                        </svg>
+                    </div>
                     <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p><span id="ach-points">0</span> очков</p></div>
                     <div class="ach-total"><span id="ach-earned">0</span>/50</div>
                 </div>
@@ -850,6 +913,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=136"></script>
+    <script src="app.js?v=137"></script>
 </body>
 </html>
