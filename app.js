@@ -213,6 +213,16 @@ function copyMyId() {
     navigator.clipboard.writeText(MY_TG_ID).then(() => { showToast('📋 ID скопирован!'); }).catch(() => {});
 }
 
+// НОВАЯ ФУНКЦИЯ: Получение цвета уровня
+function getLevelColor(level) {
+    // 1) салатовый, 2) голубой 3)Алый 4) Фиолетовый 5)Золотой
+    if (level <= 20) return '#a3ff00'; // Салатовый
+    if (level <= 40) return '#00d2ff'; // Голубой
+    if (level <= 60) return '#ff3d00'; // Алый
+    if (level <= 80) return '#b44aff'; // Фиолетовый
+    return '#ffd700'; // Золотой
+}
+
 async function loadProfileData() {
     let stats = getStats(); 
     
@@ -271,9 +281,29 @@ async function loadProfileData() {
     const progressPercent = xpCurrentLevel; 
     let rankTitle = LEVEL_TITLES[Math.min(currentLevel - 1, 99)]; 
     
+    // ПОЛУЧАЕМ ЦВЕТ ДЛЯ ТЕКУЩЕГО УРОВНЯ
+    const levelColor = getLevelColor(currentLevel);
+
     setElText('user-level', currentLevel); 
     setElText('user-level-text', currentLevel); 
     setElText('user-rank', rankTitle); 
+
+    // МЕНЯЕМ ЦВЕТ ЦИФРЫ И ИКОНКИ В ПРОФИЛЕ
+    const profileLevelNum = document.getElementById('user-level');
+    if (profileLevelNum) {
+        profileLevelNum.style.color = levelColor;
+        // Убираем жесткую черную обводку, делаем мягкую тень в цвет
+        profileLevelNum.style.textShadow = `0 0 10px ${levelColor}80, 0 0 20px ${levelColor}50, 0 2px 4px rgba(0,0,0,0.8)`;
+    }
+    
+    const profileLevelSvg = document.getElementById('profile-level-svg');
+    if (profileLevelSvg) {
+        profileLevelSvg.style.filter = `drop-shadow(0 0 15px ${levelColor}) drop-shadow(0 0 30px ${levelColor}80)`;
+    }
+    const profileBadgeContainer = document.getElementById('profile-level-badge-container');
+    if (profileBadgeContainer) {
+        profileBadgeContainer.style.setProperty('--aura-color', levelColor);
+    }
 
     setElText('user-xp-current', xpCurrentLevel); 
     setElText('user-xp-next', 100);
@@ -290,8 +320,21 @@ async function loadProfileData() {
     setElWidth('modal-xp-bar', progressPercent + '%'); 
     setElText('modal-ach-earned', stats.unlockedAchievements.length); 
     
-    // Обновляем цифру в модальном окне
-    setElText('modal-icon-level', currentLevel); 
+    // Обновляем цифру и цвет в модальном окне
+    const modalLevelNum = document.getElementById('modal-icon-level');
+    if (modalLevelNum) {
+        modalLevelNum.textContent = currentLevel;
+        modalLevelNum.style.color = levelColor;
+        modalLevelNum.style.textShadow = `0 0 15px ${levelColor}, 0 0 30px ${levelColor}80, 0 2px 4px rgba(0,0,0,0.8)`;
+    }
+    const modalLevelSvg = document.getElementById('modal-level-svg');
+    if (modalLevelSvg) {
+        modalLevelSvg.style.filter = `drop-shadow(0 0 15px ${levelColor}) drop-shadow(0 0 30px ${levelColor}80)`;
+    }
+    const modalBadgeContainer = document.getElementById('modal-level-badge-container');
+    if (modalBadgeContainer) {
+        modalBadgeContainer.style.setProperty('--aura-color', levelColor);
+    }
 
     const nextAch = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id)); 
     if (nextAch) {
@@ -543,6 +586,8 @@ async function openFriendProfile(id, name) {
             if (b) friendBanner = `style="background-image: url('${safeUrl(b.image_url)}');"`;
         }
 
+        const friendColor = getLevelColor(lvl);
+
         container.innerHTML = `
             <div class="user-card-wrapper">
                 <div class="user-card-top" ${friendBanner}>
@@ -643,7 +688,7 @@ async function openFriendProfile(id, name) {
                                 <circle cx="500" cy="215" r="5"/><circle cx="785" cy="500" r="5"/><circle cx="500" cy="785" r="5"/><circle cx="215" cy="500" r="5"/><circle cx="700" cy="300" r="3"/><circle cx="300" cy="700" r="3"/>
                               </g>
                             </svg>
-                            <span>${lvl}</span>
+                            <span style="color: ${friendColor}; text-shadow: 0 0 10px ${friendColor}80, 0 0 20px ${friendColor}50, 0 2px 4px rgba(0,0,0,0.8);">${lvl}</span>
                         </div>
                         <div class="level-info">
                             <div class="level-title">УРОВЕНЬ ${lvl} <span class="rank">${rank}</span></div>
