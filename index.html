@@ -242,13 +242,13 @@
             to { transform: rotate(360deg); }
         }
         
-        /* ЦИФРА 20px С ЧЕТКОЙ ЧЕРНОЙ ОБВОДКОЙ */
+        /* ЦИФРА 20px С ЧЕТКОЙ ЧЕРНОЙ ОБВОДКОЙ (Цвет будет меняться через JS) */
         .level-badge span { 
             position: relative;
             z-index: 2;
             font-size: 20px; 
             font-weight: 900; 
-            color: #fff; 
+            color: #fff; /* Будет переопределено в JS */
             line-height: 1; 
             display: flex; 
             align-items: center; 
@@ -554,9 +554,9 @@
                 <!-- НИЖНЯЯ ЧАСТЬ (Уровень) -->
                 <div class="user-card-bottom">
                     <div class="level-row" onclick="openLevelModal()">
-                        <div class="level-badge">
+                        <div class="level-badge" id="profile-level-badge-container">
                             <!-- ТВОЙ SVG -->
-                            <svg class="level-emblem" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+                            <svg class="level-emblem" id="profile-level-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
                               <defs>
                                 <radialGradient id="glow" cx="50%" cy="50%">
                                   <stop offset="0" stop-color="#fff" stop-opacity=".95"/>
@@ -691,8 +691,8 @@
             
             <!-- ИКОНКА 120x120 -->
             <div class="modal-icon-large">
-                <div class="level-badge modal-level-badge">
-                    <svg class="level-emblem" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+                <div class="level-badge modal-level-badge" id="modal-level-badge-container">
+                    <svg class="level-emblem" id="modal-level-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
                       <defs>
                         <radialGradient id="glow" cx="50%" cy="50%">
                           <stop offset="0" stop-color="#fff" stop-opacity=".95"/>
@@ -856,6 +856,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=132"></script>
+    <script src="app.js?v=133"></script>
 </body>
 </html>
