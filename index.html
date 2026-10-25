@@ -8,6 +8,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
+        /* Подключаем скругленный шрифт */
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@900&display=swap');
+
         :root { --bg: #0a0a0f; --card: #1a1a20; --primary: #5b5bff; --text: #fff; --muted: #888; --nav-h: 65px; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background: var(--bg); color: var(--text); padding-bottom: calc(var(--nav-h) + 20px); overflow-x: hidden; }
@@ -201,7 +204,7 @@
         .level-row:active { transform: scale(0.98); }
         
         .level-badge { 
-            width: 72px; /* Увеличено до 72 */
+            width: 72px; 
             height: 72px; 
             display: flex; 
             align-items: center; 
@@ -241,18 +244,18 @@
             to { transform: rotate(360deg); }
         }
         
-        /* ЦИФРА 20px (3D будет задан через JS) */
+        /* ЦИФРА 20px (БЕЗ ТЕНИ, ЖИРНАЯ, СКРУГЛЕННАЯ) */
         .level-badge span { 
             position: relative;
             z-index: 2;
-            font-size: 20px; /* Вернули 20px */
+            font-size: 20px; 
             font-weight: 900; 
+            font-family: 'Nunito', 'Arial Rounded MT Bold', sans-serif;
             color: #fff; 
             line-height: 1; 
             display: flex; 
             align-items: center; 
             justify-content: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         .level-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
@@ -847,6 +850,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=135"></script>
+    <script src="app.js?v=136"></script>
 </body>
 </html>
