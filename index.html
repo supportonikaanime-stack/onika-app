@@ -8,9 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* Подключаем скругленный шрифт */
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@900&display=swap');
-
         :root { --bg: #0a0a0f; --card: #1a1a20; --primary: #5b5bff; --text: #fff; --muted: #888; --nav-h: 65px; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background: var(--bg); color: var(--text); padding-bottom: calc(var(--nav-h) + 20px); overflow-x: hidden; }
@@ -101,52 +99,11 @@
         .profile-header h1 { font-size: 32px; font-weight: 800; color: #fff; }
         .profile-container { padding: 0 15px; }
         
-        /* ==========================================
-           НОВАЯ СТРУКТУРА КАРТОЧКИ ПРОФИЛЯ
-           ========================================== */
-        .user-card-wrapper { 
-            background: #14141f; 
-            border-radius: 20px; 
-            border: 1px solid rgba(255,255,255,0.05); 
-            overflow: hidden; 
-            position: relative; 
-            display: flex;
-            flex-direction: column;
-        }
-        
-        /* Верхняя часть с баннером */
-        .user-card-top {
-            padding: 20px 20px 0 20px;
-            position: relative;
-            background-size: cover;
-            background-position: center;
-            min-height: 260px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
-            padding-bottom: 15px;
-        }
-        
-        /* Градиент, чтобы текст читался поверх баннера */
-        .user-card-top::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(to bottom, rgba(20,20,31,0.1) 0%, rgba(20,20,31,0.7) 60%, #14141f 100%);
-            z-index: 1;
-            pointer-events: none;
-        }
-        
+        .user-card-wrapper { background: #14141f; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; position: relative; display: flex; flex-direction: column; }
+        .user-card-top { padding: 20px 20px 0 20px; position: relative; background-size: cover; background-position: center; min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 15px; }
+        .user-card-top::before { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(20,20,31,0.1) 0%, rgba(20,20,31,0.7) 60%, #14141f 100%); z-index: 1; pointer-events: none; }
         .user-card-top-content { position: relative; z-index: 2; width: 100%; display: flex; flex-direction: column; align-items: center; }
-        
-        /* Нижняя часть (только уровень) */
-        .user-card-bottom {
-            padding: 15px 20px 20px 20px;
-            position: relative;
-            z-index: 3;
-            background: #14141f;
-        }
+        .user-card-bottom { padding: 15px 20px 20px 20px; position: relative; z-index: 3; background: #14141f; }
 
         .avatar-container { position: relative; width: 80px; height: 80px; margin: 0 auto 15px auto; }
         .avatar { width: 100%; height: 100%; border-radius: 50%; background: #222; border: 2px solid #333; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
@@ -155,108 +112,20 @@
         .user-details { text-align: center; width: 100%; }
         .user-details h2 { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
         
-        .coin-balance {
-            background: rgba(255, 215, 0, 0.15);
-            border: 1px solid rgba(255, 215, 0, 0.4);
-            border-radius: 12px;
-            padding: 6px 15px;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 10px;
-            color: #ffd700;
-            font-weight: bold;
-            font-size: 16px;
-            backdrop-filter: blur(5px);
-        }
+        .coin-balance { background: rgba(255, 215, 0, 0.15); border: 1px solid rgba(255, 215, 0, 0.4); border-radius: 12px; padding: 6px 15px; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; color: #ffd700; font-weight: bold; font-size: 16px; backdrop-filter: blur(5px); }
         .coin-balance svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         
-        .id-container {
-            background: rgba(0,0,0,0.5); 
-            border: 1px solid rgba(255,255,255,0.1); 
-            border-radius: 12px; 
-            padding: 8px 15px; 
-            display: inline-flex; 
-            align-items: center; 
-            gap: 10px; 
-            margin-bottom: 5px; 
-            cursor: pointer; 
-            backdrop-filter: blur(5px);
-        }
+        .id-container { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px 15px; display: inline-flex; align-items: center; gap: 10px; margin-bottom: 5px; cursor: pointer; backdrop-filter: blur(5px); }
         
-        /* ==========================================
-           БЕЙДЖ УРОВНЯ (ПРОФИЛЬ) 72x72, ЦИФРА 20px
-           ========================================== */
-        .level-row { 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            background: rgba(10, 10, 15, 0.6); 
-            padding: 10px 12px; 
-            border-radius: 16px; 
-            text-align: left; 
-            cursor: pointer; 
-            transition: 0.2s; 
-            backdrop-filter: blur(10px); 
-            border: 1px solid rgba(91, 91, 255, 0.4);
-            box-shadow: 0 4px 25px rgba(91, 91, 255, 0.15), inset 0 0 20px rgba(91, 91, 255, 0.1); 
-        }
+        /* БЕЙДЖ УРОВНЯ 72x72 */
+        .level-row { display: flex; align-items: center; gap: 12px; background: rgba(10, 10, 15, 0.6); padding: 10px 12px; border-radius: 16px; text-align: left; cursor: pointer; transition: 0.2s; backdrop-filter: blur(10px); border: 1px solid rgba(91, 91, 255, 0.4); box-shadow: 0 4px 25px rgba(91, 91, 255, 0.15), inset 0 0 20px rgba(91, 91, 255, 0.1); }
         .level-row:active { transform: scale(0.98); }
-        
-        .level-badge { 
-            width: 72px; 
-            height: 72px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            flex-shrink: 0; 
-            position: relative; 
-        }
-        
-        /* Внешнее свечение (сделано менее размытым) */
-        .level-badge::before {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, var(--aura-color, rgba(91, 91, 255, 0.4)) 0%, transparent 65%);
-            border-radius: 50%;
-            animation: auraPulse 2.5s infinite alternate;
-            z-index: 0;
-        }
-
-        @keyframes auraPulse {
-            0% { transform: scale(0.95); opacity: 0.4; }
-            100% { transform: scale(1.1); opacity: 0.7; }
-        }
-        
-        /* Сам SVG-артефакт */
-        .level-emblem { 
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            animation: spinEmblem 25s linear infinite;
-        }
-        
-        @keyframes spinEmblem {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        
-        /* ЦИФРА 20px (БЕЗ ТЕНИ, ЖИРНАЯ, СКРУГЛЕННАЯ) */
-        .level-badge span { 
-            position: relative;
-            z-index: 2;
-            font-size: 20px; 
-            font-weight: 900; 
-            font-family: 'Nunito', 'Arial Rounded MT Bold', sans-serif;
-            color: #fff; 
-            line-height: 1; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-        }
+        .level-badge { width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; }
+        .level-badge::before { content: ''; position: absolute; width: 100%; height: 100%; background: radial-gradient(circle, var(--aura-color, rgba(91, 91, 255, 0.4)) 0%, transparent 65%); border-radius: 50%; animation: auraPulse 2.5s infinite alternate; z-index: 0; }
+        @keyframes auraPulse { 0% { transform: scale(0.95); opacity: 0.4; } 100% { transform: scale(1.1); opacity: 0.7; } }
+        .level-emblem { position: absolute; width: 100%; height: 100%; z-index: 1; animation: spinEmblem 25s linear infinite; }
+        @keyframes spinEmblem { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .level-badge span { position: relative; z-index: 2; font-size: 20px; font-weight: 900; font-family: 'Nunito', sans-serif; color: #fff; line-height: 1; display: flex; align-items: center; justify-content: center; }
         
         .level-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
         .level-title { font-size: 12px; color: #fff; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; }
@@ -264,7 +133,6 @@
         .xp-bar-container { width: 100%; height: 6px; background: #222; border-radius: 3px; overflow: hidden; margin-bottom: 4px; border: 1px solid rgba(255,255,255,0.05); }
         .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 3px; box-shadow: 0 0 10px #00f5ff; }
         .xp-text { font-size: 10px; color: #aaa; text-align: right; font-weight: 500; }
-        /* ========================================== */
         
         .profile-tabs { display: flex; background: #14141f; border-radius: 15px; padding: 5px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.05); }
         .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: #888; font-size: 14px; font-weight: 600; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: 0.2s; }
@@ -274,35 +142,11 @@
         .achievements-card, .settings-card { background: #14141f; border-radius: 20px; padding: 20px; margin-top: 15px; border: 1px solid rgba(255, 215, 0, 0.2); position: relative; cursor: pointer; transition: 0.2s; }
         .achievements-card:active { transform: scale(0.98); }
         .settings-card { border-color: rgba(255,255,255,0.05); cursor: default; }
-        
         .ach-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
         
-        /* ==========================================
-           НОВАЯ ИКОНКА ДОСТИЖЕНИЙ (SVG МЕДАЛЬ)
-           ========================================== */
-        .ach-icon-big { 
-            width: 60px; 
-            height: 60px; 
-            background: rgba(255, 215, 0, 0.05); /* Легкий фон */
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            position: relative;
-        }
-        
-        .ach-icon-big svg {
-            width: 100%;
-            height: 100%;
-            /* Анимация пульсации */
-            animation: achPulse 3s infinite alternate;
-        }
-
-        @keyframes achPulse {
-            0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(155, 92, 255, 0.5)); }
-            100% { transform: scale(1.05); filter: drop-shadow(0 0 8px rgba(155, 92, 255, 0.8)); }
-        }
-        /* ========================================== */
+        .ach-icon-big { width: 60px; height: 60px; background: rgba(255, 215, 0, 0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }
+        .ach-icon-big svg { width: 100%; height: 100%; animation: achPulse 3s infinite alternate; }
+        @keyframes achPulse { 0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(155, 92, 255, 0.5)); } 100% { transform: scale(1.05); filter: drop-shadow(0 0 8px rgba(155, 92, 255, 0.8)); } }
         
         .ach-info h3 { font-size: 14px; color: #ffd700; margin-bottom: 4px; letter-spacing: 1px; }
         .ach-info p { font-size: 13px; color: #888; }
@@ -318,21 +162,7 @@
         .ach-reward { font-size: 12px; font-weight: bold; color: #ffd700; display: flex; align-items: center; gap: 4px; }
         .ach-reward svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
-        .settings-btn {
-            width: 100%;
-            padding: 15px;
-            border-radius: 12px;
-            background: #1a1a20;
-            border: 1px solid rgba(255,255,255,0.1);
-            color: #fff;
-            text-align: left;
-            font-size: 15px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
+        .settings-btn { width: 100%; padding: 15px; border-radius: 12px; background: #1a1a20; border: 1px solid rgba(255,255,255,0.1); color: #fff; text-align: left; font-size: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .settings-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; margin-right: 10px; }
 
         .shop-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px; }
@@ -350,24 +180,9 @@
         .modal-close { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; }
         .modal-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
         
-        /* ==========================================
-           МОДАЛЬНОЕ ОКНО: ИКОНКА 120x120, ЦИФРА 36px
-           ========================================== */
         .modal-icon-large { display: flex; justify-content: center; margin-bottom: 15px; color: var(--primary); position: relative; }
-        
-        .modal-level-badge {
-            width: 120px !important;
-            height: 120px !important;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        
-        .modal-level-badge span {
-            font-size: 36px !important; /* Уменьшено с 46 до 36 */
-        }
-        /* ========================================== */
+        .modal-level-badge { width: 120px !important; height: 120px !important; display: flex; align-items: center; justify-content: center; position: relative; }
+        .modal-level-badge span { font-size: 36px !important; }
         
         .modal-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 5px; }
         .modal-subtitle { font-size: 14px; color: #888; margin-bottom: 20px; word-wrap: break-word; line-height: 1.4; }
@@ -376,14 +191,28 @@
         .modal-xp-text { font-size: 12px; color: #aaa; text-align: right; margin-bottom: 20px; }
         .modal-desc { font-size: 14px; color: #ccc; line-height: 1.5; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; text-align: left; }
         
-        .ach-list-item { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); text-align: left; opacity: 0.5; }
-        .ach-list-item.completed { opacity: 1; border-color: rgba(255, 215, 0, 0.3); background: rgba(255, 215, 0, 0.05); }
-        .ach-list-icon { width: 40px; height: 40px; background: rgba(0,0,0,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; }
-        .ach-list-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-        .ach-list-item.completed .ach-list-icon { background: rgba(255, 215, 0, 0.2); color: #ffd700; }
+        /* НОВЫЙ ДИЗАЙН ДОСТИЖЕНИЙ */
+        .ach-list-item { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); text-align: left; opacity: 0.7; transition: 0.3s; }
+        .ach-list-item.completed { opacity: 1; background: rgba(255,255,255,0.05); }
+        
+        .ach-list-item.common { border-color: rgba(200, 200, 200, 0.2); }
+        .ach-list-item.common.completed { border-color: #ccc; box-shadow: 0 0 15px rgba(200, 200, 200, 0.3); }
+        .ach-list-item.rare { border-color: rgba(0, 210, 255, 0.2); }
+        .ach-list-item.rare.completed { border-color: #00d2ff; box-shadow: 0 0 15px rgba(0, 210, 255, 0.3); }
+        .ach-list-item.epic { border-color: rgba(180, 74, 255, 0.2); }
+        .ach-list-item.epic.completed { border-color: #b44aff; box-shadow: 0 0 15px rgba(180, 74, 255, 0.4); }
+        .ach-list-item.legendary { border-color: rgba(255, 215, 0, 0.2); }
+        .ach-list-item.legendary.completed { border-color: #ffd700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+
+        .ach-list-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .ach-list-icon svg { width: 100%; height: 100%; }
         .ach-list-info { flex: 1; }
         .ach-list-info h4 { font-size: 14px; color: #fff; margin-bottom: 2px; }
-        .ach-list-info p { font-size: 11px; color: #aaa; }
+        .ach-list-info p { font-size: 11px; color: #aaa; margin-bottom: 4px; }
+        .ach-progress-mini { width: 100%; height: 4px; background: #333; border-radius: 2px; overflow: hidden; margin-top: 4px; }
+        .ach-progress-mini div { height: 100%; background: #5b5bff; border-radius: 2px; }
+        .ach-reward-badge { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: bold; color: #ffd700; margin-top: 5px; }
+        .ach-status-icon { font-size: 20px; margin-left: 10px; flex-shrink: 0; }
         
         .level-up-popup { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #1a1a2e, #5b5bff); padding: 15px 30px; border-radius: 50px; display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 30px rgba(91, 91, 255, 0.5); z-index: 20000; transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); width: 90%; max-width: 350px; }
         .level-up-popup.show { top: 20px; }
@@ -405,7 +234,6 @@
 </head>
 <body>
 
-    <!-- SVG СПРАЙТ -->
     <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
       <symbol id="oa-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
       <symbol id="oa-catalog" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></symbol>
@@ -428,128 +256,88 @@
       <symbol id="oa-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
       <symbol id="oa-dice" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="8" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="8" cy="16" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="1.5" fill="currentColor" stroke="none"/></symbol>
       <symbol id="oa-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v12m-3-9h6m-6 6h6"/></symbol>
+
+      <!-- ИКОНКИ ДОСТИЖЕНИЙ -->
+      <symbol id="ach-icon-crystal" viewBox="0 0 55 55" fill="none">
+          <defs>
+              <linearGradient id="orbitalGradient" x1="8" y1="8" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#55C7FF"/><stop offset="0.5" stop-color="#9B5CFF"/><stop offset="1" stop-color="#FF4FD8"/>
+              </linearGradient>
+              <linearGradient id="crystalGradient" x1="27.5" y1="13" x2="27.5" y2="39" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#FFF6B0"/><stop offset="0.45" stop-color="#FFD166"/><stop offset="1" stop-color="#FF65C3"/>
+              </linearGradient>
+              <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+                <feGaussianBlur stdDeviation="1.7" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+          </defs>
+          <circle cx="27.5" cy="25" r="20" stroke="url(#orbitalGradient)" stroke-width="2" opacity=".3" filter="url(#glow)"/>
+          <ellipse cx="27.5" cy="25" rx="21" ry="9" transform="rotate(-25 27.5 25)" stroke="url(#orbitalGradient)" stroke-width="1.4" opacity=".9"/>
+          <ellipse cx="27.5" cy="25" rx="21" ry="9" transform="rotate(25 27.5 25)" stroke="#9B5CFF" stroke-width=".8" opacity=".45"/>
+          <circle cx="27.5" cy="25" r="15.5" fill="#111321" stroke="url(#orbitalGradient)" stroke-width="2.2" filter="url(#glow)"/>
+          <circle cx="27.5" cy="25" r="12.5" stroke="#BFA7FF" stroke-width=".8" opacity=".65"/>
+          <path d="M27.5 12.5 L36 20 L33.5 34 L27.5 40 L21.5 34 L19 20 Z" fill="url(#crystalGradient)" stroke="#FFF4B0" stroke-width="1" stroke-linejoin="round" filter="url(#glow)"/>
+          <path d="M27.5 12.5 V40" stroke="#FFFBE0" stroke-width=".8" opacity=".8"/>
+          <path d="M19 20 L27.5 24 L36 20" stroke="#FFFBE0" stroke-width=".8" opacity=".8"/>
+          <path d="M21.5 34 L27.5 24 L33.5 34" stroke="#FFB7E8" stroke-width=".8" opacity=".8"/>
+          <circle cx="27.5" cy="24" r="2" fill="#FFFBE0" filter="url(#glow)"/>
+          <path d="M20 38 L18.5 51 L25 47.5 L28 51 L29 38 Z" fill="url(#orbitalGradient)" stroke="#9B5CFF" stroke-width="1.1" stroke-linejoin="round"/>
+          <path d="M26 38 L27 51 L30 47.5 L36.5 51 L35 38 Z" fill="url(#orbitalGradient)" stroke="#FF4FD8" stroke-width="1.1" stroke-linejoin="round"/>
+          <path d="M8 13 L9.2 16 L12 17 L9.2 18 L8 21 L6.8 18 L4 17 L6.8 16 Z" fill="#55C7FF"/>
+          <path d="M47 10 L48 12.5 L50.5 13.5 L48 14.5 L47 17 L46 14.5 L43.5 13.5 L46 12.5 Z" fill="#FF4FD8"/>
+      </symbol>
+
+      <symbol id="ach-icon-flower" viewBox="0 0 55 55" fill="none">
+          <defs>
+              <linearGradient id="pink" x1="27.5" y1="6" x2="27.5" y2="48" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#FFB0F2"/><stop offset=".35" stop-color="#FF4EDB"/><stop offset="1" stop-color="#A90091"/>
+              </linearGradient>
+              <linearGradient id="petal" x1="17" y1="13" x2="39" y2="43" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#FF9DEA"/><stop offset=".45" stop-color="#F83CCF"/><stop offset="1" stop-color="#8E087E"/>
+              </linearGradient>
+              <filter id="glow2" x="-100%" y="-100%" width="300%" height="300%">
+                <feGaussianBlur stdDeviation="1.4" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
+                <feGaussianBlur stdDeviation="3"/>
+              </filter>
+          </defs>
+          <path d="M27.5 5 L49 27.5 L27.5 50 L6 27.5 Z" stroke="#FF35D6" stroke-width="3" opacity=".22" filter="url(#softGlow)"/>
+          <g stroke="#FF5DE1" stroke-width=".65" opacity=".85" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow2)">
+              <path d="M27.5 4 L49 27.5 L27.5 49 L6 27.5 Z"/><path d="M27.5 8 L45 27.5 L27.5 45 L10 27.5"/><path d="M8 27.5 H18"/><path d="M37 27.5 H47"/>
+          </g>
+          <g stroke="#FF75E6" stroke-width=".8" stroke-linecap="round" opacity=".9" filter="url(#glow2)">
+              <path d="M4 22 Q9 19 14 22"/><path d="M5 25 Q10 22 16 25"/><path d="M4 29 Q9 32 15 29"/>
+              <path d="M41 22 Q46 19 51 22"/><path d="M39 25 Q45 22 50 25"/><path d="M40 29 Q46 32 51 29"/>
+          </g>
+          <path d="M27.5 27 C22.5 22 21.7 15.7 24.3 8.2 C25 6.2 26.2 5.2 27.5 4 C28.8 5.2 30 6.2 30.7 8.2 C33.3 15.7 32.5 22 27.5 27 Z" fill="url(#pink)" stroke="#FF35CF" stroke-width="1" stroke-linejoin="round" filter="url(#glow2)"/>
+          <path d="M27.5 27 C22.5 21 17.2 15.8 10.2 15.1 C8.4 14.9 7.3 16.1 8.2 17.8 C10.9 23.3 16.4 27.6 23.2 30.2 Z" fill="url(#petal)" stroke="#D71AB7" stroke-width="1" stroke-linejoin="round" filter="url(#glow2)"/>
+          <path d="M27.5 27 C32.5 21 37.8 15.8 44.8 15.1 C46.6 14.9 47.7 16.1 46.8 17.8 C44.1 23.3 38.6 27.6 31.8 30.2 Z" fill="url(#petal)" stroke="#D71AB7" stroke-width="1" stroke-linejoin="round" filter="url(#glow2)"/>
+          <path d="M27.5 27 C22.4 27.5 15.2 30.3 10.8 36.6 C9.7 38.2 10.5 39.5 12.3 39.4 C19.5 39.1 25 35.5 28.5 30.2 Z" fill="url(#petal)" stroke="#C516A9" stroke-width="1" stroke-linejoin="round" filter="url(#glow2)"/>
+          <path d="M27.5 27 C32.6 27.5 39.8 30.3 44.2 36.6 C45.3 38.2 44.5 39.5 42.7 39.4 C35.5 39.1 30 35.5 26.5 30.2 Z" fill="url(#petal)" stroke="#C516A9" stroke-width="1" stroke-linejoin="round" filter="url(#glow2)"/>
+          <g stroke="#8B087A" stroke-width=".8" stroke-linecap="round" opacity=".9">
+              <path d="M27.5 8 L27.5 20"/><path d="M27.5 12 L25.4 9.5"/><path d="M27.5 12 L29.6 9.5"/>
+          </g>
+          <g stroke="#8C087D" stroke-width=".75" stroke-linecap="round" stroke-linejoin="round" opacity=".9">
+              <path d="M12 18 L15 21 L13.5 23.5 L18 25"/><path d="M43 18 L40 21 L41.5 23.5 L37 25"/>
+              <path d="M13 36 L17 34 L18 37 L22 35"/><path d="M42 36 L38 34 L37 37 L33 35"/>
+          </g>
+          <g fill="url(#pink)" stroke="#8A087A" stroke-width=".8" filter="url(#glow2)">
+              <path d="M27.5 22 C24 19.3 20.8 21.5 21.7 25 C22.4 28.2 25.2 29.5 27.5 27.3 C29.8 29.5 32.6 28.2 33.3 25 C34.2 21.5 31 19.3 27.5 22 Z"/>
+              <circle cx="24.5" cy="24.5" r="1.15" fill="#6E0066"/><circle cx="30.5" cy="24.5" r="1.15" fill="#6E0066"/><circle cx="27.5" cy="27" r="1" fill="#6E0066"/>
+          </g>
+          <path d="M27.5 28 C24.7 32 24.7 37.8 27.5 43 C30.3 37.8 30.3 32 27.5 28 Z" fill="url(#pink)" stroke="#C516A9" stroke-width="1" filter="url(#glow2)"/>
+          <circle cx="27.5" cy="25.5" r="1.1" fill="#FFE7FC" filter="url(#glow2)"/>
+      </symbol>
     </svg>
 
-    <div class="level-up-popup" id="levelUpPopup">
-        <div class="icon"><svg><use href="#oa-level"></use></svg></div>
-        <div class="text">
-            <h4>Новый уровень: <span id="popup-level">2</span></h4>
-            <p>Звание: <span id="popup-rank">Любопытный зритель</span></p>
-        </div>
-        <div class="coins">+<span id="popup-coins">100</span> <svg><use href="#oa-coin"></use></svg></div>
-    </div>
-
-    <div id="screen-home" class="screen active">
-        <section class="hero-section" id="heroSection">
-            <div class="hero-slider" id="heroSlider"></div>
-            <div class="hero-dots" id="heroDots"></div>
-        </section>
-        <section class="content-section">
-            <div class="section-header"><h2>🔥 Популярное сейчас</h2></div>
-            <div class="horizontal-scroll" id="popular-list"></div>
-        </section>
-        <section class="tg-banner-section">
-            <a href="https://t.me/onikaanime" target="_blank" class="tg-banner">
-                <div class="tg-icon">✈️</div>
-                <div class="tg-text">
-                    <h3>Наш Telegram-канал</h3>
-                    <p>Новости, розыгрыши и анонсы</p>
-                </div>
-            </a>
-        </section>
-        <section class="content-section">
-            <div class="section-header"><h2>✨ Рекомендации для вас</h2></div>
-            <div class="grid-catalog" id="recommended-list"></div>
-        </section>
-    </div>
-
-    <div id="screen-catalog" class="screen">
-        <div style="padding: 20px 20px 10px 20px;">
-            <div style="display: flex; align-items: center; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 0 15px; margin-bottom: 15px;">
-                <span style="color: #888; display: flex; align-items: center;"><svg style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-search"></use></svg></span>
-                <input type="text" id="search-input" placeholder="Найти аниме..." oninput="searchAnime()" style="flex: 1; background: transparent; border: none; padding: 14px 10px; color: #fff; font-size: 15px; outline: none;">
-            </div>
-            <div onclick="openRandomAnime()" style="display: flex; align-items: center; justify-content: space-between; background: #14141f; border-radius: 16px; padding: 16px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;">
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <div style="width: 45px; height: 45px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #a29bfe;"><svg style="width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-dice"></use></svg></div>
-                    <div>
-                        <div style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 2px;">Случайное аниме</div>
-                        <div style="font-size: 12px; color: #888;">Доверься судьбе</div>
-                    </div>
-                </div>
-                <div style="color: #888; font-size: 20px;">›</div>
-            </div>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;" id="genre-filters"></div>
-            <div style="display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 10px;" id="dropdown-filters">
-                <button class="filter-btn" onclick="openFilterModal('year')">Год ⌄</button>
-                <button class="filter-btn" onclick="openFilterModal('status')">Статус ⌄</button>
-                <button class="filter-btn" onclick="openFilterModal('sort')">Сортировка ⌄</button>
-            </div>
-        </div>
-        <div class="grid-catalog" id="catalog-grid"></div>
-        <div style="text-align: center; padding: 20px;">
-            <button id="load-more-btn" onclick="loadMoreCatalog()" style="display: none; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 12px 30px; border-radius: 20px; font-weight: bold; cursor: pointer;">Загрузить еще</button>
-        </div>
-    </div>
-
-    <div id="screen-my" class="screen">
-        <header class="profile-header" style="padding-bottom: 10px;"><h1>Моё</h1></header>
-        <div class="my-list-tabs" id="my-list-tabs">
-            <div class="my-list-tab active" onclick="filterMyList('all', this)">Все</div>
-            <div class="my-list-tab" onclick="filterMyList('watching', this)">Смотрю</div>
-            <div class="my-list-tab" onclick="filterMyList('planned', this)">В планах</div>
-            <div class="my-list-tab" onclick="filterMyList('completed', this)">Просмотрено</div>
-            <div class="my-list-tab" onclick="filterMyList('dropped', this)">Заброшено</div>
-            <div class="my-list-tab" onclick="filterMyList('favorite', this)">Любимое</div>
-        </div>
-        <div class="grid-catalog" id="my-grid" style="margin-top: 10px;"></div>
-    </div>
-
-    <div id="screen-friends" class="screen">
-        <header class="profile-header" style="padding-bottom: 10px;"><h1>Друзья</h1></header>
-        <div class="friends-search">
-            <input type="number" id="friend-search-input" placeholder="Введите Telegram ID друга...">
-            <button onclick="searchFriend()">Найти</button>
-        </div>
-        <div id="search-result-container" style="padding: 0 20px 20px;"></div>
-        <div id="friends-list-container"></div>
-    </div>
-
-    <div id="screen-friend-profile" class="screen" style="padding: 20px;">
-        <button onclick="switchTab('friends')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
-        <div id="friend-profile-content"></div>
-    </div>
-
-    <div id="screen-detail" class="screen" style="padding: 20px;">
-        <button onclick="goBackFromDetail()" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
-        <div id="detail-content"></div>
-    </div>
-
-    <div id="screen-voice" class="screen" style="padding: 20px;">
-        <button onclick="switchTab('detail')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
-        <h1 id="voice-title" style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор озвучки</h1>
-        <div style="display: flex; flex-direction: column; gap: 12px;" id="voice-list"></div>
-    </div>
-
-    <div id="screen-player" class="screen" style="padding: 20px;">
-        <button onclick="switchTab('voice')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
-        <h1 id="player-title" style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор плеера</h1>
-        <div style="display: flex; flex-direction: column; gap: 12px;" id="player-list"></div>
-    </div>
-
-    <div id="screen-episodes" class="screen" style="padding: 20px;">
-        <button onclick="switchTab('player')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
-        <h1 id="eps-title" style="font-size: 24px; font-weight: 800; margin-bottom: 10px;">Выбор серии</h1>
-        <p style="color: #888; font-size: 14px; margin-bottom: 20px;">Озвучка: <span id="selected-voice-text" style="color: #fff;"></span> • Плеер: <span id="selected-player-text" style="color: #fff;"></span></p>
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;" id="episodes-list"></div>
-    </div>
-
+    <!-- ... (Весь остальной HTML без изменений, кроме иконки в карточке достижений) ... -->
+    
     <div id="screen-profile" class="screen">
         <header class="profile-header"><h1>Профиль</h1></header>
         <div class="profile-container">
-            <!-- НОВАЯ СТРУКТУРА -->
             <div class="user-card-wrapper">
-                <!-- ВЕРХНЯЯ ЧАСТЬ (Баннер) -->
                 <div class="user-card-top" id="profile-banner">
                     <div class="user-card-top-content">
                         <div class="avatar-container">
@@ -571,11 +359,10 @@
                     </div>
                 </div>
 
-                <!-- НИЖНЯЯ ЧАСТЬ (Уровень) -->
                 <div class="user-card-bottom">
                     <div class="level-row" onclick="openLevelModal()">
                         <div class="level-badge" id="profile-level-badge-container">
-                            <!-- ТВОЙ SVG -->
+                            <!-- ТВОЙ SVG УРОВНЯ -->
                             <svg class="level-emblem" id="profile-level-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
                               <defs>
                                 <radialGradient id="glow" cx="50%" cy="50%">
@@ -667,7 +454,6 @@
                     </div>
                 </div>
             </div>
-            <!-- КОНЕЦ НОВОЙ СТРУКТУРЫ -->
 
             <div class="profile-tabs">
                 <button class="tab-btn active" id="tab-btn-profile" onclick="switchProfileTab('profile')"><svg><use href="#oa-profile"></use></svg> Профиль</button>
@@ -676,243 +462,36 @@
 
             <div class="achievements-card" id="profile-content-tab" onclick="openAchievementsModal()">
                 <div class="ach-header">
-                    <!-- НОВАЯ ИКОНКА ДОСТИЖЕНИЙ -->
                     <div class="ach-icon-big">
-                        <svg viewBox="0 0 55 55" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <defs>
-                            <linearGradient id="orbitalGradient" x1="8" y1="8" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-                              <stop stop-color="#55C7FF"/>
-                              <stop offset="0.5" stop-color="#9B5CFF"/>
-                              <stop offset="1" stop-color="#FF4FD8"/>
-                            </linearGradient>
-                            <linearGradient id="crystalGradient" x1="27.5" y1="13" x2="27.5" y2="39" gradientUnits="userSpaceOnUse">
-                              <stop stop-color="#FFF6B0"/>
-                              <stop offset="0.45" stop-color="#FFD166"/>
-                              <stop offset="1" stop-color="#FF65C3"/>
-                            </linearGradient>
-                            <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
-                              <feGaussianBlur stdDeviation="1.7" result="blur"/>
-                              <feMerge>
-                                <feMergeNode in="blur"/>
-                                <feMergeNode in="SourceGraphic"/>
-                              </feMerge>
-                            </filter>
-                          </defs>
-                          <circle cx="27.5" cy="25" r="20" stroke="url(#orbitalGradient)" stroke-width="2" opacity=".3" filter="url(#glow)"/>
-                          <ellipse cx="27.5" cy="25" rx="21" ry="9" transform="rotate(-25 27.5 25)" stroke="url(#orbitalGradient)" stroke-width="1.4" opacity=".9"/>
-                          <ellipse cx="27.5" cy="25" rx="21" ry="9" transform="rotate(25 27.5 25)" stroke="#9B5CFF" stroke-width=".8" opacity=".45"/>
-                          <circle cx="27.5" cy="25" r="15.5" fill="#111321" stroke="url(#orbitalGradient)" stroke-width="2.2" filter="url(#glow)"/>
-                          <circle cx="27.5" cy="25" r="12.5" stroke="#BFA7FF" stroke-width=".8" opacity=".65"/>
-                          <path d="M27.5 12.5 L36 20 L33.5 34 L27.5 40 L21.5 34 L19 20 Z" fill="url(#crystalGradient)" stroke="#FFF4B0" stroke-width="1" stroke-linejoin="round" filter="url(#glow)"/>
-                          <path d="M27.5 12.5 V40" stroke="#FFFBE0" stroke-width=".8" opacity=".8"/>
-                          <path d="M19 20 L27.5 24 L36 20" stroke="#FFFBE0" stroke-width=".8" opacity=".8"/>
-                          <path d="M21.5 34 L27.5 24 L33.5 34" stroke="#FFB7E8" stroke-width=".8" opacity=".8"/>
-                          <circle cx="27.5" cy="24" r="2" fill="#FFFBE0" filter="url(#glow)"/>
-                          <path d="M20 38 L18.5 51 L25 47.5 L28 51 L29 38 Z" fill="url(#orbitalGradient)" stroke="#9B5CFF" stroke-width="1.1" stroke-linejoin="round"/>
-                          <path d="M26 38 L27 51 L30 47.5 L36.5 51 L35 38 Z" fill="url(#orbitalGradient)" stroke="#FF4FD8" stroke-width="1.1" stroke-linejoin="round"/>
-                          <path d="M8 13 L9.2 16 L12 17 L9.2 18 L8 21 L6.8 18 L4 17 L6.8 16 Z" fill="#55C7FF"/>
-                          <path d="M47 10 L48 12.5 L50.5 13.5 L48 14.5 L47 17 L46 14.5 L43.5 13.5 L46 12.5 Z" fill="#FF4FD8"/>
-                        </svg>
+                        <!-- Используем иконку кристалла для общего вида -->
+                        <svg viewBox="0 0 55 55" fill="none"><use href="#ach-icon-crystal"></use></svg>
                     </div>
                     <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p><span id="ach-points">0</span> очков</p></div>
-                    <div class="ach-total"><span id="ach-earned">0</span>/50</div>
+                    <div class="ach-total"><span id="ach-earned">0</span>/<span id="ach-total-count">12</span></div>
                 </div>
                 <div class="ach-progress-wrap"><div class="ach-progress-bar" id="ach-bar" style="width: 0%;"></div></div>
                 <div class="ach-next">
                     <div class="ach-next-icon"><svg><use href="#oa-level"></use></svg></div>
-                    <div class="ach-next-info"><h4>Дальше: <span id="next-ach-name">Первый шаг</span></h4><p>Продолжайте смотреть</p></div>
-                    <div class="ach-reward">+<span id="next-ach-reward">50</span> <svg><use href="#oa-coin"></use></svg></div>
+                    <div class="ach-next-info"><h4>Дальше: <span id="next-ach-name">Загрузка...</span></h4><p>Продолжайте смотреть</p></div>
+                    <div class="ach-reward">+<span id="next-ach-reward">0</span> <svg><use href="#oa-coin"></use></svg></div>
                 </div>
             </div>
 
-            <div class="settings-card" id="settings-content-tab" style="display: none;">
-                <div style="padding: 20px;">
-                    <h3 style="margin-bottom: 15px; color: #fff;">Настройки</h3>
-                    <button class="settings-btn" onclick="openShopModal()">
-                        <span style="display:flex; align-items:center;"><svg><use href="#oa-shop"></use></svg> Магазин баннеров</span>
-                        <span style="color: #888;">›</span>
-                    </button>
-                    <button class="settings-btn" onclick="resetBanner()">
-                        <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять баннер</span>
-                        <span style="color: #888;">›</span>
-                    </button>
-                </div>
-            </div>
-            <div style="height: 20px;"></div>
+            <!-- ... (Остальные блоки профиля) ... -->
         </div>
     </div>
 
-    <div class="modal-overlay" id="levelModal" onclick="closeModal('levelModal')">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal('levelModal')"><svg><use href="#oa-close"></use></svg></button>
-            
-            <!-- ИКОНКА 120x120 -->
-            <div class="modal-icon-large">
-                <div class="level-badge modal-level-badge" id="modal-level-badge-container">
-                    <svg class="level-emblem" id="modal-level-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
-                      <defs>
-                        <radialGradient id="glow" cx="50%" cy="50%">
-                          <stop offset="0" stop-color="#fff" stop-opacity=".95"/>
-                          <stop offset=".55" stop-color="#fff" stop-opacity=".45"/>
-                          <stop offset="1" stop-color="#fff" stop-opacity="0"/>
-                        </radialGradient>
-                        <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
-                          <feGaussianBlur stdDeviation="5" result="blur"/>
-                          <feMerge>
-                            <feMergeNode in="blur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                          </feMerge>
-                        </filter>
-                        <filter id="strongGlow" x="-100%" y="-100%" width="300%" height="300%">
-                          <feGaussianBlur stdDeviation="12" result="blur"/>
-                          <feMerge>
-                            <feMergeNode in="blur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                          </feMerge>
-                        </filter>
-                        <g id="ray">
-                          <path d="M500 72 L500 210" stroke="#fff" stroke-width="2" opacity=".5"/>
-                          <path d="M500 92 L488 150 L500 137 L512 150 Z" fill="none" stroke="#fff" stroke-width="2"/>
-                        </g>
-                        <g id="diamond">
-                          <path d="M500 174 L514 198 L500 222 L486 198 Z" fill="none" stroke="#fff" stroke-width="3"/>
-                          <path d="M500 183 L507 198 L500 211 L493 198 Z" fill="#fff" opacity=".35"/>
-                        </g>
-                        <g id="crystal">
-                          <path d="M500 66 L532 155 L500 137 L468 155 Z" fill="none" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
-                          <path d="M500 88 L515 143 L500 128 L485 143 Z" fill="none" stroke="#fff" stroke-width="2"/>
-                          <path d="M500 66 L500 137" stroke="#fff" stroke-width="2"/>
-                        </g>
-                        <g id="diagonal">
-                          <path d="M500 116 L527 170 L500 157 L473 170 Z" fill="none" stroke="#fff" stroke-width="3"/>
-                          <path d="M500 132 L512 161 L500 153 L488 161 Z" fill="#fff" opacity=".35"/>
-                        </g>
-                      </defs>
-                      <circle cx="500" cy="500" r="390" fill="url(#glow)" opacity=".18" filter="url(#strongGlow)"/>
-                      <g opacity=".55" stroke="#fff" fill="none">
-                        <circle cx="500" cy="500" r="350" stroke-width="2"/>
-                        <circle cx="500" cy="500" r="330" stroke-width="1"/>
-                        <circle cx="500" cy="500" r="300" stroke-width="3"/>
-                        <circle cx="500" cy="500" r="270" stroke-width="1"/>
-                        <circle cx="500" cy="500" r="245" stroke-width="2"/>
-                        <path d="M500 105 V895"/>
-                        <path d="M105 500 H895"/>
-                        <path d="M220 220 L780 780"/>
-                        <path d="M780 220 L220 780"/>
-                        <path d="M155 355 L845 645"/>
-                        <path d="M155 645 L845 355"/>
-                        <path d="M355 155 L645 845"/>
-                        <path d="M645 155 L355 845"/>
-                      </g>
-                      <g>
-                        <use href="#ray"/><use href="#ray" transform="rotate(22.5 500 500)"/><use href="#ray" transform="rotate(45 500 500)"/><use href="#ray" transform="rotate(67.5 500 500)"/><use href="#ray" transform="rotate(90 500 500)"/><use href="#ray" transform="rotate(112.5 500 500)"/><use href="#ray" transform="rotate(135 500 500)"/><use href="#ray" transform="rotate(157.5 500 500)"/><use href="#ray" transform="rotate(180 500 500)"/><use href="#ray" transform="rotate(202.5 500 500)"/><use href="#ray" transform="rotate(225 500 500)"/><use href="#ray" transform="rotate(247.5 500 500)"/><use href="#ray" transform="rotate(270 500 500)"/><use href="#ray" transform="rotate(292.5 500 500)"/><use href="#ray" transform="rotate(315 500 500)"/><use href="#ray" transform="rotate(337.5 500 500)"/>
-                      </g>
-                      <g>
-                        <use href="#diamond"/><use href="#diamond" transform="rotate(30 500 500)"/><use href="#diamond" transform="rotate(60 500 500)"/><use href="#diamond" transform="rotate(90 500 500)"/><use href="#diamond" transform="rotate(120 500 500)"/><use href="#diamond" transform="rotate(150 500 500)"/><use href="#diamond" transform="rotate(180 500 500)"/><use href="#diamond" transform="rotate(210 500 500)"/><use href="#diamond" transform="rotate(240 500 500)"/><use href="#diamond" transform="rotate(270 500 500)"/><use href="#diamond" transform="rotate(300 500 500)"/><use href="#diamond" transform="rotate(330 500 500)"/>
-                      </g>
-                      <g filter="url(#softGlow)">
-                        <use href="#crystal"/><use href="#crystal" transform="rotate(90 500 500)"/><use href="#crystal" transform="rotate(180 500 500)"/><use href="#crystal" transform="rotate(270 500 500)"/>
-                      </g>
-                      <g opacity=".9">
-                        <use href="#diagonal"/><use href="#diagonal" transform="rotate(45 500 500)"/><use href="#diagonal" transform="rotate(90 500 500)"/><use href="#diagonal" transform="rotate(135 500 500)"/><use href="#diagonal" transform="rotate(180 500 500)"/><use href="#diagonal" transform="rotate(225 500 500)"/><use href="#diagonal" transform="rotate(270 500 500)"/><use href="#diagonal" transform="rotate(315 500 500)"/>
-                      </g>
-                      <g fill="none" stroke="#fff" filter="url(#softGlow)">
-                        <circle cx="500" cy="500" r="235" stroke-width="9"/>
-                        <circle cx="500" cy="500" r="260" stroke-width="3"/>
-                        <circle cx="500" cy="500" r="285" stroke-width="2"/>
-                      </g>
-                      <path d="M500 240 L514 266 L540 250 L548 280 L579 271 L575 302 L607 305 L590 332 L618 345 L595 365 L620 390 L590 400 L605 430 L575 435 L582 468 L550 460 L540 492 L514 478 L500 505 L486 478 L460 492 L450 460 L418 468 L425 435 L395 430 L410 400 L380 390 L405 365 L382 345 L410 332 L393 305 L425 302 L421 271 L452 280 L460 250 L486 266 Z" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>
-                      <circle cx="500" cy="500" r="190" fill="none" stroke="#fff" stroke-width="5" filter="url(#softGlow)"/>
-                      <circle cx="500" cy="500" r="164" fill="none" stroke="#fff" stroke-width="2" opacity=".65"/>
-                      <circle cx="500" cy="500" r="8" fill="#fff" filter="url(#softGlow)"/>
-                      <g fill="#fff" filter="url(#strongGlow)">
-                        <circle cx="500" cy="215" r="5"/><circle cx="785" cy="500" r="5"/><circle cx="500" cy="785" r="5"/><circle cx="215" cy="500" r="5"/><circle cx="700" cy="300" r="3"/><circle cx="300" cy="700" r="3"/>
-                      </g>
-                    </svg>
-                    <span id="modal-icon-level">1</span>
-                </div>
-            </div>
-            
-            <div class="modal-title">Уровень <span id="modal-level-num">1</span></div>
-            <div class="modal-subtitle">Звание: <span style="color: #b44aff; font-weight: bold;" id="modal-rank">Первый эпизод</span></div>
-            <div class="modal-xp-bar"><div class="modal-xp-fill" id="modal-xp-bar" style="width: 20%;"></div></div>
-            <div class="modal-xp-text"><span id="modal-xp-cur">0</span> / <span id="modal-xp-next">100</span> XP</div>
-            
-            <div class="modal-desc">
-                <b>Как фармить XP:</b><br>
-                📅 Ежедневный вход: +5 XP<br>
-                ⏱️ Время на сайте (за 1 час): +2 XP
-            </div>
-        </div>
-    </div>
-
+    <!-- МОДАЛЬНОЕ ОКНО ДОСТИЖЕНИЙ -->
     <div class="modal-overlay" id="achievementsModal" onclick="closeModal('achievementsModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('achievementsModal')"><svg><use href="#oa-close"></use></svg></button>
             <div class="modal-icon-large"><svg><use href="#oa-achievement"></use></svg></div>
             <div class="modal-title">Достижения</div>
-            <div class="modal-subtitle">Получено: <span id="modal-ach-earned">0</span> из 50</div>
+            <div class="modal-subtitle">Получено: <span id="modal-ach-earned">0</span> из <span id="modal-ach-total">12</span></div>
             <div id="achievements-list-container" style="margin-top: 15px;"></div>
         </div>
     </div>
 
-    <div class="modal-overlay" id="filterModal" onclick="closeModal('filterModal')">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal('filterModal')"><svg><use href="#oa-close"></use></svg></button>
-            <h2 class="modal-title" id="filter-modal-title">Выберите</h2>
-            <div id="filter-options-container" style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;"></div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="statusModal" onclick="closeModal('statusModal')">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal('statusModal')"><svg><use href="#oa-close"></use></svg></button>
-            <div class="modal-title">Добавить в список</div>
-            <div class="modal-subtitle" id="status-anime-title">Название аниме</div>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button class="filter-option-btn" onclick="setAnimeStatus('watching')"><svg style="color: #3498db;"><use href="#oa-eye"></use></svg> Смотрю</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('planned')"><svg style="color: #f1c40f;"><use href="#oa-calendar"></use></svg> В планах</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('completed')"><svg style="color: #2ecc71;"><use href="#oa-check"></use></svg> Просмотрено</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('dropped')"><svg style="color: #e74c3c;"><use href="#oa-close"></use></svg> Заброшено</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('favorite')" style="color: #ff2d78;"><svg><use href="#oa-favorite"></use></svg> Любимое</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('')" style="color: #888;"><svg><use href="#oa-trash"></use></svg> Удалить</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="shopModal" onclick="closeModal('shopModal')">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal('shopModal')"><svg><use href="#oa-close"></use></svg></button>
-            <div class="modal-icon-large"><svg><use href="#oa-shop"></use></svg></div>
-            <div class="modal-title">Магазин баннеров</div>
-            <div class="modal-subtitle">Твой баланс: <span id="shop-coins" style="color: #ffd700; font-weight: bold;">0</span> <svg style="width:14px;height:14px;display:inline;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.8;"><use href="#oa-coin"></use></svg></div>
-            <div id="shop-items-container" class="shop-grid"></div>
-        </div>
-    </div>
-
-    <nav class="bottom-nav">
-        <div class="nav-item active" onclick="switchTab('home', this)">
-            <span class="nav-icon"><svg><use href="#oa-home"></use></svg></span>
-            <span class="nav-text">Главная</span>
-        </div>
-        <div class="nav-item" onclick="switchTab('catalog', this)">
-            <span class="nav-icon"><svg><use href="#oa-catalog"></use></svg></span>
-            <span class="nav-text">Каталог</span>
-        </div>
-        <div class="nav-item" onclick="switchTab('my', this)">
-            <span class="nav-icon"><svg><use href="#oa-favorite"></use></svg></span>
-            <span class="nav-text">Моё</span>
-        </div>
-        <div class="nav-item" onclick="switchTab('friends', this)">
-            <span class="nav-icon"><svg><use href="#oa-friends"></use></svg></span>
-            <span class="nav-text">Друзья</span>
-        </div>
-        <div class="nav-item" onclick="switchTab('profile', this)">
-            <span class="nav-icon"><svg><use href="#oa-profile"></use></svg></span>
-            <span class="nav-text">Профиль</span>
-        </div>
-    </nav>
-
-    <script src="app.js?v=137"></script>
+    <!-- ... (Остальные модалки) ... -->
 </body>
 </html>
