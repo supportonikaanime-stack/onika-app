@@ -114,7 +114,7 @@
         }
 
         .avatar-container { position: relative; width: 80px; height: 80px; margin: 0 auto 15px auto; }
-        .avatar { width: 100%; height: 100%; border-radius: 50%; background: #222; border: 2px solid #333; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .avatar { width: 100%; height: 100%; border-radius: 50%; background: #222; border: 2px solid #333; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5); position: relative; z-index: 2; }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
 
         .user-details { text-align: center; width: 100%; }
@@ -332,6 +332,65 @@
         .nav-icon { width: 24px; height: 24px; margin-bottom: 4px; }
         .nav-icon svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         .nav-text { font-size: 11px; font-weight: 500; }
+
+        /* ==========================================
+           CSS ЭФФЕКТЫ ДЛЯ АВАТАРКИ
+           ========================================== */
+           
+        /* 1. Неоновое синее свечение */
+        .effect-neon-blue .avatar {
+            box-shadow: 0 0 10px #00d2ff, 0 0 20px #00d2ff, 0 0 40px #00d2ff;
+            border-color: #00d2ff;
+            animation: pulse-neon-blue 2s infinite alternate;
+        }
+        @keyframes pulse-neon-blue {
+            0% { box-shadow: 0 0 10px #00d2ff, 0 0 20px #00d2ff; }
+            100% { box-shadow: 0 0 15px #00d2ff, 0 0 30px #00d2ff, 0 0 50px #00d2ff; }
+        }
+
+        /* 2. Кровавая аура (красное свечение) */
+        .effect-blood-red .avatar {
+            box-shadow: 0 0 15px #ff0000, 0 0 30px #ff0000;
+            border-color: #ff0000;
+            animation: pulse-red 1.5s infinite alternate;
+        }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000; }
+            100% { box-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000, 0 0 60px #ff0000; }
+        }
+
+        /* 3. Золотая легенда (желтое свечение) */
+        .effect-gold .avatar {
+            box-shadow: 0 0 15px #ffd700, 0 0 30px #ffd700;
+            border-color: #ffd700;
+            animation: pulse-gold 3s infinite alternate;
+        }
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700; }
+            100% { box-shadow: 0 0 20px #ffd700, 0 0 40px #ffd700, 0 0 60px #ffd700; }
+        }
+
+        /* 4. Пламя (оранжевое свечение) */
+        .effect-fire .avatar {
+            box-shadow: 0 0 15px #ff4500, 0 0 30px #ff8c00;
+            border-color: #ff4500;
+            animation: pulse-fire 1s infinite alternate;
+        }
+        @keyframes pulse-fire {
+            0% { box-shadow: 0 0 10px #ff4500, 0 0 20px #ff8c00; }
+            100% { box-shadow: 0 0 25px #ff4500, 0 0 45px #ff8c00, 0 0 65px #ff4500; }
+        }
+
+        /* 5. Звездная пыль (фиолетовое мерцание) */
+        .effect-stars .avatar {
+            box-shadow: 0 0 15px #b44aff, 0 0 30px #b44aff;
+            border-color: #b44aff;
+            animation: pulse-stars 2.5s infinite alternate;
+        }
+        @keyframes pulse-stars {
+            0% { box-shadow: 0 0 10px #b44aff, 0 0 20px #b44aff; filter: brightness(1); }
+            100% { box-shadow: 0 0 25px #b44aff, 0 0 50px #b44aff; filter: brightness(1.2); }
+        }
     </style>
 </head>
 <body>
@@ -586,7 +645,7 @@
             <div class="user-card-wrapper">
                 <div class="user-card-top" id="profile-banner">
                     <div class="user-card-top-content">
-                        <div class="avatar-container">
+                        <div class="avatar-container" id="avatar-effect-container">
                             <div class="avatar" id="tg-avatar"><span id="avatar-letter">?</span></div>
                         </div>
                         <div class="user-details">
@@ -660,6 +719,10 @@
                     </button>
                     <button class="settings-btn" onclick="resetTitle()">
                         <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять титул</span>
+                        <span style="color: #888;">›</span>
+                    </button>
+                    <button class="settings-btn" onclick="resetEffect()">
+                        <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять эффект</span>
                         <span style="color: #888;">›</span>
                     </button>
                 </div>
@@ -742,6 +805,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=155"></script>
+    <script src="app.js?v=156"></script>
 </body>
 </html>
