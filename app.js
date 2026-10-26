@@ -141,7 +141,7 @@ let previousScreen = 'catalog';
 let searchDebounceTimer;
 let currentShopTab = 'banners';
 
-// Переменные предпросмотра (используются в магазине)
+// Переменные предпросмотра
 let isPreviewMode = false;
 let previewItem = null;
 let savedStats = null;
@@ -188,7 +188,6 @@ function switchTab(tabName, element) {
     if (tabName === 'episodes') document.getElementById('eps-title').textContent = 'Выбор серии';
     if (tabName === 'friends') loadFriends();
     if (tabName === 'achievements') renderAchievementsPage(); 
-    if (tabName === 'shop') renderShopTab(currentShopTab);
 }
 
 function goBackFromDetail() {
@@ -230,12 +229,15 @@ function copyMyId() {
 async function loadProfileData() {
     let stats = getStats(); 
     
-    if (stats.active_banner_url) {
-        ACTIVE_BANNER_URL = stats.active_banner_url;
+    // ВАЖНО: если идёт предпросмотр — не трогаем ACTIVE_* переменные из stats
+    if (!isPreviewMode) {
+        if (stats.active_banner_url) {
+            ACTIVE_BANNER_URL = stats.active_banner_url;
+        }
     }
     
     // --- СИНХРОНИЗАЦИЯ ИЗ SUPABASE ---
-    if (MY_TG_ID && supabaseClient) {
+    if (MY_TG_ID && supabaseClient && !isPreviewMode) {
         try {
             const { data: dbUser } = await supabaseClient.from('users').select('*').eq('tg_id', MY_TG_ID).single();
             if (dbUser) {
@@ -251,7 +253,6 @@ async function loadProfileData() {
                     }
                 }
 
-                // ТИТУЛ
                 if (dbUser.active_title) {
                     const { data: titleData } = await supabaseClient.from('titles').select('*').eq('id', dbUser.active_title).single();
                     if (titleData) {
@@ -263,7 +264,6 @@ async function loadProfileData() {
                     stats.active_title = null;
                 }
 
-                // ЭФФЕКТ
                 if (dbUser.active_effect) {
                     const { data: effectData } = await supabaseClient.from('effects').select('*').eq('id', dbUser.active_effect).single();
                     if (effectData) {
@@ -275,7 +275,6 @@ async function loadProfileData() {
                     stats.active_effect = null;
                 }
 
-                // ЗНАЧОК
                 if (dbUser.active_badge) {
                     const { data: badgeData } = await supabaseClient.from('badges').select('image_url').eq('id', dbUser.active_badge).single();
                     if (badgeData) {
@@ -295,8 +294,7 @@ async function loadProfileData() {
     }
     
     const today = new Date().toDateString(); 
-    // Ежедневный вход
-    if (stats.lastVisit !== today) { 
+    if (stats.lastVisit !== today && !isPreviewMode) { 
         stats.daysStreak += 1; 
         stats.lastVisit = today; 
         stats.xp += 5; 
@@ -316,17 +314,11 @@ async function loadProfileData() {
     
     const bannerEl = document.getElementById('profile-banner');
     if (bannerEl) {
-        if (ACTIVE_BANNER_URL) {
-            bannerEl.style.backgroundImage = `url('${ACTIVE_BANNER_URL}')`;
-        } else {
-            bannerEl.style.backgroundImage = 'none';
-        }
+        bannerEl.style.backgroundImage = ACTIVE_BANNER_URL ? `url('${ACTIVE_BANNER_URL}')` : 'none';
     }
 
-    // ГЕНЕРАЦИЯ ЧАСТИЦ
     renderParticles();
 
-    // ЗНАЧОК
     const badgeEl = document.getElementById('user-badge-img');
     if (badgeEl) {
         if (ACTIVE_BADGE_URL) {
@@ -340,7 +332,6 @@ async function loadProfileData() {
     setElText('my-tg-id', MY_TG_ID || 'Нет ID');
     setElText('tg-name', MY_NAME);
 
-    // ОТОБРАЖЕНИЕ ТИТУЛА
     const titleContainer = document.getElementById('user-title-container');
     const titleEl = document.getElementById('user-active-title');
     
@@ -393,7 +384,7 @@ async function loadProfileData() {
         setElText('next-ach-reward', '0');
     }
 
-    syncProfileToDB();
+    if (!isPreviewMode) syncProfileToDB();
 }
 
 // ==========================================
@@ -435,6 +426,41 @@ function renderParticles() {
         }
 
         container.appendChild(span);
+    }
+}
+
+// ==========================================
+// ПРИМЕНЕНИЕ ВИЗУАЛА ПРЕДПРОСМОТРА
+// ==========================================
+function applyPreviewVisuals() {
+    const bannerEl = document.getElementById('profile-banner');
+    if (bannerEl) {
+        bannerEl.style.backgroundImage = ACTIVE_BANNER_URL ? `url('${ACTIVE_BANNER_URL}')` : 'none';
+    }
+
+    renderParticles();
+
+    const badgeEl = document.getElementById('user-badge-img');
+    if (badgeEl) {
+        if (ACTIVE_BADGE_URL) {
+            badgeEl.src = ACTIVE_BADGE_URL;
+            badgeEl.style.display = 'block';
+        } else {
+            badgeEl.style.display = 'none';
+        }
+    }
+
+    const titleContainer = document.getElementById('user-title-container');
+    const titleEl = document.getElementById('user-active-title');
+    if (titleContainer && titleEl) {
+        if (ACTIVE_TITLE_DATA) {
+            titleContainer.style.display = 'block';
+            titleEl.textContent = ACTIVE_TITLE_DATA.name;
+            titleEl.style.color = ACTIVE_TITLE_DATA.color || '#fff';
+            titleEl.style.border = `1px solid ${ACTIVE_TITLE_DATA.color || '#fff'}40`;
+        } else {
+            titleContainer.style.display = 'none';
+        }
     }
 }
 
@@ -517,7 +543,7 @@ async function renderBannersInShop(container) {
     }
 }
 
-// --- ФУНКЦИЯ ЗАПУСКА ПРЕДПРОСМОТРА ---
+// --- ЗАПУСК ПРЕДПРОСМОТРА ---
 function startPreview(type, item) {
     if (isPreviewMode) return; 
 
@@ -540,8 +566,31 @@ function startPreview(type, item) {
         ACTIVE_BADGE_URL = safeUrl(item.image_url);
     }
 
-    switchTab('profile'); 
+    // Переключаемся на экран профиля БЕЗ вызова loadProfileData
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const profileScreen = document.getElementById('screen-profile');
+    if (profileScreen) profileScreen.classList.add('active');
     
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const navItems = document.querySelectorAll('.nav-item');
+    if (navItems[4]) navItems[4].classList.add('active');
+
+    // Принудительно открываем вкладку "Профиль"
+    switchProfileTab('profile');
+
+    // Рисуем предпросмотр напрямую
+    applyPreviewVisuals();
+
+    // Заполняем базовые поля (без перезаписи ACTIVE_*)
+    const stats = getStats();
+    const currentLevel = Math.floor(stats.xp / 100) + 1; 
+    setElText('user-level', currentLevel); 
+    setElText('user-level-text', currentLevel); 
+    setElText('user-rank', LEVEL_TITLES[Math.min(currentLevel - 1, 99)]); 
+    setElText('user-xp-current', stats.xp % 100); 
+    setElText('user-coins', stats.coins || 0);
+
+    // Панель покупки
     const bar = document.getElementById('previewBar');
     const btn = document.getElementById('preview-btn-buy');
     
@@ -551,11 +600,7 @@ function startPreview(type, item) {
         btn.textContent = `Купить и надеть · ${item.price} 🪙`;
     }
     
-    if (getStats().coins < item.price) {
-        btn.style.opacity = '0.5';
-    } else {
-        btn.style.opacity = '1';
-    }
+    btn.style.opacity = getStats().coins < item.price ? '0.5' : '1';
 
     bar.classList.add('active');
 }
@@ -574,8 +619,14 @@ function cancelPreview() {
     previewItem = null;
     savedStats = null;
     
-    document.getElementById('previewBar').classList.remove('active');
-    loadProfileData(); 
+    const bar = document.getElementById('previewBar');
+    if (bar) bar.classList.remove('active');
+    
+    // Возвращаем в магазин
+    switchProfileTab('shop');
+    
+    // Откатываем визуал
+    applyPreviewVisuals();
 }
 
 async function executePreview() {
@@ -589,8 +640,11 @@ async function executePreview() {
         return;
     }
 
-    document.getElementById('previewBar').classList.remove('active');
+    const bar = document.getElementById('previewBar');
+    if (bar) bar.classList.remove('active');
+    
     isPreviewMode = false;
+    previewItem = null;
 
     if (type === 'banner') {
         await buyBanner(item.id, item.price);
@@ -598,7 +652,6 @@ async function executePreview() {
         await buyItem(type, item.id, item.price);
     }
     
-    previewItem = null;
     savedStats = null;
     loadProfileData();
 }
@@ -767,8 +820,6 @@ async function buyItem(type, itemId, price) {
         syncProfileToDB();
         showToast('✅ Покупка успешна!');
         
-        loadProfileData();
-        
         if (type === 'title') {
             await applyTitle(itemId);
         } else if (type === 'effect') {
@@ -776,6 +827,7 @@ async function buyItem(type, itemId, price) {
         } else if (type === 'badge') {
             await applyBadge(itemId);
         } else {
+            loadProfileData();
             renderShopTab(type + 's'); 
         }
 
@@ -796,29 +848,24 @@ async function applyTitle(titleId) {
         saveStats(stats);
         
         showToast('Титул надет!');
-        renderShopTab('titles');
         loadProfileData();
+        renderShopTab('titles');
     } catch(e) {
         console.error(e);
         showToast('Ошибка применения');
     }
 }
 
-// --- СНЯТИЕ ТИТУЛА ---
 async function resetTitle() {
     if (!supabaseClient) return;
     let stats = getStats();
-    
     try {
         await supabaseClient.from('users').update({ active_title: null }).eq('tg_id', MY_TG_ID);
         stats.active_title = null;
         saveStats(stats);
-        
         showToast('Титул снят');
         loadProfileData();
-    } catch(e) {
-        console.error(e);
-    }
+    } catch(e) { console.error(e); }
 }
 
 // --- ПРИМЕНЕНИЕ ЭФФЕКТА ---
@@ -832,29 +879,24 @@ async function applyEffect(effectId) {
         saveStats(stats);
         
         showToast('Эффект надет!');
-        renderShopTab('effects');
         loadProfileData();
+        renderShopTab('effects');
     } catch(e) {
         console.error(e);
         showToast('Ошибка применения');
     }
 }
 
-// --- СНЯТИЕ ЭФФЕКТА ---
 async function resetEffect() {
     if (!supabaseClient) return;
     let stats = getStats();
-    
     try {
         await supabaseClient.from('users').update({ active_effect: null }).eq('tg_id', MY_TG_ID);
         stats.active_effect = null;
         saveStats(stats);
-        
         showToast('Эффект снят');
         loadProfileData();
-    } catch(e) {
-        console.error(e);
-    }
+    } catch(e) { console.error(e); }
 }
 
 // --- ПРИМЕНЕНИЕ ЗНАЧКА ---
@@ -868,31 +910,25 @@ async function applyBadge(badgeId) {
         saveStats(stats);
         
         showToast('Значок надет!');
-        renderShopTab('badges');
         loadProfileData();
+        renderShopTab('badges');
     } catch(e) {
         console.error(e);
         showToast('Ошибка применения');
     }
 }
 
-// --- СНЯТИЕ ЗНАЧКА ---
 async function resetBadge() {
     if (!supabaseClient) return;
     let stats = getStats();
-    
     try {
         await supabaseClient.from('users').update({ active_badge: null }).eq('tg_id', MY_TG_ID);
         stats.active_badge = null;
         saveStats(stats);
-        
         showToast('Значок снят');
         loadProfileData();
-    } catch(e) {
-        console.error(e);
-    }
+    } catch(e) { console.error(e); }
 }
-
 
 async function buyBanner(bannerId, price) {
     let stats = getStats();
@@ -923,8 +959,8 @@ async function buyBanner(bannerId, price) {
         checkAchievements(stats);
 
         showToast('✅ Баннер получен!');
-        renderShopTab('banners');
         loadProfileData();
+        renderShopTab('banners');
 
     } catch(e) {
         console.error(e);
@@ -940,8 +976,7 @@ async function applyBanner(bannerId, imageUrl) {
     syncProfileToDB();
     
     ACTIVE_BANNER_URL = stats.active_banner_url;
-    const bannerEl = document.getElementById('profile-banner');
-    if (bannerEl) bannerEl.style.backgroundImage = `url('${ACTIVE_BANNER_URL}')`;
+    applyPreviewVisuals();
 
     showToast('Баннер применен!');
     renderShopTab('banners'); 
@@ -1077,7 +1112,6 @@ async function openFriendProfile(id, name) {
             if (b) friendBanner = `style="background-image: url('${safeUrl(b.image_url)}');"`;
         }
 
-        // ТИТУЛ
         let friendTitleHtml = '';
         if (friend.active_title) {
             const { data: t } = await supabaseClient.from('titles').select('*').eq('id', friend.active_title).single();
@@ -1086,14 +1120,12 @@ async function openFriendProfile(id, name) {
             }
         }
 
-        // ЭФФЕКТ
         let friendEffectClass = '';
         if (friend.active_effect) {
             const { data: e } = await supabaseClient.from('effects').select('css_class').eq('id', friend.active_effect).single();
             if (e) friendEffectClass = e.css_class;
         }
 
-        // ЗНАЧОК
         let friendBadgeHtml = '';
         if (friend.active_badge) {
             const { data: bd } = await supabaseClient.from('badges').select('image_url').eq('id', friend.active_badge).single();
@@ -1150,7 +1182,6 @@ async function openFriendProfile(id, name) {
             <button onclick="removeFriend(${friend.tg_id})" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">🗑️ Удалить из друзей</button>
         `;
 
-        // Запускаем генерацию частиц для друга
         setTimeout(() => {
             const fContainer = document.getElementById('friend-particle-container');
             if (fContainer && friendEffectClass) {
@@ -1465,7 +1496,6 @@ const RARITY_STYLES = {
 };
 
 const ACHIEVEMENTS = [
-    // --- Обычные (Common) ---
     { 
         id: 'c1', 
         name: "Киносеанс", 
@@ -1510,8 +1540,6 @@ const ACHIEVEMENTS = [
         max: 10,
         imgUrl: "newbie.png"
     },
-
-    // --- Редкие (Rare) ---
     { 
         id: 'r1', 
         name: "Коллекционер", 
@@ -1555,8 +1583,6 @@ const ACHIEVEMENTS = [
         progress: (s) => ACHIEVEMENTS.filter(a => a.rarity === 'common').filter(a => s.unlockedAchievements.includes(a.id)).length,
         max: 4
     },
-
-    // --- Эпические (Epic) ---
     { 
         id: 'e1', 
         name: "Заядлый анимешник", 
@@ -1711,7 +1737,7 @@ function showToast(msg) {
     document.body.appendChild(toast); setTimeout(() => toast.remove(), 2500); 
 }
 
-// ОБНОВЛЕННАЯ ФУНКЦИЯ ПЕРЕКЛЮЧЕНИЯ ТАБОВ В ПРОФИЛЕ
+// ПЕРЕКЛЮЧЕНИЕ ТАБОВ В ПРОФИЛЕ
 function switchProfileTab(tab) { 
     const btnProfile = document.getElementById('tab-btn-profile'); 
     const btnShop = document.getElementById('tab-btn-shop'); 
@@ -1721,41 +1747,39 @@ function switchProfileTab(tab) {
     const contentSettings = document.getElementById('settings-content-tab'); 
     const shopContent = document.getElementById('shop-content-tab');
     
-    btnProfile.classList.remove('active');
-    btnShop.classList.remove('active');
-    btnSettings.classList.remove('active');
+    if (btnProfile) btnProfile.classList.remove('active');
+    if (btnShop) btnShop.classList.remove('active');
+    if (btnSettings) btnSettings.classList.remove('active');
     
     if (tab === 'profile') { 
-        btnProfile.classList.add('active'); 
-        contentProfile.style.display = 'block'; 
-        contentSettings.style.display = 'none'; 
-        if(shopContent) shopContent.style.display = 'none';
+        if (btnProfile) btnProfile.classList.add('active'); 
+        if (contentProfile) contentProfile.style.display = 'block'; 
+        if (contentSettings) contentSettings.style.display = 'none'; 
+        if (shopContent) shopContent.style.display = 'none';
     } else if (tab === 'shop') {
-        btnShop.classList.add('active');
-        contentProfile.style.display = 'none';
-        contentSettings.style.display = 'none';
+        if (btnShop) btnShop.classList.add('active');
+        if (contentProfile) contentProfile.style.display = 'none';
+        if (contentSettings) contentSettings.style.display = 'none';
         
         if (shopContent) {
             shopContent.style.display = 'block';
             renderShopTab(currentShopTab);
         }
     } else { 
-        btnSettings.classList.add('active'); 
-        contentProfile.style.display = 'none'; 
-        contentSettings.style.display = 'block'; 
-        if(shopContent) shopContent.style.display = 'none';
+        if (btnSettings) btnSettings.classList.add('active'); 
+        if (contentProfile) contentProfile.style.display = 'none'; 
+        if (contentSettings) contentSettings.style.display = 'block'; 
+        if (shopContent) shopContent.style.display = 'none';
     } 
 }
 
 function openLevelModal() { document.getElementById('levelModal').classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-// ФУНКЦИЯ ДЛЯ ПЕРЕХОДА НА СТРАНИЦУ ДОСТИЖЕНИЙ
 function openAchievementsPage() {
     switchTab('achievements');
 }
 
-// ФУНКЦИЯ ДЛЯ РЕНДЕРА СТРАНИЦЫ ДОСТИЖЕНИЙ
 function renderAchievementsPage() { 
     const stats = getStats(); 
     const container = document.getElementById('achievements-list-container'); 
@@ -1875,10 +1899,9 @@ function addSwipeSupport(element) {
 // ==========================================
 // 13. ТАЙМЕР ВРЕМЕНИ НА САЙТЕ
 // ==========================================
-// Каждую минуту проверяем, что пользователь на сайте
 setInterval(() => {
     if (document.visibilityState === 'visible') {
-        addXPForTime(1); // Добавляем 1 минуту
+        addXPForTime(1);
     }
 }, 60000);
 
