@@ -214,21 +214,6 @@ function copyMyId() {
     navigator.clipboard.writeText(MY_TG_ID).then(() => { showToast('📋 ID скопирован!'); }).catch(() => {});
 }
 
-// Функция для получения цвета уровня (от серого до золотого)
-function getLevelColor(level) {
-    if (level <= 10) return '#888888'; // Серый
-    if (level <= 20) return '#a3ff00'; // Салатовый
-    if (level <= 40) return '#00d2ff'; // Голубой
-    if (level <= 60) return '#b44aff'; // Фиолетовый
-    if (level <= 80) return '#ff8c00'; // Оранжевый
-    return '#ffd700'; // Золотой
-}
-
-// Функция для получения простого свечения (без тени)
-function getLevelGlow(color) {
-    return `0 0 15px ${color}80`; // Легкое свечение
-}
-
 async function loadProfileData() {
     let stats = getStats(); 
     
@@ -286,25 +271,10 @@ async function loadProfileData() {
     const xpCurrentLevel = stats.xp % 100; 
     const progressPercent = xpCurrentLevel; 
     let rankTitle = LEVEL_TITLES[Math.min(currentLevel - 1, 99)]; 
-    
-    // ПОЛУЧАЕМ ЦВЕТ ДЛЯ ТЕКУЩЕГО УРОВНЯ
-    const levelColor = getLevelColor(currentLevel);
 
     setElText('user-level', currentLevel); 
     setElText('user-level-text', currentLevel); 
     setElText('user-rank', rankTitle); 
-
-    // МЕНЯЕМ ЦВЕТ ЦИФРЫ И СВЕЧЕНИЕ В ПРОФИЛЕ
-    const profileLevelNum = document.getElementById('user-level');
-    if (profileLevelNum) {
-        profileLevelNum.style.color = levelColor;
-        profileLevelNum.style.textShadow = getLevelGlow(levelColor);
-    }
-    
-    const profileBadgeContainer = document.getElementById('profile-level-badge-container');
-    if (profileBadgeContainer) {
-        profileBadgeContainer.style.setProperty('--aura-color', levelColor);
-    }
 
     setElText('user-xp-current', xpCurrentLevel); 
     setElText('user-xp-next', 100);
@@ -323,16 +293,10 @@ async function loadProfileData() {
     setElText('modal-xp-next', 100); 
     setElWidth('modal-xp-bar', progressPercent + '%'); 
     
-    // Обновляем цифру и цвет в модальном окне
+    // Обновляем цифру в модальном окне (без цветов и теней)
     const modalLevelNum = document.getElementById('modal-icon-level');
     if (modalLevelNum) {
         modalLevelNum.textContent = currentLevel;
-        modalLevelNum.style.color = levelColor;
-        modalLevelNum.style.textShadow = getLevelGlow(levelColor);
-    }
-    const modalBadgeContainer = document.getElementById('modal-level-badge-container');
-    if (modalBadgeContainer) {
-        modalBadgeContainer.style.setProperty('--aura-color', levelColor);
     }
 
     const nextAch = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id)); 
@@ -587,8 +551,6 @@ async function openFriendProfile(id, name) {
             if (b) friendBanner = `style="background-image: url('${safeUrl(b.image_url)}');"`;
         }
 
-        const friendColor = getLevelColor(lvl);
-
         container.innerHTML = `
             <div class="user-card-wrapper">
                 <div class="user-card-top" ${friendBanner}>
@@ -608,7 +570,10 @@ async function openFriendProfile(id, name) {
                 <div class="user-card-bottom">
                     <div class="level-row">
                         <div class="level-badge">
-                            <span class="level-number" style="color: ${friendColor}; text-shadow: ${getLevelGlow(friendColor)};">${lvl}</span>
+                            <!-- Картинка уровня -->
+                            <img src="level_icon.png" class="level-badge-img" alt="level">
+                            <!-- Цифра уровня (без стилей цвета) -->
+                            <span class="level-number">${lvl}</span>
                         </div>
                         <div class="level-info">
                             <div class="level-title">УРОВЕНЬ ${lvl} <span class="rank">${rank}</span></div>
