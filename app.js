@@ -136,7 +136,7 @@ let currentFilters = { search: '', genre: '', year: '', status: '', sort: 'popul
 let currentMyListFilter = 'all';
 let previousScreen = 'catalog'; 
 let searchDebounceTimer;
-let currentShopTab = 'banners'; // Вкладка магазина по умолчанию
+let currentShopTab = 'banners';
 
 const GENRES = [{ id: '1', name: 'Экшен' }, { id: '22', name: 'Романтика' }, { id: '4', name: 'Комедия' }, { id: '10', name: 'Фэнтези' }, { id: '8', name: 'Драма' }, { id: '2', name: 'Приключения' }, { id: '24', name: 'Фантастика' }];
 const YEARS = [{ id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' }, { id: '2021', name: '2021' }, { id: '2020', name: '2020' }];
@@ -251,7 +251,7 @@ async function loadProfileData() {
     if (stats.lastVisit !== today) { 
         stats.daysStreak += 1; 
         stats.lastVisit = today; 
-        stats.xp += 5; // +5 XP за вход
+        stats.xp += 5; 
         stats.coins += 10; 
         stats.watchedToday = []; 
         saveStats(stats); 
@@ -343,11 +343,18 @@ function renderShopTab(tabName) {
 
     if (tabName === 'banners') {
         renderBannersInShop(container);
-    } else {
-        container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px; font-size: 16px;">🚧 Скоро здесь появятся товары!</div>';
+    } else if (tabName === 'titles') {
+        renderTitlesInShop(container);
+    } else if (tabName === 'frames') {
+        renderFramesInShop(container);
+    } else if (tabName === 'effects') {
+        renderEffectsInShop(container);
+    } else if (tabName === 'badges') {
+        renderBadgesInShop(container);
     }
 }
 
+// --- РЕНДЕР БАННЕРОВ ---
 async function renderBannersInShop(container) {
     let stats = getStats();
     if (!supabaseClient) return;
@@ -394,6 +401,161 @@ async function renderBannersInShop(container) {
         container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #f44;">Ошибка загрузки баннеров</div>';
     }
 }
+
+// --- РЕНДЕР ТИТУЛОВ ---
+async function renderTitlesInShop(container) {
+    if (!supabaseClient) return;
+    try {
+        const { data: items } = await supabaseClient.from('titles').select('*');
+        const { data: inv } = await supabaseClient.from('user_inventory').select('item_id').eq('tg_id', MY_TG_ID).eq('item_type', 'title');
+        
+        const ownedIds = inv ? inv.map(i => i.item_id) : [];
+        let html = '';
+
+        items.forEach(t => {
+            const isOwned = ownedIds.includes(t.id);
+            let btn = isOwned 
+                ? `<button class="shop-btn owned" disabled>Куплен</button>` 
+                : `<button class="shop-btn" onclick="buyItem('title', ${t.id}, ${t.price})">Купить ${t.price} 🪙</button>`;
+            
+            html += `
+                <div class="shop-item">
+                    <div class="shop-img" style="background: #222; display:flex; align-items:center; justify-content:center; color:${t.color}; font-weight:bold; font-size:16px;">${escapeHTML(t.name)}</div>
+                    <div class="shop-info">
+                        <div class="shop-name">${escapeHTML(t.name)}</div>
+                        <div style="font-size:10px; color:#888; margin-bottom:5px;">${escapeHTML(t.description || '')}</div>
+                        ${btn}
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет титулов</div>';
+    } catch(e) { console.error(e); }
+}
+
+// --- РЕНДЕР РАМОК ---
+async function renderFramesInShop(container) {
+    if (!supabaseClient) return;
+    try {
+        const { data: items } = await supabaseClient.from('frames').select('*');
+        const { data: inv } = await supabaseClient.from('user_inventory').select('item_id').eq('tg_id', MY_TG_ID).eq('item_type', 'frame');
+        
+        const ownedIds = inv ? inv.map(i => i.item_id) : [];
+        let html = '';
+
+        items.forEach(f => {
+            const isOwned = ownedIds.includes(f.id);
+            let btn = isOwned 
+                ? `<button class="shop-btn owned" disabled>Куплен</button>` 
+                : `<button class="shop-btn" onclick="buyItem('frame', ${f.id}, ${f.price})">Купить ${f.price} 🪙</button>`;
+            
+            html += `
+                <div class="shop-item">
+                    <div class="shop-img" style="background-image: url('${safeUrl(f.image_url)}')"></div>
+                    <div class="shop-info">
+                        <div class="shop-name">${escapeHTML(f.name)}</div>
+                        ${btn}
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет рамок</div>';
+    } catch(e) { console.error(e); }
+}
+
+// --- РЕНДЕР ЭФФЕКТОВ ---
+async function renderEffectsInShop(container) {
+    if (!supabaseClient) return;
+    try {
+        const { data: items } = await supabaseClient.from('effects').select('*');
+        const { data: inv } = await supabaseClient.from('user_inventory').select('item_id').eq('tg_id', MY_TG_ID).eq('item_type', 'effect');
+        
+        const ownedIds = inv ? inv.map(i => i.item_id) : [];
+        let html = '';
+
+        items.forEach(e => {
+            const isOwned = ownedIds.includes(e.id);
+            let btn = isOwned 
+                ? `<button class="shop-btn owned" disabled>Куплен</button>` 
+                : `<button class="shop-btn" onclick="buyItem('effect', ${e.id}, ${e.price})">Купить ${e.price} 🪙</button>`;
+            
+            html += `
+                <div class="shop-item">
+                    <div class="shop-img" style="background: #222; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold;">${escapeHTML(e.name)}</div>
+                    <div class="shop-info">
+                        <div class="shop-name">${escapeHTML(e.name)}</div>
+                        ${btn}
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет эффектов</div>';
+    } catch(e) { console.error(e); }
+}
+
+// --- РЕНДЕР ЗНАЧКОВ ---
+async function renderBadgesInShop(container) {
+    if (!supabaseClient) return;
+    try {
+        const { data: items } = await supabaseClient.from('badges').select('*');
+        const { data: inv } = await supabaseClient.from('user_inventory').select('item_id').eq('tg_id', MY_TG_ID).eq('item_type', 'badge');
+        
+        const ownedIds = inv ? inv.map(i => i.item_id) : [];
+        let html = '';
+
+        items.forEach(b => {
+            const isOwned = ownedIds.includes(b.id);
+            let btn = isOwned 
+                ? `<button class="shop-btn owned" disabled>Куплен</button>` 
+                : `<button class="shop-btn" onclick="buyItem('badge', ${b.id}, ${b.price})">Купить ${b.price} 🪙</button>`;
+            
+            html += `
+                <div class="shop-item">
+                    <div class="shop-img" style="background-image: url('${safeUrl(b.image_url)}')"></div>
+                    <div class="shop-info">
+                        <div class="shop-name">${escapeHTML(b.name)}</div>
+                        ${btn}
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет значков</div>';
+    } catch(e) { console.error(e); }
+}
+
+// --- УНИВЕРСАЛЬНАЯ ПОКУПКА ---
+async function buyItem(type, itemId, price) {
+    let stats = getStats();
+    if (stats.coins < price) {
+        showToast('Недостаточно монет!');
+        return;
+    }
+
+    if (!supabaseClient) return;
+
+    try {
+        stats.coins -= price;
+        saveStats(stats);
+
+        await supabaseClient.from('user_inventory').insert({ 
+            tg_id: MY_TG_ID, 
+            item_type: type, 
+            item_id: itemId,
+            is_active: false
+        });
+        
+        syncProfileToDB();
+        showToast('✅ Покупка успешна!');
+        
+        loadProfileData();
+        renderShopTab(type + 's'); // Обновляем текущую вкладку (banners -> banners, titles -> titles)
+
+    } catch(e) {
+        console.error(e);
+        showToast('Ошибка покупки');
+    }
+}
+
 
 async function buyBanner(bannerId, price) {
     let stats = getStats();
@@ -820,11 +982,17 @@ async function openRandomAnime() {
 // 9. СПИСОК "МОЁ"
 // ==========================================
 function filterMyList(type, btn) { currentMyListFilter = type; document.querySelectorAll('.my-list-tab').forEach(el => el.classList.remove('active')); btn.classList.add('active'); renderMyList(); }
-function renderMyList() {
+async function renderMyList() {
     const grid = document.getElementById('my-grid'); if (!grid) return;
+    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
+    
     let stats = getStats(); let favs = stats.favedAnime || []; let filtered = favs;
     if (currentMyListFilter !== 'all') filtered = favs.filter(a => a.status === currentMyListFilter);
-    if (filtered.length === 0) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Тут пусто</div>'; return; }
+    
+    if (filtered.length === 0) { 
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Тут пусто</div>'; 
+        return; 
+    }
     
     const cachedAnime = stats.cachedAnime || {};
     grid.innerHTML = '';
@@ -1051,10 +1219,7 @@ function checkAchievements(stats) {
             } 
         } 
     }); 
-    if (changed) {
-        saveStats(stats); 
-        syncProfileToDB(); // Синхронизируем достижения в БД
-    }
+    if (changed) saveStats(stats); 
 }
 
 function addXP(amount) { 
