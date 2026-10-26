@@ -119,7 +119,6 @@
 
         .user-details { text-align: center; width: 100%; position: relative; z-index: 3; }
         
-        /* НИК + ЗНАЧОК */
         .user-name-row {
             display: flex;
             align-items: center;
@@ -135,7 +134,6 @@
             filter: drop-shadow(0 0 4px rgba(0,0,0,0.5));
         }
         
-        /* ТИТУЛ В ПРОФИЛЕ */
         .user-title-display {
             font-size: 13px;
             font-weight: 700;
@@ -152,27 +150,9 @@
         
         .id-container { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px 15px; display: inline-flex; align-items: center; gap: 10px; margin-bottom: 5px; cursor: pointer; backdrop-filter: blur(5px); }
         
-        /* БЕЙДЖ УРОВНЯ С КАРТИНКОЙ (БЕЗ КРУГА) */
-        .level-row { 
-            display: flex; 
-            align-items: center; 
-            gap: 15px; 
-            padding: 15px 0; 
-            text-align: left; 
-            cursor: pointer; 
-        }
+        .level-row { display: flex; align-items: center; gap: 15px; padding: 15px 0; text-align: left; cursor: pointer; }
         
-        .level-badge { 
-            width: 72px; 
-            height: 72px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            flex-shrink: 0; 
-            position: relative; 
-            border-radius: 8px;
-            overflow: visible; 
-        }
+        .level-badge { width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; border-radius: 8px; overflow: visible; }
 
         .level-badge-img {
             position: absolute;
@@ -193,11 +173,7 @@
             display: flex; 
             align-items: center; 
             justify-content: center;
-            
             color: #000000; 
-            -webkit-text-stroke: 0px;
-            text-shadow: none;
-            
             top: 45%;  
             left: 75%; 
             transform: translate(-50%, -50%);
@@ -210,7 +186,6 @@
         .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 4px; box-shadow: 0 0 10px #00f5ff; }
         .xp-text { font-size: 12px; color: #aaa; text-align: right; font-weight: 600; }
         
-        /* ТАБЫ ПРОФИЛЯ (3 КНОПКИ) */
         .profile-tabs { display: flex; background: #14141f; border-radius: 15px; padding: 5px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.05); }
         .tab-btn { flex: 1; padding: 12px 5px; border: none; background: transparent; color: #888; font-size: 12px; font-weight: 600; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
         .tab-btn.active { background: #2a2a3e; color: #fff; }
@@ -221,7 +196,6 @@
         .settings-card { border-color: rgba(255,255,255,0.05); cursor: default; }
         .ach-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
         
-        /* ИКОНКА ДОСТИЖЕНИЙ В ПРОФИЛЕ */
         .ach-icon-big { width: 60px; height: 60px; background: rgba(255, 215, 0, 0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
         .ach-icon-big svg { width: 100%; height: 100%; animation: achPulse 3s infinite alternate; }
         @keyframes achPulse { 0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(155, 92, 255, 0.5)); } 100% { transform: scale(1.05); filter: drop-shadow(0 0 8px rgba(155, 92, 255, 0.8)); } }
@@ -263,16 +237,8 @@
         .modal-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
         
         .modal-icon-large { display: flex; justify-content: center; margin-bottom: 15px; color: var(--primary); position: relative; }
-        .modal-level-badge { 
-            width: 140px !important; 
-            height: 140px !important; 
-            border-radius: 12px;
-        }
-        .modal-level-badge .level-number { 
-            font-size: 48px; 
-            top: 45%;
-            left: 75%;
-        }
+        .modal-level-badge { width: 140px !important; height: 140px !important; border-radius: 12px; }
+        .modal-level-badge .level-number { font-size: 48px; top: 45%; left: 75%; }
         
         .modal-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 5px; }
         .modal-subtitle { font-size: 14px; color: #888; margin-bottom: 20px; word-wrap: break-word; line-height: 1.4; }
@@ -281,11 +247,9 @@
         .modal-xp-text { font-size: 12px; color: #aaa; text-align: right; margin-bottom: 20px; }
         .modal-desc { font-size: 14px; color: #ccc; line-height: 1.5; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; text-align: left; }
         
-        /* СТИЛИ ДЛЯ ДОСТИЖЕНИЙ (СТРАНИЦА) */
         .ach-list-item { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); text-align: left; opacity: 0.6; transition: 0.3s; }
         .ach-list-item.completed { opacity: 1; background: rgba(255,255,255,0.08); }
         
-        /* ПОДСВЕТКА ПОЛУЧЕННЫХ ДОСТИЖЕНИЙ */
         .ach-list-item.common.completed { border-color: rgba(200, 200, 200, 0.6); box-shadow: 0 0 15px rgba(200, 200, 200, 0.2); }
         .ach-list-item.rare.completed { border-color: rgba(0, 210, 255, 0.8); box-shadow: 0 0 20px rgba(0, 210, 255, 0.3); }
         .ach-list-item.epic.completed { border-color: rgba(180, 74, 255, 0.8); box-shadow: 0 0 20px rgba(180, 74, 255, 0.4); }
@@ -303,7 +267,6 @@
         .ach-reward-badge { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: bold; color: #ffd700; margin-top: 5px; }
         .ach-status-icon { font-size: 20px; margin-left: 10px; flex-shrink: 0; }
 
-        /* ЗАГОЛОВКИ КАТЕГОРИЙ ДОСТИЖЕНИЙ */
         .ach-category-header {
             display: flex;
             align-items: center;
@@ -315,15 +278,8 @@
             font-weight: 700;
             color: #fff;
         }
-        .ach-category-header:first-child {
-            margin-top: 0;
-        }
-        .ach-category-header .count {
-            font-size: 12px;
-            color: #888;
-            font-weight: 500;
-            margin-left: auto;
-        }
+        .ach-category-header:first-child { margin-top: 0; }
+        .ach-category-header .count { font-size: 12px; color: #888; font-weight: 500; margin-left: auto; }
         .ach-category-header.common { border-bottom-color: rgba(204, 204, 204, 0.3); }
         .ach-category-header.rare { border-bottom-color: rgba(0, 210, 255, 0.3); }
         .ach-category-header.epic { border-bottom-color: rgba(180, 74, 255, 0.3); }
@@ -349,7 +305,6 @@
         /* ==========================================
            CSS ЭФФЕКТЫ ЧАСТИЦ (БАННЕР)
            ========================================== */
-        
         .effect-container {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -359,7 +314,6 @@
             border-radius: 20px 20px 0 0;
         }
 
-        /* 1. ЗОЛОТЫЕ ИСКРЫ */
         .effect-sparks span {
             position: absolute;
             bottom: -10px;
@@ -376,7 +330,6 @@
             100% { transform: translateY(-300px) scale(0); opacity: 0; }
         }
 
-        /* 2. ЛЕПЕСТКИ САКУРЫ */
         .effect-sakura span {
             position: absolute;
             top: -20px;
@@ -393,7 +346,6 @@
             100% { transform: translateY(300px) rotate(360deg); opacity: 0; }
         }
 
-        /* 3. ЗВЕЗДНАЯ ПЫЛЬ */
         .effect-stars span {
             position: absolute;
             background: #fff;
@@ -483,7 +435,7 @@
 </head>
 <body>
 
-    <!-- SVG СПРАЙТ (Навигация) -->
+    <!-- SVG СПРАЙТ -->
     <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
       <symbol id="oa-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
       <symbol id="oa-catalog" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></symbol>
@@ -498,7 +450,6 @@
       <symbol id="oa-achievement" viewBox="0 0 24 24"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/><path d="m8.5 18.5-.8 3 4.3-2.3 4.3 2.3-.8-3"/></symbol>
       <symbol id="oa-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
       <symbol id="oa-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
-      
       <symbol id="oa-eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
       <symbol id="oa-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
       <symbol id="oa-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
@@ -507,7 +458,6 @@
       <symbol id="oa-dice" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="8" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="8" cy="16" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="1.5" fill="currentColor" stroke="none"/></symbol>
       <symbol id="oa-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v12m-3-9h6m-6 6h6"/></symbol>
 
-      <!-- ИКОНКИ ДОСТИЖЕНИЙ (SVG для тех, у кого нет картинок) -->
       <symbol id="ach-icon-crystal" viewBox="0 0 55 55" fill="none">
           <defs>
               <linearGradient id="orbitalGradient" x1="8" y1="8" x2="48" y2="48" gradientUnits="userSpaceOnUse">
@@ -591,6 +541,7 @@
         <div class="coins">+<span id="popup-coins">100</span> <svg><use href="#oa-coin"></use></svg></div>
     </div>
 
+    <!-- ГЛАВНАЯ -->
     <div id="screen-home" class="screen active">
         <section class="hero-section" id="heroSection">
             <div class="hero-slider" id="heroSlider"></div>
@@ -615,6 +566,7 @@
         </section>
     </div>
 
+    <!-- КАТАЛОГ -->
     <div id="screen-catalog" class="screen">
         <div style="padding: 20px 20px 10px 20px;">
             <div style="display: flex; align-items: center; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 0 15px; margin-bottom: 15px;">
@@ -644,6 +596,7 @@
         </div>
     </div>
 
+    <!-- МОЁ -->
     <div id="screen-my" class="screen">
         <header class="profile-header" style="padding-bottom: 10px;"><h1>Моё</h1></header>
         <div class="my-list-tabs" id="my-list-tabs">
@@ -657,6 +610,7 @@
         <div class="grid-catalog" id="my-grid" style="margin-top: 10px;"></div>
     </div>
 
+    <!-- ДРУЗЬЯ -->
     <div id="screen-friends" class="screen">
         <header class="profile-header" style="padding-bottom: 10px;"><h1>Друзья</h1></header>
         <div class="friends-search">
@@ -667,28 +621,33 @@
         <div id="friends-list-container"></div>
     </div>
 
+    <!-- ПРОФИЛЬ ДРУГА -->
     <div id="screen-friend-profile" class="screen" style="padding: 20px;">
         <button onclick="switchTab('friends')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div id="friend-profile-content"></div>
     </div>
 
+    <!-- ДЕТАЛИ АНИМЕ -->
     <div id="screen-detail" class="screen" style="padding: 20px;">
         <button onclick="goBackFromDetail()" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div id="detail-content"></div>
     </div>
 
+    <!-- ВЫБОР ОЗВУЧКИ -->
     <div id="screen-voice" class="screen" style="padding: 20px;">
         <button onclick="switchTab('detail')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <h1 id="voice-title" style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор озвучки</h1>
         <div style="display: flex; flex-direction: column; gap: 12px;" id="voice-list"></div>
     </div>
 
+    <!-- ВЫБОР ПЛЕЕРА -->
     <div id="screen-player" class="screen" style="padding: 20px;">
         <button onclick="switchTab('voice')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <h1 id="player-title" style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор плеера</h1>
         <div style="display: flex; flex-direction: column; gap: 12px;" id="player-list"></div>
     </div>
 
+    <!-- ВЫБОР СЕРИИ -->
     <div id="screen-episodes" class="screen" style="padding: 20px;">
         <button onclick="switchTab('player')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <h1 id="eps-title" style="font-size: 24px; font-weight: 800; margin-bottom: 10px;">Выбор серии</h1>
@@ -696,12 +655,12 @@
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;" id="episodes-list"></div>
     </div>
 
-    <!-- НОВЫЙ ЭКРАН ДОСТИЖЕНИЙ -->
+    <!-- ДОСТИЖЕНИЯ -->
     <div id="screen-achievements" class="screen" style="padding: 20px;">
         <button onclick="switchTab('profile')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
             <div class="ach-icon-big" style="width: 50px; height: 50px;">
-                <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;">
+                <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='🏆';">
             </div>
             <div>
                 <h1 style="font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 2px;">Достижения</h1>
@@ -711,14 +670,13 @@
         <div id="achievements-list-container" style="margin-top: 15px;"></div>
     </div>
 
+    <!-- ПРОФИЛЬ -->
     <div id="screen-profile" class="screen">
         <header class="profile-header"><h1>Профиль</h1></header>
         <div class="profile-container">
             <div class="user-card-wrapper">
                 <div class="user-card-top" id="profile-banner">
-                    <!-- КОНТЕЙНЕР ДЛЯ ЧАСТИЦ (СЮДА БУДЕТ ДОБАВЛЯТЬСЯ ЭФФЕКТ) -->
                     <div class="effect-container" id="particle-effect-container"></div>
-                    
                     <div class="user-card-top-content">
                         <div class="avatar-container">
                             <div class="avatar" id="tg-avatar"><span id="avatar-letter">?</span></div>
@@ -726,10 +684,8 @@
                         <div class="user-details">
                             <div class="user-name-row">
                                 <h2 id="tg-name">Гость</h2>
-                                <!-- МЕСТО ДЛЯ ЗНАЧКА -->
                                 <img id="user-badge-img" class="user-badge-icon" style="display: none;" alt="badge">
                             </div>
-                            <!-- КОНТЕЙНЕР ДЛЯ ТИТУЛА -->
                             <div id="user-title-container" style="display: none;">
                                 <div class="user-title-display" id="user-active-title"></div>
                             </div>
@@ -750,7 +706,7 @@
                 <div class="user-card-bottom">
                     <div class="level-row" onclick="openLevelModal()">
                         <div class="level-badge" id="profile-level-badge-container">
-                            <img src="level_icon.png" class="level-badge-img" alt="level">
+                            <img src="level_icon.png" class="level-badge-img" alt="level" onerror="this.style.display='none'">
                             <span id="user-level" class="level-number">1</span>
                         </div>
                         <div class="level-info">
@@ -762,7 +718,7 @@
                 </div>
             </div>
 
-            <!-- ТАБЫ ПРОФИЛЯ (3 КНОПКИ) -->
+            <!-- ТАБЫ ПРОФИЛЯ -->
             <div class="profile-tabs">
                 <button class="tab-btn active" id="tab-btn-profile" onclick="switchProfileTab('profile')"><svg><use href="#oa-profile"></use></svg> Профиль</button>
                 <button class="tab-btn" id="tab-btn-shop" onclick="switchProfileTab('shop')"><svg><use href="#oa-shop"></use></svg> Магазин</button>
@@ -774,7 +730,7 @@
                 <div class="achievements-card" onclick="openAchievementsPage()">
                     <div class="ach-header">
                         <div class="ach-icon-big">
-                            <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;">
+                            <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='🏆';">
                         </div>
                         <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p><span id="ach-points">0</span> очков</p></div>
                         <div class="ach-total"><span id="ach-earned">0</span>/<span id="ach-total-count">12</span></div>
@@ -788,7 +744,7 @@
                 </div>
             </div>
 
-            <!-- КОНТЕНТ МАГАЗИНА (СКРЫТ ПО УМОЛЧАНИЮ) -->
+            <!-- КОНТЕНТ МАГАЗИНА -->
             <div id="shop-content-tab" style="display: none;">
                 <div class="shop-tabs">
                     <div class="shop-tab active" onclick="switchShopTab('banners', this)">Баннеры</div>
@@ -827,13 +783,14 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА УРОВНЯ -->
     <div class="modal-overlay" id="levelModal" onclick="closeModal('levelModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('levelModal')"><svg><use href="#oa-close"></use></svg></button>
             
             <div class="modal-icon-large">
                 <div class="level-badge modal-level-badge" id="modal-level-badge-container">
-                    <img src="level_icon.png" class="level-badge-img" alt="level">
+                    <img src="level_icon.png" class="level-badge-img" alt="level" onerror="this.style.display='none'">
                     <span id="modal-icon-level" class="level-number">1</span>
                 </div>
             </div>
@@ -851,6 +808,7 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА ФИЛЬТРОВ -->
     <div class="modal-overlay" id="filterModal" onclick="closeModal('filterModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('filterModal')"><svg><use href="#oa-close"></use></svg></button>
@@ -859,6 +817,7 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА СТАТУСА -->
     <div class="modal-overlay" id="statusModal" onclick="closeModal('statusModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('statusModal')"><svg><use href="#oa-close"></use></svg></button>
@@ -882,6 +841,7 @@
     </div>
     <div class="preview-hint" id="previewHint">Тапни вещь — примерь её вживую до покупки</div>
 
+    <!-- НАВИГАЦИЯ -->
     <nav class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('home', this)">
             <span class="nav-icon"><svg><use href="#oa-home"></use></svg></span>
@@ -905,6 +865,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=162"></script>
+    <script src="app.js?v=170"></script>
 </body>
 </html>
