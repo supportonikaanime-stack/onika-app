@@ -17,7 +17,7 @@ let MY_NAME = 'Гость';
 let MY_PHOTO_URL = '';
 let ACTIVE_BANNER_URL = '';
 let ACTIVE_TITLE_DATA = null;
-let ACTIVE_EFFECT_CLASS = '';
+let ACTIVE_EFFECT_CSS = '';
 
 if (tg) {
     tg.expand();
@@ -260,11 +260,11 @@ async function loadProfileData() {
                 if (dbUser.active_effect) {
                     const { data: effectData } = await supabaseClient.from('effects').select('*').eq('id', dbUser.active_effect).single();
                     if (effectData) {
-                        ACTIVE_EFFECT_CLASS = effectData.css_class;
+                        ACTIVE_EFFECT_CSS = effectData.css_class;
                         stats.active_effect = effectData.id;
                     }
                 } else {
-                    ACTIVE_EFFECT_CLASS = '';
+                    ACTIVE_EFFECT_CSS = '';
                     stats.active_effect = null;
                 }
                 
@@ -304,14 +304,8 @@ async function loadProfileData() {
         }
     }
 
-    // ПРИМЕНЯЕМ ЭФФЕКТ
-    const effectContainer = document.getElementById('avatar-effect-container');
-    if (effectContainer) {
-        effectContainer.className = 'avatar-container'; // Сбрасываем
-        if (ACTIVE_EFFECT_CLASS) {
-            effectContainer.classList.add(ACTIVE_EFFECT_CLASS);
-        }
-    }
+    // ГЕНЕРАЦИЯ ЧАСТИЦ
+    renderParticles();
 
     setElText('my-tg-id', MY_TG_ID || 'Нет ID');
     setElText('tg-name', MY_NAME);
@@ -370,6 +364,47 @@ async function loadProfileData() {
     }
 
     syncProfileToDB();
+}
+
+// ==========================================
+// ГЕНЕРАЦИЯ ЧАСТИЦ
+// ==========================================
+function renderParticles() {
+    const container = document.getElementById('particle-effect-container');
+    if (!container) return;
+    
+    container.innerHTML = ''; // Очищаем старые
+    container.className = 'effect-container'; // Сбрасываем классы
+    
+    if (!ACTIVE_EFFECT_CSS) return;
+
+    container.classList.add(ACTIVE_EFFECT_CSS);
+
+    // Количество частиц (чем больше, тем насыщеннее)
+    const particleCount = 25;
+
+    for (let i = 0; i < particleCount; i++) {
+        const span = document.createElement('span');
+        
+        // Рандомные параметры для каждой частицы
+        const size = Math.random() * 4 + 2; // Размер от 2 до 6 px
+        const left = Math.random() * 100; // Позиция по горизонтали
+        const delay = Math.random() * 5; // Задержка старта
+        const duration = Math.random() * 3 + 3; // Скорость полета
+
+        span.style.left = `${left}%`;
+        span.style.width = `${size}px`;
+        span.style.height = `${size}px`;
+        span.style.animationDuration = `${duration}s`;
+        span.style.animationDelay = `${delay}s`;
+
+        // Для эффекта искр и сакуры
+        if (ACTIVE_EFFECT_CSS === 'effect-sparks' || ACTIVE_EFFECT_CSS === 'effect-sakura') {
+            span.style.animationName = ACTIVE_EFFECT_CSS === 'effect-sparks' ? 'riseUp' : 'fallDown';
+        }
+
+        container.appendChild(span);
+    }
 }
 
 // ==========================================
@@ -549,11 +584,11 @@ async function renderEffectsInShop(container) {
             // Демонстрация эффекта прямо в магазине
             html += `
                 <div class="shop-item">
-                    <div class="shop-img ${e.css_class}" style="background: #222; display:flex; align-items:center; justify-content:center;">
-                        <div class="avatar" style="width:50px; height:50px; font-size:14px;">AA</div>
+                    <div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items:center; justify-content:center;">
                     </div>
                     <div class="shop-info">
                         <div class="shop-name">${escapeHTML(e.name)}</div>
+                        <div style="font-size:10px; color:#888; margin-bottom:5px;">${escapeHTML(e.description || '')}</div>
                         ${btn}
                     </div>
                 </div>
@@ -898,7 +933,7 @@ async function openFriendProfile(id, name) {
             }
         }
 
-        // ЭФФЕКТ
+        // ЭФФЕКТ (ПЕРЕДАЕМ КЛАСС В КОНТЕЙНЕР)
         let friendEffectClass = '';
         if (friend.active_effect) {
             const { data: e } = await supabaseClient.from('effects').select('css_class').eq('id', friend.active_effect).single();
@@ -908,8 +943,9 @@ async function openFriendProfile(id, name) {
         container.innerHTML = `
             <div class="user-card-wrapper">
                 <div class="user-card-top" ${friendBanner}>
+                    <div class="effect-container ${friendEffectClass}" id="friend-particle-container"></div>
                     <div class="user-card-top-content">
-                        <div class="avatar-container ${friendEffectClass}">
+                        <div class="avatar-container">
                             <div class="avatar" style="background: linear-gradient(135deg, #5b5bff, #b44aff); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff; overflow: hidden;">${avatarHtml}</div>
                         </div>
                         <div class="user-details">
@@ -948,6 +984,24 @@ async function openFriendProfile(id, name) {
             ${lastWatchedHtml}
             <button onclick="removeFriend(${friend.tg_id})" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">🗑️ Удалить из друзей</button>
         `;
+
+        // Запускаем генерацию частиц для друга
+        setTimeout(() => {
+            const fContainer = document.getElementById('friend-particle-container');
+            if (fContainer && friendEffectClass) {
+                for (let i = 0; i < 25; i++) {
+                    const span = document.createElement('span');
+                    const size = Math.random() * 4 + 2;
+                    span.style.left = `${Math.random() * 100}%`;
+                    span.style.width = `${size}px`;
+                    span.style.height = `${size}px`;
+                    span.style.animationDuration = `${Math.random() * 3 + 3}s`;
+                    span.style.animationDelay = `${Math.random() * 5}s`;
+                    fContainer.appendChild(span);
+                }
+            }
+        }, 100);
+
     } catch (e) { container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка</div>'; }
 }
 
