@@ -18,6 +18,7 @@ let MY_PHOTO_URL = '';
 let ACTIVE_BANNER_URL = '';
 let ACTIVE_TITLE_DATA = null;
 let ACTIVE_EFFECT_CSS = '';
+let ACTIVE_BADGE_URL = '';
 
 if (tg) {
     tg.expand();
@@ -210,6 +211,7 @@ async function syncProfileToDB() {
             active_banner: stats.active_banner,
             active_title: stats.active_title,
             active_effect: stats.active_effect,
+            active_badge: stats.active_badge,
             last_watched: stats.favedAnime.length > 0 ? stats.favedAnime[stats.favedAnime.length - 1].id : null
         }, { onConflict: 'tg_id' });
     } catch (e) { console.error('Ошибка синхронизации:', e); }
@@ -267,6 +269,18 @@ async function loadProfileData() {
                     ACTIVE_EFFECT_CSS = '';
                     stats.active_effect = null;
                 }
+
+                // ЗНАЧОК
+                if (dbUser.active_badge) {
+                    const { data: badgeData } = await supabaseClient.from('badges').select('image_url').eq('id', dbUser.active_badge).single();
+                    if (badgeData) {
+                        ACTIVE_BADGE_URL = safeUrl(badgeData.image_url);
+                        stats.active_badge = dbUser.active_badge;
+                    }
+                } else {
+                    ACTIVE_BADGE_URL = '';
+                    stats.active_badge = null;
+                }
                 
                 saveStats(stats);
             }
@@ -306,6 +320,17 @@ async function loadProfileData() {
 
     // ГЕНЕРАЦИЯ ЧАСТИЦ
     renderParticles();
+
+    // ЗНАЧОК
+    const badgeEl = document.getElementById('user-badge-img');
+    if (badgeEl) {
+        if (ACTIVE_BADGE_URL) {
+            badgeEl.src = ACTIVE_BADGE_URL;
+            badgeEl.style.display = 'block';
+        } else {
+            badgeEl.style.display = 'none';
+        }
+    }
 
     setElText('my-tg-id', MY_TG_ID || 'Нет ID');
     setElText('tg-name', MY_NAME);
@@ -367,25 +392,24 @@ async function loadProfileData() {
 }
 
 // ==========================================
-// ГЕНЕРАЦИЯ ЧАСТИЦ (ИСПРАВЛЕНО)
+// ГЕНЕРАЦИЯ ЧАСТИЦ
 // ==========================================
 function renderParticles() {
     const container = document.getElementById('particle-effect-container');
     if (!container) return;
     
-    container.innerHTML = ''; // Очищаем старые
-    container.className = 'effect-container'; // Сбрасываем классы
+    container.innerHTML = ''; 
+    container.className = 'effect-container'; 
     
     if (!ACTIVE_EFFECT_CSS) return;
 
     container.classList.add(ACTIVE_EFFECT_CSS);
 
-    const particleCount = 30; // Количество частиц
+    const particleCount = 30;
 
     for (let i = 0; i < particleCount; i++) {
         const span = document.createElement('span');
         
-        // Рандомные параметры
         const size = Math.random() * 4 + 2;
         const left = Math.random() * 100;
         const delay = Math.random() * 5;
@@ -397,13 +421,12 @@ function renderParticles() {
         span.style.animationDuration = `${duration}s`;
         span.style.animationDelay = `${delay}s`;
 
-        // ЯВНО ЗАДАЕМ АНИМАЦИЮ
         if (ACTIVE_EFFECT_CSS === 'effect-sparks') {
             span.style.animationName = 'riseUp';
         } else if (ACTIVE_EFFECT_CSS === 'effect-sakura') {
             span.style.animationName = 'fallDown';
         } else if (ACTIVE_EFFECT_CSS === 'effect-stars') {
-            span.style.animationName = 'twinkle, float'; // Двойная анимация для звезд
+            span.style.animationName = 'twinkle, float'; 
         }
 
         container.appendChild(span);
@@ -584,7 +607,6 @@ async function renderEffectsInShop(container) {
                 btn = `<button class="shop-btn" onclick="buyItem('effect', ${e.id}, ${e.price})">Купить ${e.price} 🪙</button>`;
             }
             
-            // Демонстрация эффекта прямо в магазине (в виде кружочка)
             html += `
                 <div class="shop-item">
                     <div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items:center; justify-content:center;">
@@ -605,6 +627,7 @@ async function renderEffectsInShop(container) {
 // --- РЕНДЕР ЗНАЧКОВ ---
 async function renderBadgesInShop(container) {
     if (!supabaseClient) return;
+    let stats = getStats();
     try {
         const { data: items } = await supabaseClient.from('badges').select('*');
         const { data: inv } = await supabaseClient.from('user_inventory').select('item_id').eq('tg_id', MY_TG_ID).eq('item_type', 'badge');
@@ -614,13 +637,22 @@ async function renderBadgesInShop(container) {
 
         items.forEach(b => {
             const isOwned = ownedIds.includes(b.id);
-            let btn = isOwned 
-                ? `<button class="shop-btn owned" disabled>Куплен</button>` 
-                : `<button class="shop-btn" onclick="buyItem('badge', ${b.id}, ${b.price})">Купить ${b.price} 🪙</button>`;
+            const isActive = stats.active_badge === b.id;
+            
+            let btn = '';
+            if (isActive) {
+                btn = `<button class="shop-btn owned" disabled>Активен</button>`;
+            } else if (isOwned) {
+                btn = `<button class="shop-btn owned" onclick="applyBadge(${b.id})">Применить</button>`;
+            } else {
+                btn = `<button class="shop-btn" onclick="buyItem('badge', ${b.id}, ${b.price})">Купить ${b.price} 🪙</button>`;
+            }
             
             html += `
                 <div class="shop-item">
-                    <div class="shop-img" style="background-image: url('${safeUrl(b.image_url)}')"></div>
+                    <div class="shop-img" style="background: #222; display:flex; align-items:center; justify-content:center;">
+                        <img src="${safeUrl(b.image_url)}" style="width:50px; height:50px; object-fit:contain;">
+                    </div>
                     <div class="shop-info">
                         <div class="shop-name">${escapeHTML(b.name)}</div>
                         ${btn}
@@ -662,6 +694,8 @@ async function buyItem(type, itemId, price) {
             await applyTitle(itemId);
         } else if (type === 'effect') {
             await applyEffect(itemId);
+        } else if (type === 'badge') {
+            await applyBadge(itemId);
         } else {
             renderShopTab(type + 's'); 
         }
@@ -738,6 +772,42 @@ async function resetEffect() {
         saveStats(stats);
         
         showToast('Эффект снят');
+        loadProfileData();
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+// --- ПРИМЕНЕНИЕ ЗНАЧКА ---
+async function applyBadge(badgeId) {
+    if (!supabaseClient) return;
+    let stats = getStats();
+    
+    try {
+        await supabaseClient.from('users').update({ active_badge: badgeId }).eq('tg_id', MY_TG_ID);
+        stats.active_badge = badgeId;
+        saveStats(stats);
+        
+        showToast('Значок надет!');
+        renderShopTab('badges');
+        loadProfileData();
+    } catch(e) {
+        console.error(e);
+        showToast('Ошибка применения');
+    }
+}
+
+// --- СНЯТИЕ ЗНАЧКА ---
+async function resetBadge() {
+    if (!supabaseClient) return;
+    let stats = getStats();
+    
+    try {
+        await supabaseClient.from('users').update({ active_badge: null }).eq('tg_id', MY_TG_ID);
+        stats.active_badge = null;
+        saveStats(stats);
+        
+        showToast('Значок снят');
         loadProfileData();
     } catch(e) {
         console.error(e);
@@ -937,11 +1007,20 @@ async function openFriendProfile(id, name) {
             }
         }
 
-        // ЭФФЕКТ (ПЕРЕДАЕМ КЛАСС В КОНТЕЙНЕР)
+        // ЭФФЕКТ
         let friendEffectClass = '';
         if (friend.active_effect) {
             const { data: e } = await supabaseClient.from('effects').select('css_class').eq('id', friend.active_effect).single();
             if (e) friendEffectClass = e.css_class;
+        }
+
+        // ЗНАЧОК
+        let friendBadgeHtml = '';
+        if (friend.active_badge) {
+            const { data: bd } = await supabaseClient.from('badges').select('image_url').eq('id', friend.active_badge).single();
+            if (bd) {
+                friendBadgeHtml = `<img src="${safeUrl(bd.image_url)}" class="user-badge-icon" alt="badge">`;
+            }
         }
 
         container.innerHTML = `
@@ -953,7 +1032,10 @@ async function openFriendProfile(id, name) {
                             <div class="avatar" style="background: linear-gradient(135deg, #5b5bff, #b44aff); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff; overflow: hidden;">${avatarHtml}</div>
                         </div>
                         <div class="user-details">
-                            <h2>${escapeHTML(friend.name)}</h2>
+                            <div class="user-name-row">
+                                <h2>${escapeHTML(friend.name)}</h2>
+                                ${friendBadgeHtml}
+                            </div>
                             ${friendTitleHtml}
                             <div class="id-container">
                                 <span style="color: #ccc; font-size: 12px;">ID:</span>
@@ -1457,6 +1539,7 @@ function getStats() {
             active_banner_url: '', 
             active_title: null, 
             active_effect: null, 
+            active_badge: null,
             lastVisit: new Date().toDateString(), 
             unlockedAchievements: [], 
             favedAnime: [], 
@@ -1476,6 +1559,7 @@ function getStats() {
     if (stats.hasPurchasedBanner === undefined) stats.hasPurchasedBanner = false;
     if (stats.active_title === undefined) stats.active_title = null;
     if (stats.active_effect === undefined) stats.active_effect = null;
+    if (stats.active_badge === undefined) stats.active_badge = null;
     return stats; 
 }
 
