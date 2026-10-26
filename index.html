@@ -788,6 +788,18 @@
                 </div>
             </div>
 
+            <!-- КОНТЕНТ МАГАЗИНА (СКРЫТ ПО УМОЛЧАНИЮ) -->
+            <div id="shop-content-tab" style="display: none;">
+                <div class="shop-tabs">
+                    <div class="shop-tab active" onclick="switchShopTab('banners', this)">Баннеры</div>
+                    <div class="shop-tab" onclick="switchShopTab('titles', this)">Титулы</div>
+                    <div class="shop-tab" onclick="switchShopTab('frames', this)">Рамки</div>
+                    <div class="shop-tab" onclick="switchShopTab('effects', this)">Эффекты</div>
+                    <div class="shop-tab" onclick="switchShopTab('badges', this)">Значки</div>
+                </div>
+                <div id="shop-items-container" class="shop-grid"></div>
+            </div>
+
             <!-- КОНТЕНТ НАСТРОЕК -->
             <div class="settings-card" id="settings-content-tab" style="display: none;">
                 <div style="padding: 20px;">
@@ -863,8 +875,6 @@
         </div>
     </div>
 
-    <!-- УДАЛИЛИ СТАРОЕ МОДАЛЬНОЕ ОКНО МАГАЗИНА (shopModal) -->
-
     <!-- ПАНЕЛЬ ПРЕДПРОСМОТРА -->
     <div class="preview-bar" id="previewBar">
         <button class="preview-btn-buy" id="preview-btn-buy" onclick="executePreview()">Купить</button>
@@ -895,6 +905,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=161"></script>
+    <script src="app.js?v=162"></script>
 </body>
 </html>
