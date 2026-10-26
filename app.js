@@ -17,6 +17,7 @@ let MY_NAME = 'Гость';
 let MY_PHOTO_URL = '';
 let ACTIVE_BANNER_URL = '';
 let ACTIVE_TITLE_DATA = null;
+let ACTIVE_EFFECT_CLASS = '';
 
 if (tg) {
     tg.expand();
@@ -207,7 +208,8 @@ async function syncProfileToDB() {
             minutes_watched: stats.minutesWatched, 
             days_streak: stats.daysStreak,
             active_banner: stats.active_banner,
-            active_title: stats.active_title, // <-- СИНХРОНИЗИРУЕМ ТИТУЛ
+            active_title: stats.active_title,
+            active_effect: stats.active_effect,
             last_watched: stats.favedAnime.length > 0 ? stats.favedAnime[stats.favedAnime.length - 1].id : null
         }, { onConflict: 'tg_id' });
     } catch (e) { console.error('Ошибка синхронизации:', e); }
@@ -242,7 +244,7 @@ async function loadProfileData() {
                     }
                 }
 
-                // Подгружаем активный титул
+                // ТИТУЛ
                 if (dbUser.active_title) {
                     const { data: titleData } = await supabaseClient.from('titles').select('*').eq('id', dbUser.active_title).single();
                     if (titleData) {
@@ -252,6 +254,18 @@ async function loadProfileData() {
                 } else {
                     ACTIVE_TITLE_DATA = null;
                     stats.active_title = null;
+                }
+
+                // ЭФФЕКТ
+                if (dbUser.active_effect) {
+                    const { data: effectData } = await supabaseClient.from('effects').select('*').eq('id', dbUser.active_effect).single();
+                    if (effectData) {
+                        ACTIVE_EFFECT_CLASS = effectData.css_class;
+                        stats.active_effect = effectData.id;
+                    }
+                } else {
+                    ACTIVE_EFFECT_CLASS = '';
+                    stats.active_effect = null;
                 }
                 
                 saveStats(stats);
@@ -287,6 +301,15 @@ async function loadProfileData() {
             bannerEl.style.backgroundImage = `url('${ACTIVE_BANNER_URL}')`;
         } else {
             bannerEl.style.backgroundImage = 'none';
+        }
+    }
+
+    // ПРИМЕНЯЕМ ЭФФЕКТ
+    const effectContainer = document.getElementById('avatar-effect-container');
+    if (effectContainer) {
+        effectContainer.className = 'avatar-container'; // Сбрасываем
+        if (ACTIVE_EFFECT_CLASS) {
+            effectContainer.classList.add(ACTIVE_EFFECT_CLASS);
         }
     }
 
@@ -502,6 +525,7 @@ async function renderFramesInShop(container) {
 // --- РЕНДЕР ЭФФЕКТОВ ---
 async function renderEffectsInShop(container) {
     if (!supabaseClient) return;
+    let stats = getStats();
     try {
         const { data: items } = await supabaseClient.from('effects').select('*');
         const { data: inv } = await supabaseClient.from('user_inventory').select('item_id').eq('tg_id', MY_TG_ID).eq('item_type', 'effect');
@@ -511,13 +535,23 @@ async function renderEffectsInShop(container) {
 
         items.forEach(e => {
             const isOwned = ownedIds.includes(e.id);
-            let btn = isOwned 
-                ? `<button class="shop-btn owned" disabled>Куплен</button>` 
-                : `<button class="shop-btn" onclick="buyItem('effect', ${e.id}, ${e.price})">Купить ${e.price} 🪙</button>`;
+            const isActive = stats.active_effect === e.id;
             
+            let btn = '';
+            if (isActive) {
+                btn = `<button class="shop-btn owned" disabled>Активен</button>`;
+            } else if (isOwned) {
+                btn = `<button class="shop-btn owned" onclick="applyEffect(${e.id})">Применить</button>`;
+            } else {
+                btn = `<button class="shop-btn" onclick="buyItem('effect', ${e.id}, ${e.price})">Купить ${e.price} 🪙</button>`;
+            }
+            
+            // Демонстрация эффекта прямо в магазине
             html += `
                 <div class="shop-item">
-                    <div class="shop-img" style="background: #222; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold;">${escapeHTML(e.name)}</div>
+                    <div class="shop-img ${e.css_class}" style="background: #222; display:flex; align-items:center; justify-content:center;">
+                        <div class="avatar" style="width:50px; height:50px; font-size:14px;">AA</div>
+                    </div>
                     <div class="shop-info">
                         <div class="shop-name">${escapeHTML(e.name)}</div>
                         ${btn}
@@ -585,9 +619,10 @@ async function buyItem(type, itemId, price) {
         
         loadProfileData();
         
-        // Если это титул, сразу применяем его
         if (type === 'title') {
             await applyTitle(itemId);
+        } else if (type === 'effect') {
+            await applyEffect(itemId);
         } else {
             renderShopTab(type + 's'); 
         }
@@ -628,6 +663,42 @@ async function resetTitle() {
         saveStats(stats);
         
         showToast('Титул снят');
+        loadProfileData();
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+// --- ПРИМЕНЕНИЕ ЭФФЕКТА ---
+async function applyEffect(effectId) {
+    if (!supabaseClient) return;
+    let stats = getStats();
+    
+    try {
+        await supabaseClient.from('users').update({ active_effect: effectId }).eq('tg_id', MY_TG_ID);
+        stats.active_effect = effectId;
+        saveStats(stats);
+        
+        showToast('Эффект надет!');
+        renderShopTab('effects');
+        loadProfileData();
+    } catch(e) {
+        console.error(e);
+        showToast('Ошибка применения');
+    }
+}
+
+// --- СНЯТИЕ ЭФФЕКТА ---
+async function resetEffect() {
+    if (!supabaseClient) return;
+    let stats = getStats();
+    
+    try {
+        await supabaseClient.from('users').update({ active_effect: null }).eq('tg_id', MY_TG_ID);
+        stats.active_effect = null;
+        saveStats(stats);
+        
+        showToast('Эффект снят');
         loadProfileData();
     } catch(e) {
         console.error(e);
@@ -818,7 +889,7 @@ async function openFriendProfile(id, name) {
             if (b) friendBanner = `style="background-image: url('${safeUrl(b.image_url)}');"`;
         }
 
-        // ПОДГРУЖАЕМ ТИТУЛ ДРУГА
+        // ТИТУЛ
         let friendTitleHtml = '';
         if (friend.active_title) {
             const { data: t } = await supabaseClient.from('titles').select('*').eq('id', friend.active_title).single();
@@ -827,11 +898,18 @@ async function openFriendProfile(id, name) {
             }
         }
 
+        // ЭФФЕКТ
+        let friendEffectClass = '';
+        if (friend.active_effect) {
+            const { data: e } = await supabaseClient.from('effects').select('css_class').eq('id', friend.active_effect).single();
+            if (e) friendEffectClass = e.css_class;
+        }
+
         container.innerHTML = `
             <div class="user-card-wrapper">
                 <div class="user-card-top" ${friendBanner}>
                     <div class="user-card-top-content">
-                        <div class="avatar-container">
+                        <div class="avatar-container ${friendEffectClass}">
                             <div class="avatar" style="background: linear-gradient(135deg, #5b5bff, #b44aff); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff; overflow: hidden;">${avatarHtml}</div>
                         </div>
                         <div class="user-details">
@@ -1314,7 +1392,8 @@ function getStats() {
             coins: 0, 
             active_banner: null, 
             active_banner_url: '', 
-            active_title: null, // <-- ДОБАВЛЕНО
+            active_title: null, 
+            active_effect: null, // <-- ДОБАВЛЕНО
             lastVisit: new Date().toDateString(), 
             unlockedAchievements: [], 
             favedAnime: [], 
@@ -1333,6 +1412,7 @@ function getStats() {
     if (stats.totalMinutesOnSite === undefined) stats.totalMinutesOnSite = 0;
     if (stats.hasPurchasedBanner === undefined) stats.hasPurchasedBanner = false;
     if (stats.active_title === undefined) stats.active_title = null;
+    if (stats.active_effect === undefined) stats.active_effect = null;
     return stats; 
 }
 
