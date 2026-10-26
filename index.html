@@ -118,7 +118,7 @@
         
         .id-container { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px 15px; display: inline-flex; align-items: center; gap: 10px; margin-bottom: 5px; cursor: pointer; backdrop-filter: blur(5px); }
         
-        /* БЕЙДЖ УРОВНЯ С КАРТИНКОЙ */
+        /* БЕЙДЖ УРОВНЯ С КАРТИНКОЙ (БЕЗ КРУГА) */
         .level-row { 
             display: flex; 
             align-items: center; 
@@ -137,9 +137,8 @@
             justify-content: center; 
             flex-shrink: 0; 
             position: relative; 
-            border-radius: 50%;
-            overflow: hidden; /* Обрезаем картинку под круг */
-            border: 2px solid rgba(255, 255, 255, 0.1); /* Тонкая рамка для красоты */
+            border-radius: 8px; /* Легкое скругление */
+            overflow: visible; 
         }
 
         /* Картинка на фоне */
@@ -147,28 +146,32 @@
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            object-fit: cover;
+            object-fit: contain; /* Картинка вписывается целиком */
             z-index: 1;
+            border-radius: 8px;
         }
         
         /* Цифра уровня поверх картинки */
         .level-number {
-            position: relative; 
+            position: absolute; 
             z-index: 2; 
-            font-size: 40px; 
+            font-size: 26px; /* Размер под листочек */
             font-weight: 900; 
             font-family: 'Nunito', sans-serif; 
             line-height: 1; 
             display: flex; 
             align-items: center; 
             justify-content: center;
-            /* Белая цифра с черной обводкой */
-            color: #ffffff;
-            -webkit-text-stroke: 2px #000000;
-            text-shadow: 0px 2px 4px rgba(0,0,0,0.8);
-            /* Убрали анимации */
-            transition: none;
-            animation: none;
+            
+            /* Черная цифра без обводки */
+            color: #000000; 
+            -webkit-text-stroke: 0px;
+            text-shadow: none;
+            
+            /* Позиционируем ровно на листочек */
+            top: 55%;
+            left: 65%;
+            transform: translate(-50%, -50%);
         }
         
         .level-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
@@ -226,8 +229,16 @@
         .modal-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
         
         .modal-icon-large { display: flex; justify-content: center; margin-bottom: 15px; color: var(--primary); position: relative; }
-        .modal-level-badge { width: 120px !important; height: 120px !important; display: flex; align-items: center; justify-content: center; position: relative; }
-        .modal-level-badge .level-number { font-size: 64px; -webkit-text-stroke: 3px #000000; }
+        .modal-level-badge { 
+            width: 140px !important; 
+            height: 140px !important; 
+            border-radius: 12px;
+        }
+        .modal-level-badge .level-number { 
+            font-size: 48px; 
+            top: 55%;
+            left: 65%;
+        }
         
         .modal-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 5px; }
         .modal-subtitle { font-size: 14px; color: #888; margin-bottom: 20px; word-wrap: break-word; line-height: 1.4; }
@@ -523,7 +534,6 @@
         <button onclick="switchTab('profile')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
             <div class="ach-icon-big" style="width: 50px; height: 50px;">
-                <!-- ЗАМЕНИЛИ SVG НА ВАШУ КАРТИНКУ (без фона) -->
                 <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;">
             </div>
             <div>
@@ -562,9 +572,7 @@
                 <div class="user-card-bottom">
                     <div class="level-row" onclick="openLevelModal()">
                         <div class="level-badge" id="profile-level-badge-container">
-                            <!-- Картинка уровня -->
                             <img src="level_icon.png" class="level-badge-img" alt="level">
-                            <!-- Цифра уровня -->
                             <span id="user-level" class="level-number">1</span>
                         </div>
                         <div class="level-info">
@@ -584,7 +592,6 @@
             <div class="achievements-card" id="profile-content-tab" onclick="openAchievementsPage()">
                 <div class="ach-header">
                     <div class="ach-icon-big">
-                        <!-- ЗАМЕНИЛИ SVG НА ВАШУ КАРТИНКУ (без фона) -->
                         <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;">
                     </div>
                     <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p><span id="ach-points">0</span> очков</p></div>
@@ -621,9 +628,7 @@
             
             <div class="modal-icon-large">
                 <div class="level-badge modal-level-badge" id="modal-level-badge-container">
-                    <!-- Картинка уровня -->
                     <img src="level_icon.png" class="level-badge-img" alt="level">
-                    <!-- Цифра уровня -->
                     <span id="modal-icon-level" class="level-number">1</span>
                 </div>
             </div>
@@ -698,6 +703,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=148"></script>
+    <script src="app.js?v=149"></script>
 </body>
 </html>
