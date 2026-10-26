@@ -131,7 +131,7 @@
             display: flex; 
             align-items: center; 
             gap: 15px; 
-            padding: 15px 0; /* Добавили отступы, так как убрали их у user-card-bottom */
+            padding: 15px 0; 
             text-align: left; 
             cursor: pointer; 
         }
@@ -184,10 +184,11 @@
         .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 4px; box-shadow: 0 0 10px #00f5ff; }
         .xp-text { font-size: 12px; color: #aaa; text-align: right; font-weight: 600; }
         
+        /* ОБНОВЛЕННЫЕ ТАБЫ (3 КНОПКИ) */
         .profile-tabs { display: flex; background: #14141f; border-radius: 15px; padding: 5px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.05); }
-        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: #888; font-size: 14px; font-weight: 600; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: 0.2s; }
+        .tab-btn { flex: 1; padding: 12px 5px; border: none; background: transparent; color: #888; font-size: 13px; font-weight: 600; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
         .tab-btn.active { background: #2a2a3e; color: #fff; }
-        .tab-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .tab-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         
         .achievements-card, .settings-card { background: #14141f; border-radius: 20px; padding: 20px; margin-top: 15px; border: 1px solid rgba(255, 215, 0, 0.2); position: relative; cursor: pointer; transition: 0.2s; }
         .achievements-card:active { transform: scale(0.98); }
@@ -216,9 +217,15 @@
         .settings-btn { width: 100%; padding: 15px; border-radius: 12px; background: #1a1a20; border: 1px solid rgba(255,255,255,0.1); color: #fff; text-align: left; font-size: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .settings-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; margin-right: 10px; }
 
+        /* МАГАЗИН */
+        .shop-tabs { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 15px; }
+        .shop-tabs::-webkit-scrollbar { display: none; }
+        .shop-tab { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #888; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: 0.2s; }
+        .shop-tab.active { background: #5b5bff; color: #fff; border-color: #5b5bff; }
+
         .shop-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px; }
         .shop-item { background: #1a1a20; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
-        .shop-img { width: 100%; height: 80px; background-size: cover; background-position: center; }
+        .shop-img { width: 100%; height: 100px; background-size: cover; background-position: center; }
         .shop-info { padding: 10px; text-align: center; display: flex; flex-direction: column; flex: 1; justify-content: space-between; }
         .shop-name { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #fff; }
         .shop-btn { background: var(--primary); color: #fff; border: none; padding: 8px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; margin-top: 5px; }
@@ -546,6 +553,22 @@
         <div id="achievements-list-container" style="margin-top: 15px;"></div>
     </div>
 
+    <!-- НОВЫЙ ЭКРАН МАГАЗИНА -->
+    <div id="screen-shop" class="screen" style="padding: 20px;">
+        <button onclick="switchTab('profile')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+        <h1 style="font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 15px;">Магазин</h1>
+        
+        <div class="shop-tabs">
+            <div class="shop-tab active" onclick="switchShopTab('banners', this)">Баннеры</div>
+            <div class="shop-tab" onclick="switchShopTab('titles', this)">Титулы</div>
+            <div class="shop-tab" onclick="switchShopTab('frames', this)">Рамки</div>
+            <div class="shop-tab" onclick="switchShopTab('effects', this)">Эффекты</div>
+            <div class="shop-tab" onclick="switchShopTab('badges', this)">Значки</div>
+        </div>
+
+        <div id="shop-items-container" class="shop-grid"></div>
+    </div>
+
     <div id="screen-profile" class="screen">
         <header class="profile-header"><h1>Профиль</h1></header>
         <div class="profile-container">
@@ -586,40 +609,43 @@
                 </div>
             </div>
 
+            <!-- ОБНОВЛЕННЫЕ ТАБЫ (3 КНОПКИ) -->
             <div class="profile-tabs">
                 <button class="tab-btn active" id="tab-btn-profile" onclick="switchProfileTab('profile')"><svg><use href="#oa-profile"></use></svg> Профиль</button>
+                <button class="tab-btn" id="tab-btn-shop" onclick="switchProfileTab('shop')"><svg><use href="#oa-shop"></use></svg> Магазин</button>
                 <button class="tab-btn" id="tab-btn-settings" onclick="switchProfileTab('settings')"><svg><use href="#oa-settings"></use></svg> Настройки</button>
             </div>
 
-            <div class="achievements-card" id="profile-content-tab" onclick="openAchievementsPage()">
-                <div class="ach-header">
-                    <div class="ach-icon-big">
-                        <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;">
+            <!-- КОНТЕНТ ПРОФИЛЯ -->
+            <div id="profile-content-tab">
+                <div class="achievements-card" onclick="openAchievementsPage()">
+                    <div class="ach-header">
+                        <div class="ach-icon-big">
+                            <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;">
+                        </div>
+                        <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p><span id="ach-points">0</span> очков</p></div>
+                        <div class="ach-total"><span id="ach-earned">0</span>/<span id="ach-total-count">12</span></div>
                     </div>
-                    <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p><span id="ach-points">0</span> очков</p></div>
-                    <div class="ach-total"><span id="ach-earned">0</span>/<span id="ach-total-count">12</span></div>
-                </div>
-                <div class="ach-progress-wrap"><div class="ach-progress-bar" id="ach-bar" style="width: 0%;"></div></div>
-                <div class="ach-next">
-                    <div class="ach-next-icon"><svg><use href="#oa-level"></use></svg></div>
-                    <div class="ach-next-info"><h4>Дальше: <span id="next-ach-name">Загрузка...</span></h4><p>Продолжайте смотреть</p></div>
-                    <div class="ach-reward">+<span id="next-ach-reward">0</span> <svg><use href="#oa-coin"></use></svg></div>
+                    <div class="ach-progress-wrap"><div class="ach-progress-bar" id="ach-bar" style="width: 0%;"></div></div>
+                    <div class="ach-next">
+                        <div class="ach-next-icon"><svg><use href="#oa-level"></use></svg></div>
+                        <div class="ach-next-info"><h4>Дальше: <span id="next-ach-name">Загрузка...</span></h4><p>Продолжайте смотреть</p></div>
+                        <div class="ach-reward">+<span id="next-ach-reward">0</span> <svg><use href="#oa-coin"></use></svg></div>
+                    </div>
                 </div>
             </div>
 
+            <!-- КОНТЕНТ НАСТРОЕК -->
             <div class="settings-card" id="settings-content-tab" style="display: none;">
                 <div style="padding: 20px;">
                     <h3 style="margin-bottom: 15px; color: #fff;">Настройки</h3>
-                    <button class="settings-btn" onclick="openShopModal()">
-                        <span style="display:flex; align-items:center;"><svg><use href="#oa-shop"></use></svg> Магазин баннеров</span>
-                        <span style="color: #888;">›</span>
-                    </button>
                     <button class="settings-btn" onclick="resetBanner()">
                         <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять баннер</span>
                         <span style="color: #888;">›</span>
                     </button>
                 </div>
             </div>
+
             <div style="height: 20px;"></div>
         </div>
     </div>
@@ -672,15 +698,7 @@
         </div>
     </div>
 
-    <div class="modal-overlay" id="shopModal" onclick="closeModal('shopModal')">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal('shopModal')"><svg><use href="#oa-close"></use></svg></button>
-            <div class="modal-icon-large"><svg><use href="#oa-shop"></use></svg></div>
-            <div class="modal-title">Магазин баннеров</div>
-            <div class="modal-subtitle">Твой баланс: <span id="shop-coins" style="color: #ffd700; font-weight: bold;">0</span> <svg style="width:14px;height:14px;display:inline;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.8;"><use href="#oa-coin"></use></svg></div>
-            <div id="shop-items-container" class="shop-grid"></div>
-        </div>
-    </div>
+    <!-- УДАЛИЛИ СТАРОЕ МОДАЛЬНОЕ ОКНО МАГАЗИНА (shopModal) -->
 
     <nav class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('home', this)">
@@ -705,6 +723,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=150"></script>
+    <script src="app.js?v=151"></script>
 </body>
 </html>
