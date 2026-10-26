@@ -20,11 +20,6 @@ let ACTIVE_TITLE_DATA = null;
 let ACTIVE_EFFECT_CSS = '';
 let ACTIVE_BADGE_URL = '';
 
-// ПЕРЕМЕННЫЕ ДЛЯ ПРЕДПРОСМОТРА
-let isPreviewMode = false;
-let previewItem = null;
-let savedStats = null; // Сюда сохраним состояние до примерки
-
 if (tg) {
     tg.expand();
     tg.setHeaderColor('#0a0a0f');
@@ -230,12 +225,6 @@ function copyMyId() {
 async function loadProfileData() {
     let stats = getStats(); 
     
-    // Если мы в режиме предпросмотра, не перезагружаем данные из БД, чтобы не сбить примерку
-    if (isPreviewMode) {
-        applyStatsToUI(savedStats || stats);
-        return;
-    }
-
     if (stats.active_banner_url) {
         ACTIVE_BANNER_URL = stats.active_banner_url;
     }
@@ -313,12 +302,7 @@ async function loadProfileData() {
     } 
     
     checkAchievements(stats); 
-    applyStatsToUI(stats);
-    syncProfileToDB();
-}
-
-// ФУНКЦИЯ ОТРИСОВКИ ПРОФИЛЯ (вынесена отдельно для предпросмотра)
-function applyStatsToUI(stats) {
+    
     const avatarEl = document.getElementById('tg-avatar'); 
     if (avatarEl && MY_TG_ID) { 
         if (MY_PHOTO_URL) avatarEl.innerHTML = `<img src="${safeUrl(MY_PHOTO_URL)}" style="width:100%; height:100%; object-fit:cover;">`; 
@@ -334,6 +318,7 @@ function applyStatsToUI(stats) {
         }
     }
 
+    // ГЕНЕРАЦИЯ ЧАСТИЦ
     renderParticles();
 
     // ЗНАЧОК
@@ -402,6 +387,8 @@ function applyStatsToUI(stats) {
         setElText('next-ach-name', 'Все выполнено!'); 
         setElText('next-ach-reward', '0');
     }
+
+    syncProfileToDB();
 }
 
 // ==========================================
@@ -447,7 +434,7 @@ function renderParticles() {
 }
 
 // ==========================================
-// МАГАЗИН И ПРЕДПРОСМОТР
+// МАГАЗИН
 // ==========================================
 function openShopModal() {
     switchProfileTab('shop');
@@ -477,98 +464,6 @@ function renderShopTab(tabName) {
     } else if (tabName === 'badges') {
         renderBadgesInShop(container);
     }
-}
-
-// --- ФУНКЦИЯ ЗАПУСКА ПРЕДПРОСМОТРА ---
-function startPreview(type, item) {
-    if (isPreviewMode) return; // Защита от повторного клика
-
-    isPreviewMode = true;
-    previewItem = { type, item };
-    
-    // Сохраняем текущее состояние
-    savedStats = JSON.parse(JSON.stringify(getStats())); 
-    savedStats._active_banner_url = ACTIVE_BANNER_URL;
-    savedStats._active_title_data = ACTIVE_TITLE_DATA;
-    savedStats._active_effect_css = ACTIVE_EFFECT_CSS;
-    savedStats._active_badge_url = ACTIVE_BADGE_URL;
-
-    // Применяем визуально
-    if (type === 'banner') {
-        ACTIVE_BANNER_URL = safeUrl(item.image_url);
-    } else if (type === 'title') {
-        ACTIVE_TITLE_DATA = item;
-    } else if (type === 'effect') {
-        ACTIVE_EFFECT_CSS = item.css_class;
-    } else if (type === 'badge') {
-        ACTIVE_BADGE_URL = safeUrl(item.image_url);
-    }
-
-    // Переключаем на вкладку "Профиль" для визуализации
-    switchTab('profile'); 
-    
-    // Показываем панель внизу
-    const bar = document.getElementById('previewBar');
-    const btn = document.getElementById('preview-btn-buy');
-    
-    const isOwned = getStats().coins >= item.price;
-    if (item.price === 0) {
-        btn.textContent = 'Получить';
-    } else {
-        btn.textContent = `Купить и надеть · ${item.price} 🪙`;
-    }
-    
-    if (getStats().coins < item.price) {
-        btn.style.opacity = '0.5';
-    } else {
-        btn.style.opacity = '1';
-    }
-
-    bar.classList.add('active');
-}
-
-function cancelPreview() {
-    if (!isPreviewMode) return;
-    
-    // Восстанавливаем состояние
-    if (savedStats) {
-        ACTIVE_BANNER_URL = savedStats._active_banner_url || '';
-        ACTIVE_TITLE_DATA = savedStats._active_title_data || null;
-        ACTIVE_EFFECT_CSS = savedStats._active_effect_css || '';
-        ACTIVE_BADGE_URL = savedStats._active_badge_url || '';
-    }
-
-    isPreviewMode = false;
-    previewItem = null;
-    savedStats = null;
-    
-    document.getElementById('previewBar').classList.remove('active');
-    loadProfileData(); // Возвращаем реальные данные
-}
-
-async function executePreview() {
-    if (!isPreviewMode || !previewItem) return;
-
-    const { type, item } = previewItem;
-    const stats = getStats();
-
-    if (stats.coins < item.price) {
-        showToast('Недостаточно монет!');
-        return;
-    }
-
-    document.getElementById('previewBar').classList.remove('active');
-    isPreviewMode = false;
-
-    if (type === 'banner') {
-        await buyBanner(item.id, item.price);
-    } else {
-        await buyItem(type, item.id, item.price);
-    }
-    
-    previewItem = null;
-    savedStats = null;
-    loadProfileData();
 }
 
 // --- РЕНДЕР БАННЕРОВ ---
@@ -615,6 +510,93 @@ async function renderBannersInShop(container) {
         console.error(e);
         container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #f44;">Ошибка загрузки баннеров</div>';
     }
+}
+
+// --- ФУНКЦИЯ ЗАПУСКА ПРЕДПРОСМОТРА ---
+function startPreview(type, item) {
+    if (isPreviewMode) return; 
+
+    isPreviewMode = true;
+    previewItem = { type, item };
+    
+    savedStats = JSON.parse(JSON.stringify(getStats())); 
+    savedStats._active_banner_url = ACTIVE_BANNER_URL;
+    savedStats._active_title_data = ACTIVE_TITLE_DATA;
+    savedStats._active_effect_css = ACTIVE_EFFECT_CSS;
+    savedStats._active_badge_url = ACTIVE_BADGE_URL;
+
+    if (type === 'banner') {
+        ACTIVE_BANNER_URL = safeUrl(item.image_url);
+    } else if (type === 'title') {
+        ACTIVE_TITLE_DATA = item;
+    } else if (type === 'effect') {
+        ACTIVE_EFFECT_CSS = item.css_class;
+    } else if (type === 'badge') {
+        ACTIVE_BADGE_URL = safeUrl(item.image_url);
+    }
+
+    switchTab('profile'); 
+    
+    const bar = document.getElementById('previewBar');
+    const btn = document.getElementById('preview-btn-buy');
+    
+    const isOwned = getStats().coins >= item.price;
+    if (item.price === 0) {
+        btn.textContent = 'Получить';
+    } else {
+        btn.textContent = `Купить и надеть · ${item.price} 🪙`;
+    }
+    
+    if (getStats().coins < item.price) {
+        btn.style.opacity = '0.5';
+    } else {
+        btn.style.opacity = '1';
+    }
+
+    bar.classList.add('active');
+}
+
+function cancelPreview() {
+    if (!isPreviewMode) return;
+    
+    if (savedStats) {
+        ACTIVE_BANNER_URL = savedStats._active_banner_url || '';
+        ACTIVE_TITLE_DATA = savedStats._active_title_data || null;
+        ACTIVE_EFFECT_CSS = savedStats._active_effect_css || '';
+        ACTIVE_BADGE_URL = savedStats._active_badge_url || '';
+    }
+
+    isPreviewMode = false;
+    previewItem = null;
+    savedStats = null;
+    
+    document.getElementById('previewBar').classList.remove('active');
+    loadProfileData(); 
+}
+
+async function executePreview() {
+    if (!isPreviewMode || !previewItem) return;
+
+    const { type, item } = previewItem;
+    const stats = getStats();
+
+    if (stats.coins < item.price) {
+        showToast('Недостаточно монет!');
+        return;
+    }
+
+    document.getElementById('previewBar').classList.remove('active');
+    isPreviewMode = false;
+
+    if (type === 'banner') {
+        await buyBanner(item.id, item.price);
+    } else {
+        await buyItem(type, item.id, item.price);
+    }
+    
+    previewItem = null;
+    savedStats = null;
+    loadProfileData();
 }
 
 // --- РЕНДЕР ТИТУЛОВ ---
@@ -1742,14 +1724,41 @@ function switchProfileTab(tab) {
         btnProfile.classList.add('active'); 
         contentProfile.style.display = 'block'; 
         contentSettings.style.display = 'none'; 
+        // Скрываем контейнер магазина, если он есть
+        const shopContent = document.getElementById('shop-content-tab');
+        if(shopContent) shopContent.style.display = 'none';
     } else if (tab === 'shop') {
         btnShop.classList.add('active');
-        switchTab('shop');
+        // Показываем контейнер магазина
+        contentProfile.style.display = 'none';
+        contentSettings.style.display = 'none';
+        
+        // Динамически создаем или показываем контейнер магазина
+        let shopContent = document.getElementById('shop-content-tab');
+        if (!shopContent) {
+            shopContent = document.createElement('div');
+            shopContent.id = 'shop-content-tab';
+            shopContent.innerHTML = `
+                <div class="shop-tabs">
+                    <div class="shop-tab active" onclick="switchShopTab('banners', this)">Баннеры</div>
+                    <div class="shop-tab" onclick="switchShopTab('titles', this)">Титулы</div>
+                    <div class="shop-tab" onclick="switchShopTab('frames', this)">Рамки</div>
+                    <div class="shop-tab" onclick="switchShopTab('effects', this)">Эффекты</div>
+                    <div class="shop-tab" onclick="switchShopTab('badges', this)">Значки</div>
+                </div>
+                <div id="shop-items-container" class="shop-grid"></div>
+            `;
+            document.querySelector('.profile-container').appendChild(shopContent);
+        }
+        shopContent.style.display = 'block';
+        renderShopTab(currentShopTab); // Отрисовываем вкладку
         return;
     } else { 
         btnSettings.classList.add('active'); 
         contentProfile.style.display = 'none'; 
         contentSettings.style.display = 'block'; 
+        const shopContent = document.getElementById('shop-content-tab');
+        if(shopContent) shopContent.style.display = 'none';
     } 
 }
 
