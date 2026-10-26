@@ -229,15 +229,11 @@ function copyMyId() {
 async function loadProfileData() {
     let stats = getStats(); 
     
-    // ВАЖНО: если идёт предпросмотр — не трогаем ACTIVE_* переменные из stats
-    if (!isPreviewMode) {
-        if (stats.active_banner_url) {
-            ACTIVE_BANNER_URL = stats.active_banner_url;
-        }
+    if (stats.active_banner_url) {
+        ACTIVE_BANNER_URL = stats.active_banner_url;
     }
     
-    // --- СИНХРОНИЗАЦИЯ ИЗ SUPABASE ---
-    if (MY_TG_ID && supabaseClient && !isPreviewMode) {
+    if (MY_TG_ID && supabaseClient) {
         try {
             const { data: dbUser } = await supabaseClient.from('users').select('*').eq('tg_id', MY_TG_ID).single();
             if (dbUser) {
@@ -294,7 +290,7 @@ async function loadProfileData() {
     }
     
     const today = new Date().toDateString(); 
-    if (stats.lastVisit !== today && !isPreviewMode) { 
+    if (stats.lastVisit !== today) { 
         stats.daysStreak += 1; 
         stats.lastVisit = today; 
         stats.xp += 5; 
@@ -384,11 +380,11 @@ async function loadProfileData() {
         setElText('next-ach-reward', '0');
     }
 
-    if (!isPreviewMode) syncProfileToDB();
+    syncProfileToDB();
 }
 
 // ==========================================
-// ГЕНЕРАЦИЯ ЧАСТИЦ
+// ГЕНЕРАЦИЯ ЧАСТИЦ (профиль)
 // ==========================================
 function renderParticles() {
     const container = document.getElementById('particle-effect-container');
@@ -401,46 +397,90 @@ function renderParticles() {
 
     container.classList.add(ACTIVE_EFFECT_CSS);
 
-    const particleCount = 30;
-
-    for (let i = 0; i < particleCount; i++) {
+    for (let i = 0; i < 30; i++) {
         const span = document.createElement('span');
-        
         const size = Math.random() * 4 + 2;
-        const left = Math.random() * 100;
-        const delay = Math.random() * 5;
-        const duration = Math.random() * 4 + 3;
-
-        span.style.left = `${left}%`;
+        span.style.left = `${Math.random() * 100}%`;
         span.style.width = `${size}px`;
         span.style.height = `${size}px`;
-        span.style.animationDuration = `${duration}s`;
-        span.style.animationDelay = `${delay}s`;
+        span.style.animationDuration = `${Math.random() * 4 + 3}s`;
+        span.style.animationDelay = `${Math.random() * 5}s`;
 
-        if (ACTIVE_EFFECT_CSS === 'effect-sparks') {
-            span.style.animationName = 'riseUp';
-        } else if (ACTIVE_EFFECT_CSS === 'effect-sakura') {
-            span.style.animationName = 'fallDown';
-        } else if (ACTIVE_EFFECT_CSS === 'effect-stars') {
-            span.style.animationName = 'twinkle, float'; 
-        }
+        if (ACTIVE_EFFECT_CSS === 'effect-sparks') span.style.animationName = 'riseUp';
+        else if (ACTIVE_EFFECT_CSS === 'effect-sakura') span.style.animationName = 'fallDown';
+        else if (ACTIVE_EFFECT_CSS === 'effect-stars') span.style.animationName = 'twinkle, float';
 
         container.appendChild(span);
     }
 }
 
 // ==========================================
-// ПРИМЕНЕНИЕ ВИЗУАЛА ПРЕДПРОСМОТРА
+// ПРЕДПРОСМОТР (отдельный экран)
 // ==========================================
-function applyPreviewVisuals() {
-    const bannerEl = document.getElementById('profile-banner');
+function startPreview(type, item) {
+    if (isPreviewMode) return; 
+
+    isPreviewMode = true;
+    previewItem = { type, item };
+    
+    savedStats = JSON.parse(JSON.stringify(getStats())); 
+    savedStats._active_banner_url = ACTIVE_BANNER_URL;
+    savedStats._active_title_data = ACTIVE_TITLE_DATA;
+    savedStats._active_effect_css = ACTIVE_EFFECT_CSS;
+    savedStats._active_badge_url = ACTIVE_BADGE_URL;
+
+    if (type === 'banner') {
+        ACTIVE_BANNER_URL = safeUrl(item.image_url);
+    } else if (type === 'title') {
+        ACTIVE_TITLE_DATA = item;
+    } else if (type === 'effect') {
+        ACTIVE_EFFECT_CSS = item.css_class;
+    } else if (type === 'badge') {
+        ACTIVE_BADGE_URL = safeUrl(item.image_url);
+    }
+
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const previewScreen = document.getElementById('screen-preview');
+    if (previewScreen) previewScreen.classList.add('active');
+    
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+    renderPreviewCard();
+
+    const bar = document.getElementById('previewBar');
+    const btn = document.getElementById('preview-btn-buy');
+    
+    if (item.price === 0) {
+        btn.textContent = 'Получить';
+    } else {
+        btn.textContent = `Купить и надеть · ${item.price} 🪙`;
+    }
+    
+    btn.style.opacity = getStats().coins < item.price ? '0.5' : '1';
+
+    bar.classList.add('active');
+}
+
+function renderPreviewCard() {
+    const stats = getStats();
+
+    const bannerEl = document.getElementById('preview-banner');
     if (bannerEl) {
         bannerEl.style.backgroundImage = ACTIVE_BANNER_URL ? `url('${ACTIVE_BANNER_URL}')` : 'none';
     }
 
-    renderParticles();
+    const avatarEl = document.getElementById('preview-avatar');
+    if (avatarEl) {
+        if (MY_PHOTO_URL) {
+            avatarEl.innerHTML = `<img src="${safeUrl(MY_PHOTO_URL)}" style="width:100%; height:100%; object-fit:cover;">`;
+        } else {
+            avatarEl.innerHTML = `<span>${escapeHTML((MY_NAME || '?')[0].toUpperCase())}</span>`;
+        }
+    }
 
-    const badgeEl = document.getElementById('user-badge-img');
+    setElText('preview-name', MY_NAME || 'Гость');
+
+    const badgeEl = document.getElementById('preview-badge-img');
     if (badgeEl) {
         if (ACTIVE_BADGE_URL) {
             badgeEl.src = ACTIVE_BADGE_URL;
@@ -450,8 +490,8 @@ function applyPreviewVisuals() {
         }
     }
 
-    const titleContainer = document.getElementById('user-title-container');
-    const titleEl = document.getElementById('user-active-title');
+    const titleContainer = document.getElementById('preview-title-container');
+    const titleEl = document.getElementById('preview-active-title');
     if (titleContainer && titleEl) {
         if (ACTIVE_TITLE_DATA) {
             titleContainer.style.display = 'block';
@@ -462,15 +502,102 @@ function applyPreviewVisuals() {
             titleContainer.style.display = 'none';
         }
     }
+
+    setElText('preview-coins', stats.coins || 0);
+
+    const currentLevel = Math.floor(stats.xp / 100) + 1;
+    setElText('preview-level', currentLevel);
+    setElText('preview-level-text', currentLevel);
+    setElText('preview-rank', LEVEL_TITLES[Math.min(currentLevel - 1, 99)]);
+    setElText('preview-xp-current', stats.xp % 100);
+    setElText('preview-xp-next', 100);
+    setElWidth('preview-xp-bar', (stats.xp % 100) + '%');
+
+    renderPreviewParticles();
+}
+
+function renderPreviewParticles() {
+    const container = document.getElementById('preview-particle-container');
+    if (!container) return;
+    
+    container.innerHTML = ''; 
+    container.className = 'effect-container'; 
+    
+    if (!ACTIVE_EFFECT_CSS) return;
+
+    container.classList.add(ACTIVE_EFFECT_CSS);
+
+    for (let i = 0; i < 30; i++) {
+        const span = document.createElement('span');
+        const size = Math.random() * 4 + 2;
+        span.style.left = `${Math.random() * 100}%`;
+        span.style.width = `${size}px`;
+        span.style.height = `${size}px`;
+        span.style.animationDuration = `${Math.random() * 4 + 3}s`;
+        span.style.animationDelay = `${Math.random() * 5}s`;
+
+        if (ACTIVE_EFFECT_CSS === 'effect-sparks') span.style.animationName = 'riseUp';
+        else if (ACTIVE_EFFECT_CSS === 'effect-sakura') span.style.animationName = 'fallDown';
+        else if (ACTIVE_EFFECT_CSS === 'effect-stars') span.style.animationName = 'twinkle, float';
+
+        container.appendChild(span);
+    }
+}
+
+function cancelPreview() {
+    if (!isPreviewMode) return;
+    
+    if (savedStats) {
+        ACTIVE_BANNER_URL = savedStats._active_banner_url || '';
+        ACTIVE_TITLE_DATA = savedStats._active_title_data || null;
+        ACTIVE_EFFECT_CSS = savedStats._active_effect_css || '';
+        ACTIVE_BADGE_URL = savedStats._active_badge_url || '';
+    }
+
+    isPreviewMode = false;
+    previewItem = null;
+    savedStats = null;
+    
+    const bar = document.getElementById('previewBar');
+    if (bar) bar.classList.remove('active');
+    
+    switchTab('profile');
+    switchProfileTab('shop');
+}
+
+async function executePreview() {
+    if (!isPreviewMode || !previewItem) return;
+
+    const { type, item } = previewItem;
+    const stats = getStats();
+
+    if (stats.coins < item.price) {
+        showToast('Недостаточно монет!');
+        return;
+    }
+
+    const bar = document.getElementById('previewBar');
+    if (bar) bar.classList.remove('active');
+    
+    isPreviewMode = false;
+    previewItem = null;
+
+    if (type === 'banner') {
+        await buyBanner(item.id, item.price);
+    } else {
+        await buyItem(type, item.id, item.price);
+    }
+    
+    savedStats = null;
+    
+    switchTab('profile');
+    switchProfileTab('shop');
+    loadProfileData();
 }
 
 // ==========================================
 // МАГАЗИН
 // ==========================================
-function openShopModal() {
-    switchProfileTab('shop');
-}
-
 function switchShopTab(tabName, element) {
     currentShopTab = tabName;
     document.querySelectorAll('.shop-tab').forEach(el => el.classList.remove('active'));
@@ -484,20 +611,13 @@ function renderShopTab(tabName) {
     
     container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 20px;">Загрузка...</div>';
 
-    if (tabName === 'banners') {
-        renderBannersInShop(container);
-    } else if (tabName === 'titles') {
-        renderTitlesInShop(container);
-    } else if (tabName === 'frames') {
-        renderFramesInShop(container);
-    } else if (tabName === 'effects') {
-        renderEffectsInShop(container);
-    } else if (tabName === 'badges') {
-        renderBadgesInShop(container);
-    }
+    if (tabName === 'banners') renderBannersInShop(container);
+    else if (tabName === 'titles') renderTitlesInShop(container);
+    else if (tabName === 'frames') renderFramesInShop(container);
+    else if (tabName === 'effects') renderEffectsInShop(container);
+    else if (tabName === 'badges') renderBadgesInShop(container);
 }
 
-// --- РЕНДЕР БАННЕРОВ ---
 async function renderBannersInShop(container) {
     let stats = getStats();
     if (!supabaseClient) return;
@@ -543,120 +663,6 @@ async function renderBannersInShop(container) {
     }
 }
 
-// --- ЗАПУСК ПРЕДПРОСМОТРА ---
-function startPreview(type, item) {
-    if (isPreviewMode) return; 
-
-    isPreviewMode = true;
-    previewItem = { type, item };
-    
-    savedStats = JSON.parse(JSON.stringify(getStats())); 
-    savedStats._active_banner_url = ACTIVE_BANNER_URL;
-    savedStats._active_title_data = ACTIVE_TITLE_DATA;
-    savedStats._active_effect_css = ACTIVE_EFFECT_CSS;
-    savedStats._active_badge_url = ACTIVE_BADGE_URL;
-
-    if (type === 'banner') {
-        ACTIVE_BANNER_URL = safeUrl(item.image_url);
-    } else if (type === 'title') {
-        ACTIVE_TITLE_DATA = item;
-    } else if (type === 'effect') {
-        ACTIVE_EFFECT_CSS = item.css_class;
-    } else if (type === 'badge') {
-        ACTIVE_BADGE_URL = safeUrl(item.image_url);
-    }
-
-    // Переключаемся на экран профиля БЕЗ вызова loadProfileData
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    const profileScreen = document.getElementById('screen-profile');
-    if (profileScreen) profileScreen.classList.add('active');
-    
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const navItems = document.querySelectorAll('.nav-item');
-    if (navItems[4]) navItems[4].classList.add('active');
-
-    // Принудительно открываем вкладку "Профиль"
-    switchProfileTab('profile');
-
-    // Рисуем предпросмотр напрямую
-    applyPreviewVisuals();
-
-    // Заполняем базовые поля (без перезаписи ACTIVE_*)
-    const stats = getStats();
-    const currentLevel = Math.floor(stats.xp / 100) + 1; 
-    setElText('user-level', currentLevel); 
-    setElText('user-level-text', currentLevel); 
-    setElText('user-rank', LEVEL_TITLES[Math.min(currentLevel - 1, 99)]); 
-    setElText('user-xp-current', stats.xp % 100); 
-    setElText('user-coins', stats.coins || 0);
-
-    // Панель покупки
-    const bar = document.getElementById('previewBar');
-    const btn = document.getElementById('preview-btn-buy');
-    
-    if (item.price === 0) {
-        btn.textContent = 'Получить';
-    } else {
-        btn.textContent = `Купить и надеть · ${item.price} 🪙`;
-    }
-    
-    btn.style.opacity = getStats().coins < item.price ? '0.5' : '1';
-
-    bar.classList.add('active');
-}
-
-function cancelPreview() {
-    if (!isPreviewMode) return;
-    
-    if (savedStats) {
-        ACTIVE_BANNER_URL = savedStats._active_banner_url || '';
-        ACTIVE_TITLE_DATA = savedStats._active_title_data || null;
-        ACTIVE_EFFECT_CSS = savedStats._active_effect_css || '';
-        ACTIVE_BADGE_URL = savedStats._active_badge_url || '';
-    }
-
-    isPreviewMode = false;
-    previewItem = null;
-    savedStats = null;
-    
-    const bar = document.getElementById('previewBar');
-    if (bar) bar.classList.remove('active');
-    
-    // Возвращаем в магазин
-    switchProfileTab('shop');
-    
-    // Откатываем визуал
-    applyPreviewVisuals();
-}
-
-async function executePreview() {
-    if (!isPreviewMode || !previewItem) return;
-
-    const { type, item } = previewItem;
-    const stats = getStats();
-
-    if (stats.coins < item.price) {
-        showToast('Недостаточно монет!');
-        return;
-    }
-
-    const bar = document.getElementById('previewBar');
-    if (bar) bar.classList.remove('active');
-    
-    isPreviewMode = false;
-    previewItem = null;
-
-    if (type === 'banner') {
-        await buyBanner(item.id, item.price);
-    } else {
-        await buyItem(type, item.id, item.price);
-    }
-    
-    savedStats = null;
-    loadProfileData();
-}
-
-// --- РЕНДЕР ТИТУЛОВ ---
 async function renderTitlesInShop(container) {
     if (!supabaseClient) return;
     let stats = getStats();
@@ -692,7 +698,6 @@ async function renderTitlesInShop(container) {
     } catch(e) { console.error(e); }
 }
 
-// --- РЕНДЕР РАМОК ---
 async function renderFramesInShop(container) {
     if (!supabaseClient) return;
     try {
@@ -720,7 +725,6 @@ async function renderFramesInShop(container) {
     } catch(e) { console.error(e); }
 }
 
-// --- РЕНДЕР ЭФФЕКТОВ ---
 async function renderEffectsInShop(container) {
     if (!supabaseClient) return;
     let stats = getStats();
@@ -758,7 +762,6 @@ async function renderEffectsInShop(container) {
     } catch(e) { console.error(e); }
 }
 
-// --- РЕНДЕР ЗНАЧКОВ ---
 async function renderBadgesInShop(container) {
     if (!supabaseClient) return;
     let stats = getStats();
@@ -796,7 +799,6 @@ async function renderBadgesInShop(container) {
     } catch(e) { console.error(e); }
 }
 
-// --- УНИВЕРСАЛЬНАЯ ПОКУПКА ---
 async function buyItem(type, itemId, price) {
     let stats = getStats();
     if (stats.coins < price) {
@@ -820,16 +822,10 @@ async function buyItem(type, itemId, price) {
         syncProfileToDB();
         showToast('✅ Покупка успешна!');
         
-        if (type === 'title') {
-            await applyTitle(itemId);
-        } else if (type === 'effect') {
-            await applyEffect(itemId);
-        } else if (type === 'badge') {
-            await applyBadge(itemId);
-        } else {
-            loadProfileData();
-            renderShopTab(type + 's'); 
-        }
+        if (type === 'title') await applyTitle(itemId);
+        else if (type === 'effect') await applyEffect(itemId);
+        else if (type === 'badge') await applyBadge(itemId);
+        else { loadProfileData(); renderShopTab(type + 's'); }
 
     } catch(e) {
         console.error(e);
@@ -837,23 +833,17 @@ async function buyItem(type, itemId, price) {
     }
 }
 
-// --- ПРИМЕНЕНИЕ ТИТУЛА ---
 async function applyTitle(titleId) {
     if (!supabaseClient) return;
     let stats = getStats();
-    
     try {
         await supabaseClient.from('users').update({ active_title: titleId }).eq('tg_id', MY_TG_ID);
         stats.active_title = titleId;
         saveStats(stats);
-        
         showToast('Титул надет!');
         loadProfileData();
         renderShopTab('titles');
-    } catch(e) {
-        console.error(e);
-        showToast('Ошибка применения');
-    }
+    } catch(e) { console.error(e); showToast('Ошибка применения'); }
 }
 
 async function resetTitle() {
@@ -868,23 +858,17 @@ async function resetTitle() {
     } catch(e) { console.error(e); }
 }
 
-// --- ПРИМЕНЕНИЕ ЭФФЕКТА ---
 async function applyEffect(effectId) {
     if (!supabaseClient) return;
     let stats = getStats();
-    
     try {
         await supabaseClient.from('users').update({ active_effect: effectId }).eq('tg_id', MY_TG_ID);
         stats.active_effect = effectId;
         saveStats(stats);
-        
         showToast('Эффект надет!');
         loadProfileData();
         renderShopTab('effects');
-    } catch(e) {
-        console.error(e);
-        showToast('Ошибка применения');
-    }
+    } catch(e) { console.error(e); showToast('Ошибка применения'); }
 }
 
 async function resetEffect() {
@@ -899,23 +883,17 @@ async function resetEffect() {
     } catch(e) { console.error(e); }
 }
 
-// --- ПРИМЕНЕНИЕ ЗНАЧКА ---
 async function applyBadge(badgeId) {
     if (!supabaseClient) return;
     let stats = getStats();
-    
     try {
         await supabaseClient.from('users').update({ active_badge: badgeId }).eq('tg_id', MY_TG_ID);
         stats.active_badge = badgeId;
         saveStats(stats);
-        
         showToast('Значок надет!');
         loadProfileData();
         renderShopTab('badges');
-    } catch(e) {
-        console.error(e);
-        showToast('Ошибка применения');
-    }
+    } catch(e) { console.error(e); showToast('Ошибка применения'); }
 }
 
 async function resetBadge() {
@@ -976,7 +954,7 @@ async function applyBanner(bannerId, imageUrl) {
     syncProfileToDB();
     
     ACTIVE_BANNER_URL = stats.active_banner_url;
-    applyPreviewVisuals();
+    loadProfileData();
 
     showToast('Баннер применен!');
     renderShopTab('banners'); 
@@ -1158,7 +1136,7 @@ async function openFriendProfile(id, name) {
                 <div class="user-card-bottom">
                     <div class="level-row">
                         <div class="level-badge">
-                            <img src="level_icon.png" class="level-badge-img" alt="level">
+                            <img src="level_icon.png" class="level-badge-img" alt="level" onerror="this.style.display='none'">
                             <span class="level-number">${lvl}</span>
                         </div>
                         <div class="level-info">
@@ -1496,137 +1474,18 @@ const RARITY_STYLES = {
 };
 
 const ACHIEVEMENTS = [
-    { 
-        id: 'c1', 
-        name: "Киносеанс", 
-        desc: "Посмотреть любое аниме полностью", 
-        rarity: 'common', 
-        xp: 10, coins: 100, 
-        check: (s) => s.episodesWatched >= 1, 
-        progress: (s) => Math.min(s.episodesWatched, 1),
-        max: 1,
-        imgUrl: "cinema.png"
-    },
-    { 
-        id: 'c2', 
-        name: "Марафонец", 
-        desc: "Провести на сайте более 3 часов", 
-        rarity: 'common', 
-        xp: 20, coins: 100, 
-        check: (s) => s.totalMinutesOnSite >= 180,
-        progress: (s) => Math.min(s.totalMinutesOnSite, 180),
-        max: 180,
-        imgUrl: "marathon.png"
-    },
-    { 
-        id: 'c3', 
-        name: "Постоянный гость", 
-        desc: "Заходить на сайт 7 дней подряд", 
-        rarity: 'common', 
-        xp: 30, coins: 200, 
-        check: (s) => s.daysStreak >= 7,
-        progress: (s) => Math.min(s.daysStreak, 7),
-        max: 7,
-        imgUrl: "guest.png"
-    },
-    { 
-        id: 'c4', 
-        name: "Новичок", 
-        desc: "Достичь 10 уровня", 
-        rarity: 'common', 
-        xp: 50, coins: 500, 
-        check: (s) => Math.floor(s.xp / 100) + 1 >= 10,
-        progress: (s) => Math.min(Math.floor(s.xp / 100) + 1, 10),
-        max: 10,
-        imgUrl: "newbie.png"
-    },
-    { 
-        id: 'r1', 
-        name: "Коллекционер", 
-        desc: "Посмотреть 10 аниме", 
-        rarity: 'rare', 
-        xp: 50, coins: 300, 
-        check: (s) => s.episodesWatched >= 10,
-        progress: (s) => Math.min(s.episodesWatched, 10),
-        max: 10,
-        imgUrl: "collector.png"
-    },
-    { 
-        id: 'r2', 
-        name: "Опытный зритель", 
-        desc: "Достичь 20 уровня", 
-        rarity: 'rare', 
-        xp: 100, coins: 600, 
-        check: (s) => Math.floor(s.xp / 100) + 1 >= 20,
-        progress: (s) => Math.min(Math.floor(s.xp / 100) + 1, 20),
-        max: 20,
-        imgUrl: "experienced.png"
-    },
-    { 
-        id: 'r3', 
-        name: "Знаток", 
-        desc: "Достичь 40 уровня", 
-        rarity: 'rare', 
-        xp: 100, coins: 750, 
-        check: (s) => Math.floor(s.xp / 100) + 1 >= 40,
-        progress: (s) => Math.min(Math.floor(s.xp / 100) + 1, 40),
-        max: 40,
-        imgUrl: "expert.png"
-    },
-    { 
-        id: 'r4', 
-        name: "Перфекционист", 
-        desc: "Выполнить все Обычные достижения", 
-        rarity: 'rare', 
-        xp: 110, coins: 800, 
-        check: (s) => ACHIEVEMENTS.filter(a => a.rarity === 'common').every(a => s.unlockedAchievements.includes(a.id)),
-        progress: (s) => ACHIEVEMENTS.filter(a => a.rarity === 'common').filter(a => s.unlockedAchievements.includes(a.id)).length,
-        max: 4
-    },
-    { 
-        id: 'e1', 
-        name: "Заядлый анимешник", 
-        desc: "Посмотреть 20 аниме", 
-        rarity: 'epic', 
-        xp: 200, coins: 600, 
-        check: (s) => s.episodesWatched >= 20,
-        progress: (s) => Math.min(s.episodesWatched, 20),
-        max: 20,
-        imgUrl: "hardcore.png"
-    },
-    { 
-        id: 'e2', 
-        name: "Верный фанат", 
-        desc: "Заходить на сайт 30 дней подряд", 
-        rarity: 'epic', 
-        xp: 500, coins: 1000, 
-        check: (s) => s.daysStreak >= 30,
-        progress: (s) => Math.min(s.daysStreak, 30),
-        max: 30,
-        imgUrl: "fan.png"
-    },
-    { 
-        id: 'e3', 
-        name: "Модник", 
-        desc: "Приобрести любой аксессуар в магазине", 
-        rarity: 'epic', 
-        xp: 500, coins: 1000, 
-        check: (s) => s.hasPurchasedBanner === true,
-        progress: (s) => s.hasPurchasedBanner ? 1 : 0,
-        max: 1,
-        imgUrl: "fashionista.png"
-    },
-    { 
-        id: 'e4', 
-        name: "Фанат", 
-        desc: "Добавить в избранное 50 аниме", 
-        rarity: 'epic', 
-        xp: 500, coins: 1000, 
-        check: (s) => s.favedAnime.length >= 50,
-        progress: (s) => Math.min(s.favedAnime.length, 50),
-        max: 50,
-        imgUrl: "fan_fav.png"
-    }
+    { id: 'c1', name: "Киносеанс", desc: "Посмотреть любое аниме полностью", rarity: 'common', xp: 10, coins: 100, check: (s) => s.episodesWatched >= 1, progress: (s) => Math.min(s.episodesWatched, 1), max: 1, imgUrl: "cinema.png" },
+    { id: 'c2', name: "Марафонец", desc: "Провести на сайте более 3 часов", rarity: 'common', xp: 20, coins: 100, check: (s) => s.totalMinutesOnSite >= 180, progress: (s) => Math.min(s.totalMinutesOnSite, 180), max: 180, imgUrl: "marathon.png" },
+    { id: 'c3', name: "Постоянный гость", desc: "Заходить на сайт 7 дней подряд", rarity: 'common', xp: 30, coins: 200, check: (s) => s.daysStreak >= 7, progress: (s) => Math.min(s.daysStreak, 7), max: 7, imgUrl: "guest.png" },
+    { id: 'c4', name: "Новичок", desc: "Достичь 10 уровня", rarity: 'common', xp: 50, coins: 500, check: (s) => Math.floor(s.xp / 100) + 1 >= 10, progress: (s) => Math.min(Math.floor(s.xp / 100) + 1, 10), max: 10, imgUrl: "newbie.png" },
+    { id: 'r1', name: "Коллекционер", desc: "Посмотреть 10 аниме", rarity: 'rare', xp: 50, coins: 300, check: (s) => s.episodesWatched >= 10, progress: (s) => Math.min(s.episodesWatched, 10), max: 10, imgUrl: "collector.png" },
+    { id: 'r2', name: "Опытный зритель", desc: "Достичь 20 уровня", rarity: 'rare', xp: 100, coins: 600, check: (s) => Math.floor(s.xp / 100) + 1 >= 20, progress: (s) => Math.min(Math.floor(s.xp / 100) + 1, 20), max: 20, imgUrl: "experienced.png" },
+    { id: 'r3', name: "Знаток", desc: "Достичь 40 уровня", rarity: 'rare', xp: 100, coins: 750, check: (s) => Math.floor(s.xp / 100) + 1 >= 40, progress: (s) => Math.min(Math.floor(s.xp / 100) + 1, 40), max: 40, imgUrl: "expert.png" },
+    { id: 'r4', name: "Перфекционист", desc: "Выполнить все Обычные достижения", rarity: 'rare', xp: 110, coins: 800, check: (s) => ACHIEVEMENTS.filter(a => a.rarity === 'common').every(a => s.unlockedAchievements.includes(a.id)), progress: (s) => ACHIEVEMENTS.filter(a => a.rarity === 'common').filter(a => s.unlockedAchievements.includes(a.id)).length, max: 4 },
+    { id: 'e1', name: "Заядлый анимешник", desc: "Посмотреть 20 аниме", rarity: 'epic', xp: 200, coins: 600, check: (s) => s.episodesWatched >= 20, progress: (s) => Math.min(s.episodesWatched, 20), max: 20, imgUrl: "hardcore.png" },
+    { id: 'e2', name: "Верный фанат", desc: "Заходить на сайт 30 дней подряд", rarity: 'epic', xp: 500, coins: 1000, check: (s) => s.daysStreak >= 30, progress: (s) => Math.min(s.daysStreak, 30), max: 30, imgUrl: "fan.png" },
+    { id: 'e3', name: "Модник", desc: "Приобрести любой аксессуар в магазине", rarity: 'epic', xp: 500, coins: 1000, check: (s) => s.hasPurchasedBanner === true, progress: (s) => s.hasPurchasedBanner ? 1 : 0, max: 1, imgUrl: "fashionista.png" },
+    { id: 'e4', name: "Фанат", desc: "Добавить в избранное 50 аниме", rarity: 'epic', xp: 500, coins: 1000, check: (s) => s.favedAnime.length >= 50, progress: (s) => Math.min(s.favedAnime.length, 50), max: 50, imgUrl: "fan_fav.png" }
 ];
 
 const LEVEL_TITLES = ["Первый эпизод", "Любопытный зритель", "Случайный странник", "Ученик манги", "Читатель субтитров", "Собиратель тайтлов", "Ночной марафонец", "Ценитель опенингов", "Знаток сейю", "Ловец спойлеров", "Страж таймлайна", "Искатель шедевров", "Коллекционер жанров", "Следопыт сезона", "Архивариус эпизодов", "Пилот меха", "Ученик додзё", "Начинающий маг", "Дух сакуры", "Странник измерений", "Хранитель клинка", "Проводник сюжета", "Алхимик эмоций", "Писец рецензий", "Охотник за онгоингами", "Мастер бинджвотча", "Сэнпай сайта", "Хранитель лора", "Ткач теорий", "Лунный самурай", "Небесный курьер", "Хранитель опенингов", "Повелитель плейлистов", "Критик с катаной", "Мудрец субтитров", "Дубляжный маг", "Страж спойлеров", "Картограф арок", "Коллекционер аватарок", "Ловец редких тайтлов", "Хроникёр сезонов", "Мастер клиффхэнгеров", "Дуэлянт мнений", "Хранитель уютного уголка", "Рыцарь романтики", "Тень сёнэна", "Адепт исэкая", "Архимаг тайтлов", "Небесный отаку", "Странник по мирам", "Хранитель легенд", "Мастер сюжетных поворотов", "Голос фандома", "Судья сезона", "Хранитель аниме-реликвий", "Пилот звёздного поезда", "Лунный библиотекарь", "Самурай субботы", "Повелитель финальных титров", "Искатель скрытых жемчужин", "Маг рекомендаций", "Страж уютных вечеров", "Рыцарь онгоинга", "Дух обсуждений", "Хранитель мемов", "Мастер аниме-детектива", "Небесный критик", "Повелитель сезонных марафонов", "Хранитель канона", "Ткач фанфиков", "Оракул спойлеров", "Лунный сэнпай", "Самурай рейтингов", "Архивариус легенд", "Маг жанров", "Страж ночных просмотров", "Повелитель опенингов", "Хранитель тропов", "Рыцарь вечернего просмотра", "Дух фестиваля", "Мастер эмоциональных качелей", "Следопыт забытых тайтлов", "Хранитель аниме-хроник", "Небесный администратор", "Самурай финального эпизода", "Оракул сезонов", "Повелитель легендарных арок", "Хранитель аниме-вселенной", "Маг идеального топа", "Дух великого марафона", "Рыцарь вечного онгоинга", "Архимаг фандома", "Страж золотой коллекции", "Легенда аниме-сайта", "Небесный хранитель тайтлов", "Великий отаку-владыка", "Хранитель последнего эпизода", "Мастер пересмотров", "Дух аниме-сообщества", "Верховный хранитель сезонов"];
@@ -1635,23 +1494,9 @@ function getStats() {
     let stats = JSON.parse(localStorage.getItem('onika_stats')); 
     if (!stats) { 
         stats = { 
-            episodesWatched: 0, 
-            minutesWatched: 0, 
-            daysStreak: 1, 
-            xp: 0, 
-            coins: 0, 
-            active_banner: null, 
-            active_banner_url: '', 
-            active_title: null, 
-            active_effect: null, 
-            active_badge: null,
-            lastVisit: new Date().toDateString(), 
-            unlockedAchievements: [], 
-            favedAnime: [], 
-            watchedToday: [], 
-            cachedAnime: {}, 
-            totalMinutesOnSite: 0,
-            hasPurchasedBanner: false
+            episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0, 
+            active_banner: null, active_banner_url: '', active_title: null, active_effect: null, active_badge: null,
+            lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [], cachedAnime: {}, totalMinutesOnSite: 0, hasPurchasedBanner: false
         }; 
         localStorage.setItem('onika_stats', JSON.stringify(stats)); 
     } 
@@ -1737,7 +1582,6 @@ function showToast(msg) {
     document.body.appendChild(toast); setTimeout(() => toast.remove(), 2500); 
 }
 
-// ПЕРЕКЛЮЧЕНИЕ ТАБОВ В ПРОФИЛЕ
 function switchProfileTab(tab) { 
     const btnProfile = document.getElementById('tab-btn-profile'); 
     const btnShop = document.getElementById('tab-btn-shop'); 
@@ -1760,7 +1604,6 @@ function switchProfileTab(tab) {
         if (btnShop) btnShop.classList.add('active');
         if (contentProfile) contentProfile.style.display = 'none';
         if (contentSettings) contentSettings.style.display = 'none';
-        
         if (shopContent) {
             shopContent.style.display = 'block';
             renderShopTab(currentShopTab);
@@ -1776,9 +1619,7 @@ function switchProfileTab(tab) {
 function openLevelModal() { document.getElementById('levelModal').classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-function openAchievementsPage() {
-    switchTab('achievements');
-}
+function openAchievementsPage() { switchTab('achievements'); }
 
 function renderAchievementsPage() { 
     const stats = getStats(); 
@@ -1800,13 +1641,7 @@ function renderAchievementsPage() {
         if (list.length === 0) return;
         const completedCount = list.filter(a => stats.unlockedAchievements.includes(a.id)).length;
 
-        html += `
-            <div class="ach-category-header ${rarity.class}">
-                <span style="color: ${rarity.color};">●</span> 
-                ${rarity.name}
-                <span class="count">${completedCount} / ${list.length}</span>
-            </div>
-        `;
+        html += `<div class="ach-category-header ${rarity.class}"><span style="color: ${rarity.color};">●</span> ${rarity.name}<span class="count">${completedCount} / ${list.length}</span></div>`;
 
         list.forEach(ach => { 
             const isDone = stats.unlockedAchievements.includes(ach.id); 
@@ -1814,28 +1649,17 @@ function renderAchievementsPage() {
             const progressCurrent = ach.progress(stats);
             const progressPercent = (progressCurrent / ach.max) * 100;
             
-            const iconHtml = ach.imgUrl 
-                ? `<img src="${ach.imgUrl}" alt="${ach.name}">` 
-                : `<svg width="100%" height="100%"><use href="#${rarityStyle.icon}"></use></svg>`;
+            const iconHtml = ach.imgUrl ? `<img src="${ach.imgUrl}" alt="${ach.name}" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg width=\\'100%\\' height=\\'100%\\'><use href=\\'#${rarityStyle.icon}\\'></use></svg>';">` : `<svg width="100%" height="100%"><use href="#${rarityStyle.icon}"></use></svg>`;
 
             html += `
                 <div class="ach-list-item ${rarityStyle.class} ${isDone ? 'completed' : ''}">
-                    <div class="ach-list-icon" style="color: ${rarityStyle.color}">
-                        ${iconHtml}
-                    </div>
+                    <div class="ach-list-icon" style="color: ${rarityStyle.color}">${iconHtml}</div>
                     <div class="ach-list-info">
                         <h4>${ach.name}</h4>
                         <p>${ach.desc}</p>
-                        ${!isDone ? `
-                            <div class="ach-progress-mini">
-                                <div style="width: ${progressPercent}%; background: ${rarityStyle.color}"></div>
-                            </div>
-                            <div style="font-size: 10px; color: #888; margin-top: 2px;">${progressCurrent} / ${ach.max}</div>
-                        ` : ''}
+                        ${!isDone ? `<div class="ach-progress-mini"><div style="width: ${progressPercent}%; background: ${rarityStyle.color}"></div></div><div style="font-size: 10px; color: #888; margin-top: 2px;">${progressCurrent} / ${ach.max}</div>` : ''}
                     </div>
-                    <div class="ach-reward-badge">
-                        +${ach.xp} XP, +${ach.coins} <svg style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;"><use href="#oa-coin"></use></svg>
-                    </div>
+                    <div class="ach-reward-badge">+${ach.xp} XP, +${ach.coins} <svg style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;"><use href="#oa-coin"></use></svg></div>
                     ${isDone ? '<div class="ach-status-icon" style="color: #ffd700;"><svg style="width:20px;height:20px;"><use href="#oa-check"></use></svg></div>' : ''}
                 </div>
             `; 
