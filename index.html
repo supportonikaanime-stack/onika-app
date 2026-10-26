@@ -281,95 +281,7 @@
         .modal-xp-text { font-size: 12px; color: #aaa; text-align: right; margin-bottom: 20px; }
         .modal-desc { font-size: 14px; color: #ccc; line-height: 1.5; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; text-align: left; }
         
-        /* СТИЛИ ДЛЯ ПРЕДПРОСМОТРА */
-        .preview-box {
-            width: 100%;
-            height: 150px;
-            background: #0a0a0f;
-            border-radius: 16px;
-            margin-bottom: 20px;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .preview-banner {
-            position: absolute;
-            inset: 0;
-            background-size: cover;
-            background-position: center;
-        }
-        .preview-avatar-wrap {
-            position: relative;
-            width: 80px;
-            height: 80px;
-            z-index: 2;
-        }
-        .preview-avatar {
-            width: 100%; height: 100%;
-            border-radius: 50%;
-            background: #222;
-            border: 2px solid #333;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 32px; color: #fff;
-            overflow: hidden;
-            position: relative;
-            z-index: 2;
-        }
-        .preview-effect-container {
-            position: absolute;
-            inset: -50px;
-            pointer-events: none;
-            z-index: 1;
-        }
-        .preview-effect-container span {
-            position: absolute;
-            border-radius: 50%;
-        }
-        
-        .preview-title-text {
-            font-size: 20px;
-            font-weight: 900;
-            z-index: 2;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
-            text-align: center;
-        }
-        .preview-badge-img {
-            width: 50px;
-            height: 50px;
-            object-fit: contain;
-            z-index: 2;
-            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
-        }
-        .preview-frame-img {
-            position: absolute;
-            width: 100px;
-            height: 100px;
-            object-fit: contain;
-            z-index: 3;
-            pointer-events: none;
-        }
-        
-        .modal-action-btn {
-            width: 100%;
-            padding: 16px;
-            border-radius: 14px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            border: none;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            margin-top: 20px;
-        }
-        .btn-buy { background: var(--primary); color: #fff; box-shadow: 0 8px 25px rgba(91,91,255,0.4); }
-        .btn-apply { background: #2ecc71; color: #fff; box-shadow: 0 8px 25px rgba(46, 204, 113, 0.4); }
-        .btn-disabled { background: #333; color: #888; cursor: not-allowed; }
-        
+        /* СТИЛИ ДЛЯ ДОСТИЖЕНИЙ (СТРАНИЦА) */
         .ach-list-item { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); text-align: left; opacity: 0.6; transition: 0.3s; }
         .ach-list-item.completed { opacity: 1; background: rgba(255,255,255,0.08); }
         
@@ -499,6 +411,74 @@
             0% { transform: translateX(0); }
             100% { transform: translateX(20px); }
         }
+
+        /* ПАНЕЛЬ ПОКУПКИ (ФИКСИРОВАННАЯ) */
+        .preview-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(20, 20, 31, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            display: none;
+            align-items: center;
+            gap: 15px;
+            z-index: 10000;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: calc(15px + env(safe-area-inset-bottom));
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .preview-bar.active { display: flex; }
+        
+        .preview-btn-buy {
+            flex: 1;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 16px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(91,91,255,0.4);
+        }
+        .preview-btn-cancel {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            width: 50px;
+            height: 50px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .preview-btn-cancel svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        
+        .preview-hint {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 10005;
+            pointer-events: none;
+            opacity: 0;
+            transition: 0.3s;
+            text-align: center;
+            width: 80%;
+        }
+        .preview-hint.show { opacity: 1; }
     </style>
 </head>
 <body>
@@ -899,24 +879,14 @@
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО ПРЕДПРОСМОТРА -->
-    <div class="modal-overlay" id="previewModal" onclick="closeModal('previewModal')">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal('previewModal')"><svg><use href="#oa-close"></use></svg></button>
-            
-            <div class="preview-box" id="preview-box">
-                <!-- Сюда будет вставляться превью -->
-            </div>
-            
-            <div class="modal-title" id="preview-name">Название</div>
-            <div class="modal-subtitle" id="preview-desc">Описание</div>
-            
-            <!-- Кнопка действия -->
-            <button id="preview-action-btn" class="modal-action-btn" onclick="executePreviewAction()">Купить</button>
-        </div>
-    </div>
-
     <!-- УДАЛИЛИ СТАРОЕ МОДАЛЬНОЕ ОКНО МАГАЗИНА (shopModal) -->
+
+    <!-- ПАНЕЛЬ ПРЕДПРОСМОТРА -->
+    <div class="preview-bar" id="previewBar">
+        <button class="preview-btn-buy" id="preview-btn-buy" onclick="executePreview()">Купить</button>
+        <button class="preview-btn-cancel" onclick="cancelPreview()"><svg><use href="#oa-close"></use></svg></button>
+    </div>
+    <div class="preview-hint" id="previewHint">Тапни вещь — примерь её вживую до покупки</div>
 
     <nav class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('home', this)">
@@ -941,6 +911,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=159"></script>
+    <script src="app.js?v=160"></script>
 </body>
 </html>
