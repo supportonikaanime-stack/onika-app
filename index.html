@@ -217,7 +217,6 @@
         .settings-btn { width: 100%; padding: 15px; border-radius: 12px; background: #1a1a20; border: 1px solid rgba(255,255,255,0.1); color: #fff; text-align: left; font-size: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .settings-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; margin-right: 10px; }
 
-        /* МАГАЗИН */
         .shop-tabs { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 15px; }
         .shop-tabs::-webkit-scrollbar { display: none; }
         .shop-tab { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #888; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: 0.2s; }
@@ -302,9 +301,6 @@
         .nav-icon svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         .nav-text { font-size: 11px; font-weight: 500; }
 
-        /* ==========================================
-           CSS ЭФФЕКТЫ ЧАСТИЦ (БАННЕР)
-           ========================================== */
         .effect-container {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -364,7 +360,6 @@
             100% { transform: translateX(20px); }
         }
 
-        /* ПАНЕЛЬ ПОКУПКИ (ФИКСИРОВАННАЯ) */
         .preview-bar {
             position: fixed;
             bottom: 0;
@@ -435,7 +430,6 @@
 </head>
 <body>
 
-    <!-- SVG СПРАЙТ -->
     <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
       <symbol id="oa-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
       <symbol id="oa-catalog" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></symbol>
@@ -541,7 +535,6 @@
         <div class="coins">+<span id="popup-coins">100</span> <svg><use href="#oa-coin"></use></svg></div>
     </div>
 
-    <!-- ГЛАВНАЯ -->
     <div id="screen-home" class="screen active">
         <section class="hero-section" id="heroSection">
             <div class="hero-slider" id="heroSlider"></div>
@@ -566,7 +559,6 @@
         </section>
     </div>
 
-    <!-- КАТАЛОГ -->
     <div id="screen-catalog" class="screen">
         <div style="padding: 20px 20px 10px 20px;">
             <div style="display: flex; align-items: center; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 0 15px; margin-bottom: 15px;">
@@ -596,7 +588,6 @@
         </div>
     </div>
 
-    <!-- МОЁ -->
     <div id="screen-my" class="screen">
         <header class="profile-header" style="padding-bottom: 10px;"><h1>Моё</h1></header>
         <div class="my-list-tabs" id="my-list-tabs">
@@ -610,7 +601,6 @@
         <div class="grid-catalog" id="my-grid" style="margin-top: 10px;"></div>
     </div>
 
-    <!-- ДРУЗЬЯ -->
     <div id="screen-friends" class="screen">
         <header class="profile-header" style="padding-bottom: 10px;"><h1>Друзья</h1></header>
         <div class="friends-search">
@@ -621,33 +611,28 @@
         <div id="friends-list-container"></div>
     </div>
 
-    <!-- ПРОФИЛЬ ДРУГА -->
     <div id="screen-friend-profile" class="screen" style="padding: 20px;">
         <button onclick="switchTab('friends')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div id="friend-profile-content"></div>
     </div>
 
-    <!-- ДЕТАЛИ АНИМЕ -->
     <div id="screen-detail" class="screen" style="padding: 20px;">
         <button onclick="goBackFromDetail()" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div id="detail-content"></div>
     </div>
 
-    <!-- ВЫБОР ОЗВУЧКИ -->
     <div id="screen-voice" class="screen" style="padding: 20px;">
         <button onclick="switchTab('detail')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <h1 id="voice-title" style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор озвучки</h1>
         <div style="display: flex; flex-direction: column; gap: 12px;" id="voice-list"></div>
     </div>
 
-    <!-- ВЫБОР ПЛЕЕРА -->
     <div id="screen-player" class="screen" style="padding: 20px;">
         <button onclick="switchTab('voice')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <h1 id="player-title" style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор плеера</h1>
         <div style="display: flex; flex-direction: column; gap: 12px;" id="player-list"></div>
     </div>
 
-    <!-- ВЫБОР СЕРИИ -->
     <div id="screen-episodes" class="screen" style="padding: 20px;">
         <button onclick="switchTab('player')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <h1 id="eps-title" style="font-size: 24px; font-weight: 800; margin-bottom: 10px;">Выбор серии</h1>
@@ -655,7 +640,6 @@
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;" id="episodes-list"></div>
     </div>
 
-    <!-- ДОСТИЖЕНИЯ -->
     <div id="screen-achievements" class="screen" style="padding: 20px;">
         <button onclick="switchTab('profile')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
@@ -670,7 +654,6 @@
         <div id="achievements-list-container" style="margin-top: 15px;"></div>
     </div>
 
-    <!-- ПРОФИЛЬ -->
     <div id="screen-profile" class="screen">
         <header class="profile-header"><h1>Профиль</h1></header>
         <div class="profile-container">
@@ -718,14 +701,12 @@
                 </div>
             </div>
 
-            <!-- ТАБЫ ПРОФИЛЯ -->
             <div class="profile-tabs">
                 <button class="tab-btn active" id="tab-btn-profile" onclick="switchProfileTab('profile')"><svg><use href="#oa-profile"></use></svg> Профиль</button>
                 <button class="tab-btn" id="tab-btn-shop" onclick="switchProfileTab('shop')"><svg><use href="#oa-shop"></use></svg> Магазин</button>
                 <button class="tab-btn" id="tab-btn-settings" onclick="switchProfileTab('settings')"><svg><use href="#oa-settings"></use></svg> Настройки</button>
             </div>
 
-            <!-- КОНТЕНТ ПРОФИЛЯ -->
             <div id="profile-content-tab">
                 <div class="achievements-card" onclick="openAchievementsPage()">
                     <div class="ach-header">
@@ -744,7 +725,6 @@
                 </div>
             </div>
 
-            <!-- КОНТЕНТ МАГАЗИНА -->
             <div id="shop-content-tab" style="display: none;">
                 <div class="shop-tabs">
                     <div class="shop-tab active" onclick="switchShopTab('banners', this)">Баннеры</div>
@@ -756,7 +736,6 @@
                 <div id="shop-items-container" class="shop-grid"></div>
             </div>
 
-            <!-- КОНТЕНТ НАСТРОЕК -->
             <div class="settings-card" id="settings-content-tab" style="display: none;">
                 <div style="padding: 20px;">
                     <h3 style="margin-bottom: 15px; color: #fff;">Настройки</h3>
@@ -783,7 +762,55 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА УРОВНЯ -->
+    <!-- ЭКРАН ПРЕДПРОСМОТРА -->
+    <div id="screen-preview" class="screen">
+        <header class="profile-header">
+            <h1>Примерка</h1>
+            <button onclick="cancelPreview()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                <svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-close"></use></svg>
+            </button>
+        </header>
+        <div class="profile-container">
+            <div class="user-card-wrapper">
+                <div class="user-card-top" id="preview-banner">
+                    <div class="effect-container" id="preview-particle-container"></div>
+                    <div class="user-card-top-content">
+                        <div class="avatar-container">
+                            <div class="avatar" id="preview-avatar"><span>?</span></div>
+                        </div>
+                        <div class="user-details">
+                            <div class="user-name-row">
+                                <h2 id="preview-name">Гость</h2>
+                                <img id="preview-badge-img" class="user-badge-icon" style="display: none;" alt="badge">
+                            </div>
+                            <div id="preview-title-container" style="display: none;">
+                                <div class="user-title-display" id="preview-active-title"></div>
+                            </div>
+                            <div class="coin-balance">
+                                <svg><use href="#oa-coin"></use></svg>
+                                <span id="preview-coins">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="user-card-bottom">
+                    <div class="level-row">
+                        <div class="level-badge">
+                            <img src="level_icon.png" class="level-badge-img" alt="level" onerror="this.style.display='none'">
+                            <span id="preview-level" class="level-number">1</span>
+                        </div>
+                        <div class="level-info">
+                            <div class="level-title">УРОВЕНЬ <span id="preview-level-text">1</span> <span class="rank" id="preview-rank">Первый эпизод</span></div>
+                            <div class="xp-bar-container"><div class="xp-bar-fill" id="preview-xp-bar" style="width: 20%;"></div></div>
+                            <div class="xp-text"><span id="preview-xp-current">0</span> / <span id="preview-xp-next">100</span> XP</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="height: 100px;"></div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="levelModal" onclick="closeModal('levelModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('levelModal')"><svg><use href="#oa-close"></use></svg></button>
@@ -808,7 +835,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА ФИЛЬТРОВ -->
     <div class="modal-overlay" id="filterModal" onclick="closeModal('filterModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('filterModal')"><svg><use href="#oa-close"></use></svg></button>
@@ -817,7 +843,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА СТАТУСА -->
     <div class="modal-overlay" id="statusModal" onclick="closeModal('statusModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('statusModal')"><svg><use href="#oa-close"></use></svg></button>
@@ -834,14 +859,12 @@
         </div>
     </div>
 
-    <!-- ПАНЕЛЬ ПРЕДПРОСМОТРА -->
     <div class="preview-bar" id="previewBar">
         <button class="preview-btn-buy" id="preview-btn-buy" onclick="executePreview()">Купить</button>
         <button class="preview-btn-cancel" onclick="cancelPreview()"><svg><use href="#oa-close"></use></svg></button>
     </div>
     <div class="preview-hint" id="previewHint">Тапни вещь — примерь её вживую до покупки</div>
 
-    <!-- НАВИГАЦИЯ -->
     <nav class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('home', this)">
             <span class="nav-icon"><svg><use href="#oa-home"></use></svg></span>
@@ -865,6 +888,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=170"></script>
+    <script src="app.js?v=180"></script>
 </body>
 </html>
