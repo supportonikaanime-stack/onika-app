@@ -16,6 +16,7 @@ let MY_TG_ID = null;
 let MY_NAME = 'Гость';
 let MY_PHOTO_URL = '';
 let ACTIVE_BANNER_URL = '';
+let ACTIVE_TITLE_DATA = null;
 
 if (tg) {
     tg.expand();
@@ -206,6 +207,7 @@ async function syncProfileToDB() {
             minutes_watched: stats.minutesWatched, 
             days_streak: stats.daysStreak,
             active_banner: stats.active_banner,
+            active_title: stats.active_title, // <-- СИНХРОНИЗИРУЕМ ТИТУЛ
             last_watched: stats.favedAnime.length > 0 ? stats.favedAnime[stats.favedAnime.length - 1].id : null
         }, { onConflict: 'tg_id' });
     } catch (e) { console.error('Ошибка синхронизации:', e); }
@@ -231,7 +233,7 @@ async function loadProfileData() {
                 stats.coins = Math.max(stats.coins || 0, dbUser.coins || 0);
                 stats.xp = Math.max(stats.xp || 0, dbUser.xp || 0);
                 
-                if (dbUser.active_banner && !stats.active_banner) {
+                if (dbUser.active_banner) {
                     stats.active_banner = dbUser.active_banner;
                     const { data: banner } = await supabaseClient.from('banners').select('image_url').eq('id', dbUser.active_banner).single();
                     if (banner) {
@@ -239,6 +241,19 @@ async function loadProfileData() {
                         stats.active_banner_url = ACTIVE_BANNER_URL;
                     }
                 }
+
+                // Подгружаем активный титул
+                if (dbUser.active_title) {
+                    const { data: titleData } = await supabaseClient.from('titles').select('*').eq('id', dbUser.active_title).single();
+                    if (titleData) {
+                        ACTIVE_TITLE_DATA = titleData;
+                        stats.active_title = titleData.id;
+                    }
+                } else {
+                    ACTIVE_TITLE_DATA = null;
+                    stats.active_title = null;
+                }
+                
                 saveStats(stats);
             }
         } catch(e) { 
@@ -277,6 +292,19 @@ async function loadProfileData() {
 
     setElText('my-tg-id', MY_TG_ID || 'Нет ID');
     setElText('tg-name', MY_NAME);
+
+    // ОТОБРАЖЕНИЕ ТИТУЛА
+    const titleContainer = document.getElementById('user-title-container');
+    const titleEl = document.getElementById('user-active-title');
+    
+    if (ACTIVE_TITLE_DATA) {
+        titleContainer.style.display = 'block';
+        titleEl.textContent = ACTIVE_TITLE_DATA.name;
+        titleEl.style.color = ACTIVE_TITLE_DATA.color || '#fff';
+        titleEl.style.border = `1px solid ${ACTIVE_TITLE_DATA.color || '#fff'}40`;
+    } else {
+        titleContainer.style.display = 'none';
+    }
 
     const currentLevel = Math.floor(stats.xp / 100) + 1; 
     const xpCurrentLevel = stats.xp % 100; 
@@ -405,6 +433,7 @@ async function renderBannersInShop(container) {
 // --- РЕНДЕР ТИТУЛОВ ---
 async function renderTitlesInShop(container) {
     if (!supabaseClient) return;
+    let stats = getStats();
     try {
         const { data: items } = await supabaseClient.from('titles').select('*');
         const { data: inv } = await supabaseClient.from('user_inventory').select('item_id').eq('tg_id', MY_TG_ID).eq('item_type', 'title');
@@ -414,13 +443,20 @@ async function renderTitlesInShop(container) {
 
         items.forEach(t => {
             const isOwned = ownedIds.includes(t.id);
-            let btn = isOwned 
-                ? `<button class="shop-btn owned" disabled>Куплен</button>` 
-                : `<button class="shop-btn" onclick="buyItem('title', ${t.id}, ${t.price})">Купить ${t.price} 🪙</button>`;
+            const isActive = stats.active_title === t.id;
+            
+            let btn = '';
+            if (isActive) {
+                btn = `<button class="shop-btn owned" disabled>Активен</button>`;
+            } else if (isOwned) {
+                btn = `<button class="shop-btn owned" onclick="applyTitle(${t.id})">Применить</button>`;
+            } else {
+                btn = `<button class="shop-btn" onclick="buyItem('title', ${t.id}, ${t.price})">Купить ${t.price} 🪙</button>`;
+            }
             
             html += `
                 <div class="shop-item">
-                    <div class="shop-img" style="background: #222; display:flex; align-items:center; justify-content:center; color:${t.color}; font-weight:bold; font-size:16px;">${escapeHTML(t.name)}</div>
+                    <div class="shop-img" style="background: #222; display:flex; align-items:center; justify-content:center; color:${t.color}; font-weight:bold; font-size:16px; text-shadow:0 0 5px ${t.color}80;">${escapeHTML(t.name)}</div>
                     <div class="shop-info">
                         <div class="shop-name">${escapeHTML(t.name)}</div>
                         <div style="font-size:10px; color:#888; margin-bottom:5px;">${escapeHTML(t.description || '')}</div>
@@ -548,11 +584,53 @@ async function buyItem(type, itemId, price) {
         showToast('✅ Покупка успешна!');
         
         loadProfileData();
-        renderShopTab(type + 's'); 
+        
+        // Если это титул, сразу применяем его
+        if (type === 'title') {
+            await applyTitle(itemId);
+        } else {
+            renderShopTab(type + 's'); 
+        }
 
     } catch(e) {
         console.error(e);
         showToast('Ошибка покупки');
+    }
+}
+
+// --- ПРИМЕНЕНИЕ ТИТУЛА ---
+async function applyTitle(titleId) {
+    if (!supabaseClient) return;
+    let stats = getStats();
+    
+    try {
+        await supabaseClient.from('users').update({ active_title: titleId }).eq('tg_id', MY_TG_ID);
+        stats.active_title = titleId;
+        saveStats(stats);
+        
+        showToast('Титул надет!');
+        renderShopTab('titles');
+        loadProfileData();
+    } catch(e) {
+        console.error(e);
+        showToast('Ошибка применения');
+    }
+}
+
+// --- СНЯТИЕ ТИТУЛА ---
+async function resetTitle() {
+    if (!supabaseClient) return;
+    let stats = getStats();
+    
+    try {
+        await supabaseClient.from('users').update({ active_title: null }).eq('tg_id', MY_TG_ID);
+        stats.active_title = null;
+        saveStats(stats);
+        
+        showToast('Титул снят');
+        loadProfileData();
+    } catch(e) {
+        console.error(e);
     }
 }
 
@@ -740,6 +818,15 @@ async function openFriendProfile(id, name) {
             if (b) friendBanner = `style="background-image: url('${safeUrl(b.image_url)}');"`;
         }
 
+        // ПОДГРУЖАЕМ ТИТУЛ ДРУГА
+        let friendTitleHtml = '';
+        if (friend.active_title) {
+            const { data: t } = await supabaseClient.from('titles').select('*').eq('id', friend.active_title).single();
+            if (t) {
+                friendTitleHtml = `<div class="user-title-display" style="color: ${t.color}; border: 1px solid ${t.color}40;">${escapeHTML(t.name)}</div>`;
+            }
+        }
+
         container.innerHTML = `
             <div class="user-card-wrapper">
                 <div class="user-card-top" ${friendBanner}>
@@ -749,6 +836,7 @@ async function openFriendProfile(id, name) {
                         </div>
                         <div class="user-details">
                             <h2>${escapeHTML(friend.name)}</h2>
+                            ${friendTitleHtml}
                             <div class="id-container">
                                 <span style="color: #ccc; font-size: 12px;">ID:</span>
                                 <span style="color: #fff; font-weight: bold; font-size: 14px;">${escapeHTML(friend.tg_id)}</span>
@@ -938,7 +1026,6 @@ function openStatusModal(id) {
 async function setAnimeStatus(status) {
     const id = window._currentAnimeForStatus; if (!id) return;
     
-    // Кешируем данные аниме локально, чтобы картинка сразу отображалась
     let stats = getStats(); 
     let cachedAnime = stats.cachedAnime || {};
     if (status !== '' && window._tempAnimeData) {
@@ -955,10 +1042,8 @@ async function setAnimeStatus(status) {
     }
 
     try {
-        // 1. Удаляем старый статус (если он был)
         await supabaseClient.from('user_lists').delete().eq('tg_id', MY_TG_ID).eq('anime_id', id);
         
-        // 2. Если выбран не "Удалить", добавляем новый
         if (status !== '') {
             await supabaseClient.from('user_lists').insert({ 
                 tg_id: MY_TG_ID, 
@@ -970,7 +1055,6 @@ async function setAnimeStatus(status) {
             showToast('Удалено из списка');
         }
         
-        // 3. Меняем сердечко в интерфейсе
         const heartBtn = document.querySelector('#detail-content button[onclick^="openStatusModal"]');
         if (heartBtn) { 
             if (status !== '') { 
@@ -1230,6 +1314,7 @@ function getStats() {
             coins: 0, 
             active_banner: null, 
             active_banner_url: '', 
+            active_title: null, // <-- ДОБАВЛЕНО
             lastVisit: new Date().toDateString(), 
             unlockedAchievements: [], 
             favedAnime: [], 
@@ -1247,6 +1332,7 @@ function getStats() {
     if (!stats.cachedAnime) stats.cachedAnime = {};
     if (stats.totalMinutesOnSite === undefined) stats.totalMinutesOnSite = 0;
     if (stats.hasPurchasedBanner === undefined) stats.hasPurchasedBanner = false;
+    if (stats.active_title === undefined) stats.active_title = null;
     return stats; 
 }
 
