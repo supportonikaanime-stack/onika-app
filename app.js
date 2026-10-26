@@ -367,7 +367,7 @@ async function loadProfileData() {
 }
 
 // ==========================================
-// ГЕНЕРАЦИЯ ЧАСТИЦ
+// ГЕНЕРАЦИЯ ЧАСТИЦ (ИСПРАВЛЕНО)
 // ==========================================
 function renderParticles() {
     const container = document.getElementById('particle-effect-container');
@@ -380,17 +380,16 @@ function renderParticles() {
 
     container.classList.add(ACTIVE_EFFECT_CSS);
 
-    // Количество частиц (чем больше, тем насыщеннее)
-    const particleCount = 25;
+    const particleCount = 30; // Количество частиц
 
     for (let i = 0; i < particleCount; i++) {
         const span = document.createElement('span');
         
-        // Рандомные параметры для каждой частицы
-        const size = Math.random() * 4 + 2; // Размер от 2 до 6 px
-        const left = Math.random() * 100; // Позиция по горизонтали
-        const delay = Math.random() * 5; // Задержка старта
-        const duration = Math.random() * 3 + 3; // Скорость полета
+        // Рандомные параметры
+        const size = Math.random() * 4 + 2;
+        const left = Math.random() * 100;
+        const delay = Math.random() * 5;
+        const duration = Math.random() * 4 + 3;
 
         span.style.left = `${left}%`;
         span.style.width = `${size}px`;
@@ -398,9 +397,13 @@ function renderParticles() {
         span.style.animationDuration = `${duration}s`;
         span.style.animationDelay = `${delay}s`;
 
-        // Для эффекта искр и сакуры
-        if (ACTIVE_EFFECT_CSS === 'effect-sparks' || ACTIVE_EFFECT_CSS === 'effect-sakura') {
-            span.style.animationName = ACTIVE_EFFECT_CSS === 'effect-sparks' ? 'riseUp' : 'fallDown';
+        // ЯВНО ЗАДАЕМ АНИМАЦИЮ
+        if (ACTIVE_EFFECT_CSS === 'effect-sparks') {
+            span.style.animationName = 'riseUp';
+        } else if (ACTIVE_EFFECT_CSS === 'effect-sakura') {
+            span.style.animationName = 'fallDown';
+        } else if (ACTIVE_EFFECT_CSS === 'effect-stars') {
+            span.style.animationName = 'twinkle, float'; // Двойная анимация для звезд
         }
 
         container.appendChild(span);
@@ -581,10 +584,11 @@ async function renderEffectsInShop(container) {
                 btn = `<button class="shop-btn" onclick="buyItem('effect', ${e.id}, ${e.price})">Купить ${e.price} 🪙</button>`;
             }
             
-            // Демонстрация эффекта прямо в магазине
+            // Демонстрация эффекта прямо в магазине (в виде кружочка)
             html += `
                 <div class="shop-item">
                     <div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items:center; justify-content:center;">
+                        <div class="avatar" style="width:40px; height:40px; font-size:12px; background:#333; border:1px solid #555;">AA</div>
                     </div>
                     <div class="shop-info">
                         <div class="shop-name">${escapeHTML(e.name)}</div>
@@ -989,14 +993,19 @@ async function openFriendProfile(id, name) {
         setTimeout(() => {
             const fContainer = document.getElementById('friend-particle-container');
             if (fContainer && friendEffectClass) {
-                for (let i = 0; i < 25; i++) {
+                for (let i = 0; i < 30; i++) {
                     const span = document.createElement('span');
                     const size = Math.random() * 4 + 2;
                     span.style.left = `${Math.random() * 100}%`;
                     span.style.width = `${size}px`;
                     span.style.height = `${size}px`;
-                    span.style.animationDuration = `${Math.random() * 3 + 3}s`;
+                    span.style.animationDuration = `${Math.random() * 4 + 3}s`;
                     span.style.animationDelay = `${Math.random() * 5}s`;
+                    
+                    if (friendEffectClass === 'effect-sparks') span.style.animationName = 'riseUp';
+                    else if (friendEffectClass === 'effect-sakura') span.style.animationName = 'fallDown';
+                    else if (friendEffectClass === 'effect-stars') span.style.animationName = 'twinkle, float';
+                    
                     fContainer.appendChild(span);
                 }
             }
@@ -1447,7 +1456,7 @@ function getStats() {
             active_banner: null, 
             active_banner_url: '', 
             active_title: null, 
-            active_effect: null, // <-- ДОБАВЛЕНО
+            active_effect: null, 
             lastVisit: new Date().toDateString(), 
             unlockedAchievements: [], 
             favedAnime: [], 
