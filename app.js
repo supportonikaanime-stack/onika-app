@@ -548,7 +548,7 @@ async function buyItem(type, itemId, price) {
         showToast('✅ Покупка успешна!');
         
         loadProfileData();
-        renderShopTab(type + 's'); // Обновляем текущую вкладку (banners -> banners, titles -> titles)
+        renderShopTab(type + 's'); 
 
     } catch(e) {
         console.error(e);
@@ -935,35 +935,62 @@ function openStatusModal(id) {
     window._currentAnimeForStatus = id; 
 }
 
-function setAnimeStatus(status) {
+async function setAnimeStatus(status) {
     const id = window._currentAnimeForStatus; if (!id) return;
-    let stats = getStats(); stats.favedAnime = stats.favedAnime || []; 
     
+    // Кешируем данные аниме локально, чтобы картинка сразу отображалась
+    let stats = getStats(); 
     let cachedAnime = stats.cachedAnime || {};
     if (status !== '' && window._tempAnimeData) {
         cachedAnime[id] = window._tempAnimeData;
         stats.cachedAnime = cachedAnime;
+        saveStats(stats);
     }
     
-    stats.favedAnime = stats.favedAnime.filter(a => a.id !== id);
-    if (status !== '') { stats.favedAnime.push({ id: id, status: status }); showToast('Статус обновлен!'); } 
-    else { showToast('Удалено'); }
-    saveStats(stats); closeModal('statusModal');
-    checkAchievements(stats);
+    closeModal('statusModal');
     
-    const heartBtn = document.querySelector('#detail-content button[onclick^="openStatusModal"]');
-    if (heartBtn) { 
-        if (status !== '') { 
-            heartBtn.style.background = 'rgba(255,45,120,0.2)'; 
-            heartBtn.style.borderColor = '#ff2d78'; 
-            heartBtn.style.color = '#ff2d78'; 
-            heartBtn.innerHTML = '<svg style="width: 26px; height: 26px;"><use href="#oa-favorite"></use></svg>'; 
-        } else { 
-            heartBtn.style.background = 'rgba(255,255,255,0.1)'; 
-            heartBtn.style.borderColor = 'rgba(255,255,255,0.15)'; 
-            heartBtn.style.color = '#fff'; 
-            heartBtn.innerHTML = '<svg style="width: 26px; height: 26px;"><use href="#oa-favorite"></use></svg>'; 
-        } 
+    if (!supabaseClient || !MY_TG_ID) {
+        showToast('Ошибка: нет связи с базой данных');
+        return;
+    }
+
+    try {
+        // 1. Удаляем старый статус (если он был)
+        await supabaseClient.from('user_lists').delete().eq('tg_id', MY_TG_ID).eq('anime_id', id);
+        
+        // 2. Если выбран не "Удалить", добавляем новый
+        if (status !== '') {
+            await supabaseClient.from('user_lists').insert({ 
+                tg_id: MY_TG_ID, 
+                anime_id: id, 
+                status: status 
+            });
+            showToast('Статус обновлен!');
+        } else {
+            showToast('Удалено из списка');
+        }
+        
+        // 3. Меняем сердечко в интерфейсе
+        const heartBtn = document.querySelector('#detail-content button[onclick^="openStatusModal"]');
+        if (heartBtn) { 
+            if (status !== '') { 
+                heartBtn.style.background = 'rgba(255,45,120,0.2)'; 
+                heartBtn.style.borderColor = '#ff2d78'; 
+                heartBtn.style.color = '#ff2d78'; 
+                heartBtn.innerHTML = '<svg style="width: 26px; height: 26px;"><use href="#oa-favorite"></use></svg>'; 
+            } else { 
+                heartBtn.style.background = 'rgba(255,255,255,0.1)'; 
+                heartBtn.style.borderColor = 'rgba(255,255,255,0.15)'; 
+                heartBtn.style.color = '#fff'; 
+                heartBtn.innerHTML = '<svg style="width: 26px; height: 26px;"><use href="#oa-favorite"></use></svg>'; 
+            } 
+        }
+        
+        checkAchievements(getStats()); 
+        
+    } catch (e) {
+        console.error(e);
+        showToast('Ошибка сохранения');
     }
 }
 
@@ -981,38 +1008,57 @@ async function openRandomAnime() {
 // ==========================================
 // 9. СПИСОК "МОЁ"
 // ==========================================
-function filterMyList(type, btn) { currentMyListFilter = type; document.querySelectorAll('.my-list-tab').forEach(el => el.classList.remove('active')); btn.classList.add('active'); renderMyList(); }
+function filterMyList(type, btn) { 
+    currentMyListFilter = type; 
+    document.querySelectorAll('.my-list-tab').forEach(el => el.classList.remove('active')); 
+    btn.classList.add('active'); 
+    renderMyList(); 
+}
+
 async function renderMyList() {
     const grid = document.getElementById('my-grid'); if (!grid) return;
     grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
     
-    let stats = getStats(); let favs = stats.favedAnime || []; let filtered = favs;
-    if (currentMyListFilter !== 'all') filtered = favs.filter(a => a.status === currentMyListFilter);
-    
-    if (filtered.length === 0) { 
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Тут пусто</div>'; 
-        return; 
-    }
-    
-    const cachedAnime = stats.cachedAnime || {};
-    grid.innerHTML = '';
-    
-    filtered.forEach(favItem => {
-        let anime = cachedAnime[favItem.id];
-        if (anime) {
-            renderMyListCard(anime, grid);
-        } else {
-            API.getDetails(favItem.id).then(data => {
-                if (data) {
-                    renderMyListCard(data, grid);
-                    let s = getStats();
-                    s.cachedAnime = s.cachedAnime || {};
-                    s.cachedAnime[favItem.id] = data;
-                    saveStats(s);
-                }
-            }).catch(() => {});
+    if (!supabaseClient || !MY_TG_ID) return;
+
+    try {
+        let query = supabaseClient.from('user_lists').select('*').eq('tg_id', MY_TG_ID);
+        if (currentMyListFilter !== 'all') {
+            query = query.eq('status', currentMyListFilter);
         }
-    });
+        
+        const { data: list, error } = await query;
+        if (error) throw error;
+
+        if (!list || list.length === 0) { 
+            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Тут пусто</div>'; 
+            return; 
+        }
+        
+        const cachedAnime = getStats().cachedAnime || {};
+        grid.innerHTML = '';
+        
+        list.forEach(favItem => {
+            let anime = cachedAnime[favItem.anime_id];
+            if (anime) {
+                renderMyListCard(anime, grid);
+            } else {
+                API.getDetails(favItem.anime_id).then(data => {
+                    if (data) {
+                        renderMyListCard(data, grid);
+                        let s = getStats();
+                        s.cachedAnime = s.cachedAnime || {};
+                        s.cachedAnime[favItem.anime_id] = data;
+                        saveStats(s);
+                    }
+                }).catch(() => {});
+            }
+        });
+        
+    } catch (e) {
+        console.error(e);
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>';
+    }
 }
 
 function renderMyListCard(anime, grid) {
