@@ -140,6 +140,7 @@ let currentMyListFilter = 'all';
 let previousScreen = 'catalog'; 
 let searchDebounceTimer;
 let currentShopTab = 'banners';
+let currentPreview = null; // Объект для хранения данных о текущем предпросмотре
 
 const GENRES = [{ id: '1', name: 'Экшен' }, { id: '22', name: 'Романтика' }, { id: '4', name: 'Комедия' }, { id: '10', name: 'Фэнтези' }, { id: '8', name: 'Драма' }, { id: '2', name: 'Приключения' }, { id: '24', name: 'Фантастика' }];
 const YEARS = [{ id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' }, { id: '2021', name: '2021' }, { id: '2020', name: '2020' }];
@@ -434,7 +435,7 @@ function renderParticles() {
 }
 
 // ==========================================
-// МАГАЗИН
+// МАГАЗИН И ПРЕДПРОСМОТР
 // ==========================================
 function openShopModal() {
     switchProfileTab('shop');
@@ -466,6 +467,104 @@ function renderShopTab(tabName) {
     }
 }
 
+// --- ФУНКЦИЯ ОТКРЫТИЯ ПРЕДПРОСМОТРА ---
+function openPreview(type, item) {
+    currentPreview = { type, item };
+    
+    const box = document.getElementById('preview-box');
+    const nameEl = document.getElementById('preview-name');
+    const descEl = document.getElementById('preview-desc');
+    const btn = document.getElementById('preview-action-btn');
+    
+    nameEl.textContent = item.name;
+    descEl.textContent = item.description || (item.price === 0 ? 'Бесплатно' : `Цена: ${item.price} 🪙`);
+    
+    // Очистка
+    box.innerHTML = '';
+    box.className = 'preview-box';
+
+    // Рендер в зависимости от типа
+    if (type === 'banner') {
+        box.innerHTML = `<div class="preview-banner" style="background-image: url('${safeUrl(item.image_url)}');"></div>`;
+    } 
+    else if (type === 'title') {
+        box.innerHTML = `<div class="preview-title-text" style="color: ${item.color || '#fff'}; border: 1px solid ${item.color || '#fff'}40; padding: 4px 12px; border-radius: 8px; background: rgba(0,0,0,0.5);">${escapeHTML(item.name)}</div>`;
+    }
+    else if (type === 'effect') {
+        box.innerHTML = `
+            <div class="preview-effect-container ${item.css_class}" id="preview-effect-anim"></div>
+            <div class="preview-avatar-wrap">
+                <div class="preview-avatar">AA</div>
+            </div>
+        `;
+        // Генерируем частицы для превью
+        setTimeout(() => {
+            const pc = document.getElementById('preview-effect-anim');
+            if (pc) {
+                for (let i = 0; i < 30; i++) {
+                    const span = document.createElement('span');
+                    const size = Math.random() * 4 + 2;
+                    span.style.left = `${Math.random() * 100}%`;
+                    span.style.width = `${size}px`;
+                    span.style.height = `${size}px`;
+                    span.style.animationDuration = `${Math.random() * 4 + 3}s`;
+                    span.style.animationDelay = `${Math.random() * 3}s`;
+                    
+                    if (item.css_class === 'effect-sparks') span.style.animationName = 'riseUp';
+                    else if (item.css_class === 'effect-sakura') span.style.animationName = 'fallDown';
+                    else if (item.css_class === 'effect-stars') span.style.animationName = 'twinkle, float';
+                    
+                    pc.appendChild(span);
+                }
+            }
+        }, 50);
+    }
+    else if (type === 'badge') {
+        box.innerHTML = `<img src="${safeUrl(item.image_url)}" class="preview-badge-img" style="width: 80px; height: 80px;">`;
+    }
+    else if (type === 'frame') {
+        box.innerHTML = `
+            <div class="preview-avatar-wrap">
+                <div class="preview-avatar">AA</div>
+                <img src="${safeUrl(item.image_url)}" class="preview-frame-img">
+            </div>
+        `;
+    }
+
+    // Настройка кнопки
+    let isOwned = false;
+    let stats = getStats();
+    
+    if (type === 'banner') {
+        // Для баннеров проверяем user_banners
+        isOwned = stats.active_banner === item.id; // Ну или проверить покупку в базе
+        // Так как в превью мы не знаем наверняка, куплен ли он (нужен запрос), сделаем упрощенно:
+        // Если это текущий активный баннер, кнопка будет "Установлен".
+    } else if (type === 'title') {
+        isOwned = stats.active_title === item.id;
+    } else if (type === 'effect') {
+        isOwned = stats.active_effect === item.id;
+    } else if (type === 'badge') {
+        isOwned = stats.active_badge === item.id;
+    }
+
+    // Упрощенная логика для кнопки
+    btn.className = 'modal-action-btn btn-buy';
+    btn.textContent = item.price === 0 ? 'Получить' : `Купить за ${item.price} 🪙`;
+    btn.onclick = () => executePurchase(type, item);
+
+    document.getElementById('previewModal').classList.add('active');
+}
+
+async function executePurchase(type, item) {
+    closeModal('previewModal');
+    if (type === 'banner') {
+        await buyBanner(item.id, item.price);
+    } else {
+        await buyItem(type, item.id, item.price);
+    }
+}
+
 // --- РЕНДЕР БАННЕРОВ ---
 async function renderBannersInShop(container) {
     let stats = getStats();
@@ -488,16 +587,14 @@ async function renderBannersInShop(container) {
             
             let btnHtml = '';
             if (isActive) {
-                btnHtml = `<button class="shop-btn owned" disabled>Установлен</button>`;
-            } else if (isOwned) {
-                btnHtml = `<button class="shop-btn owned" onclick="applyBanner(${b.id}, '${b.image_url}')">Применить</button>`;
+                btnHtml = `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Установлен</div>`;
             } else {
-                const priceText = b.price === 0 ? 'Получить' : `Купить ${b.price} 🪙`;
-                btnHtml = `<button class="shop-btn" onclick="buyBanner(${b.id}, ${b.price})">${priceText}</button>`;
+                const priceText = b.price === 0 ? 'Получить' : `${b.price} 🪙`;
+                btnHtml = `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${priceText}</div>`;
             }
 
             html += `
-                <div class="shop-item">
+                <div class="shop-item" onclick='openPreview("banner", ${JSON.stringify(b).replace(/'/g, "&#39;")})'>
                     <div class="shop-img" style="background-image: url('${safeUrl(b.image_url)}')"></div>
                     <div class="shop-info">
                         <div class="shop-name">${escapeHTML(b.name)}</div>
@@ -529,22 +626,19 @@ async function renderTitlesInShop(container) {
             const isOwned = ownedIds.includes(t.id);
             const isActive = stats.active_title === t.id;
             
-            let btn = '';
+            let btnHtml = '';
             if (isActive) {
-                btn = `<button class="shop-btn owned" disabled>Активен</button>`;
-            } else if (isOwned) {
-                btn = `<button class="shop-btn owned" onclick="applyTitle(${t.id})">Применить</button>`;
+                btnHtml = `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>`;
             } else {
-                btn = `<button class="shop-btn" onclick="buyItem('title', ${t.id}, ${t.price})">Купить ${t.price} 🪙</button>`;
+                btnHtml = `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${t.price} 🪙</div>`;
             }
             
             html += `
-                <div class="shop-item">
+                <div class="shop-item" onclick='openPreview("title", ${JSON.stringify(t).replace(/'/g, "&#39;")})'>
                     <div class="shop-img" style="background: #222; display:flex; align-items:center; justify-content:center; color:${t.color}; font-weight:bold; font-size:16px; text-shadow:0 0 5px ${t.color}80;">${escapeHTML(t.name)}</div>
                     <div class="shop-info">
                         <div class="shop-name">${escapeHTML(t.name)}</div>
-                        <div style="font-size:10px; color:#888; margin-bottom:5px;">${escapeHTML(t.description || '')}</div>
-                        ${btn}
+                        ${btnHtml}
                     </div>
                 </div>
             `;
@@ -565,16 +659,14 @@ async function renderFramesInShop(container) {
 
         items.forEach(f => {
             const isOwned = ownedIds.includes(f.id);
-            let btn = isOwned 
-                ? `<button class="shop-btn owned" disabled>Куплен</button>` 
-                : `<button class="shop-btn" onclick="buyItem('frame', ${f.id}, ${f.price})">Купить ${f.price} 🪙</button>`;
+            let btnHtml = `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${f.price} 🪙</div>`;
             
             html += `
-                <div class="shop-item">
+                <div class="shop-item" onclick='openPreview("frame", ${JSON.stringify(f).replace(/'/g, "&#39;")})'>
                     <div class="shop-img" style="background-image: url('${safeUrl(f.image_url)}')"></div>
                     <div class="shop-info">
                         <div class="shop-name">${escapeHTML(f.name)}</div>
-                        ${btn}
+                        ${btnHtml}
                     </div>
                 </div>
             `;
@@ -598,24 +690,21 @@ async function renderEffectsInShop(container) {
             const isOwned = ownedIds.includes(e.id);
             const isActive = stats.active_effect === e.id;
             
-            let btn = '';
+            let btnHtml = '';
             if (isActive) {
-                btn = `<button class="shop-btn owned" disabled>Активен</button>`;
-            } else if (isOwned) {
-                btn = `<button class="shop-btn owned" onclick="applyEffect(${e.id})">Применить</button>`;
+                btnHtml = `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>`;
             } else {
-                btn = `<button class="shop-btn" onclick="buyItem('effect', ${e.id}, ${e.price})">Купить ${e.price} 🪙</button>`;
+                btnHtml = `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${e.price} 🪙</div>`;
             }
             
             html += `
-                <div class="shop-item">
+                <div class="shop-item" onclick='openPreview("effect", ${JSON.stringify(e).replace(/'/g, "&#39;")})'>
                     <div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items:center; justify-content:center;">
                         <div class="avatar" style="width:40px; height:40px; font-size:12px; background:#333; border:1px solid #555;">AA</div>
                     </div>
                     <div class="shop-info">
                         <div class="shop-name">${escapeHTML(e.name)}</div>
-                        <div style="font-size:10px; color:#888; margin-bottom:5px;">${escapeHTML(e.description || '')}</div>
-                        ${btn}
+                        ${btnHtml}
                     </div>
                 </div>
             `;
@@ -639,23 +728,21 @@ async function renderBadgesInShop(container) {
             const isOwned = ownedIds.includes(b.id);
             const isActive = stats.active_badge === b.id;
             
-            let btn = '';
+            let btnHtml = '';
             if (isActive) {
-                btn = `<button class="shop-btn owned" disabled>Активен</button>`;
-            } else if (isOwned) {
-                btn = `<button class="shop-btn owned" onclick="applyBadge(${b.id})">Применить</button>`;
+                btnHtml = `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>`;
             } else {
-                btn = `<button class="shop-btn" onclick="buyItem('badge', ${b.id}, ${b.price})">Купить ${b.price} 🪙</button>`;
+                btnHtml = `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${b.price} 🪙</div>`;
             }
             
             html += `
-                <div class="shop-item">
+                <div class="shop-item" onclick='openPreview("badge", ${JSON.stringify(b).replace(/'/g, "&#39;")})'>
                     <div class="shop-img" style="background: #222; display:flex; align-items:center; justify-content:center;">
                         <img src="${safeUrl(b.image_url)}" style="width:50px; height:50px; object-fit:contain;">
                     </div>
                     <div class="shop-info">
                         <div class="shop-name">${escapeHTML(b.name)}</div>
-                        ${btn}
+                        ${btnHtml}
                     </div>
                 </div>
             `;
