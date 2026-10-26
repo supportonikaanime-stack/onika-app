@@ -223,6 +223,29 @@ async function loadProfileData() {
         ACTIVE_BANNER_URL = stats.active_banner_url;
     }
     
+    // --- СИНХРОНИЗАЦИЯ ИЗ SUPABASE ---
+    if (MY_TG_ID && supabaseClient) {
+        try {
+            const { data: dbUser } = await supabaseClient.from('users').select('*').eq('tg_id', MY_TG_ID).single();
+            if (dbUser) {
+                stats.coins = Math.max(stats.coins || 0, dbUser.coins || 0);
+                stats.xp = Math.max(stats.xp || 0, dbUser.xp || 0);
+                
+                if (dbUser.active_banner && !stats.active_banner) {
+                    stats.active_banner = dbUser.active_banner;
+                    const { data: banner } = await supabaseClient.from('banners').select('image_url').eq('id', dbUser.active_banner).single();
+                    if (banner) {
+                        ACTIVE_BANNER_URL = safeUrl(banner.image_url);
+                        stats.active_banner_url = ACTIVE_BANNER_URL;
+                    }
+                }
+                saveStats(stats);
+            }
+        } catch(e) { 
+            console.log('Пользователь еще не создан в БД или ошибка синхронизации', e); 
+        }
+    }
+    
     const today = new Date().toDateString(); 
     // Ежедневный вход
     if (stats.lastVisit !== today) { 
@@ -234,23 +257,9 @@ async function loadProfileData() {
         saveStats(stats); 
         showToast('📅 Ежедневный вход! +5 XP');
     } 
+    
     checkAchievements(stats); 
     
-    if (MY_TG_ID && supabaseClient && !ACTIVE_BANNER_URL && stats.active_banner) {
-        try {
-            const { data: user } = await supabaseClient.from('users').select('active_banner').eq('tg_id', MY_TG_ID).single();
-            if (user && user.active_banner) {
-                const { data: banner } = await supabaseClient.from('banners').select('image_url').eq('id', user.active_banner).single();
-                if (banner) {
-                    ACTIVE_BANNER_URL = safeUrl(banner.image_url);
-                    stats.active_banner = user.active_banner;
-                    stats.active_banner_url = ACTIVE_BANNER_URL; 
-                    saveStats(stats);
-                }
-            }
-        } catch(e) { console.error(e); }
-    }
-
     const avatarEl = document.getElementById('tg-avatar'); 
     if (avatarEl && MY_TG_ID) { 
         if (MY_PHOTO_URL) avatarEl.innerHTML = `<img src="${safeUrl(MY_PHOTO_URL)}" style="width:100%; height:100%; object-fit:cover;">`; 
@@ -316,7 +325,6 @@ async function loadProfileData() {
 // МАГАЗИН
 // ==========================================
 function openShopModal() {
-    // Теперь вместо модалки переключаем таб в профиле
     switchProfileTab('shop');
 }
 
@@ -416,8 +424,8 @@ async function buyBanner(bannerId, price) {
         checkAchievements(stats);
 
         showToast('✅ Баннер получен!');
-        renderShopTab('banners'); // Обновляем список в магазине
-        loadProfileData(); // Обновляем баланс в профиле
+        renderShopTab('banners');
+        loadProfileData();
 
     } catch(e) {
         console.error(e);
@@ -1043,7 +1051,10 @@ function checkAchievements(stats) {
             } 
         } 
     }); 
-    if (changed) saveStats(stats); 
+    if (changed) {
+        saveStats(stats); 
+        syncProfileToDB(); // Синхронизируем достижения в БД
+    }
 }
 
 function addXP(amount) { 
@@ -1106,7 +1117,6 @@ function switchProfileTab(tab) {
     const contentProfile = document.getElementById('profile-content-tab'); 
     const contentSettings = document.getElementById('settings-content-tab'); 
     
-    // Сброс классов
     btnProfile.classList.remove('active');
     btnShop.classList.remove('active');
     btnSettings.classList.remove('active');
@@ -1117,9 +1127,8 @@ function switchProfileTab(tab) {
         contentSettings.style.display = 'none'; 
     } else if (tab === 'shop') {
         btnShop.classList.add('active');
-        // Переходим на отдельный экран магазина
         switchTab('shop');
-        return; // Выходим, чтобы не показывать контент профиля
+        return;
     } else { 
         btnSettings.classList.add('active'); 
         contentProfile.style.display = 'none'; 
