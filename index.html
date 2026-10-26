@@ -118,7 +118,22 @@
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
 
         .user-details { text-align: center; width: 100%; position: relative; z-index: 3; }
-        .user-details h2 { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        
+        /* НИК + ЗНАЧОК */
+        .user-name-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+        .user-name-row h2 { margin-bottom: 0; }
+        .user-badge-icon {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 4px rgba(0,0,0,0.5));
+        }
         
         /* ТИТУЛ В ПРОФИЛЕ */
         .user-title-display {
@@ -659,7 +674,11 @@
                             <div class="avatar" id="tg-avatar"><span id="avatar-letter">?</span></div>
                         </div>
                         <div class="user-details">
-                            <h2 id="tg-name">Гость</h2>
+                            <div class="user-name-row">
+                                <h2 id="tg-name">Гость</h2>
+                                <!-- МЕСТО ДЛЯ ЗНАЧКА -->
+                                <img id="user-badge-img" class="user-badge-icon" style="display: none;" alt="badge">
+                            </div>
                             <!-- КОНТЕЙНЕР ДЛЯ ТИТУЛА -->
                             <div id="user-title-container" style="display: none;">
                                 <div class="user-title-display" id="user-active-title"></div>
@@ -733,6 +752,10 @@
                     </button>
                     <button class="settings-btn" onclick="resetEffect()">
                         <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять эффект</span>
+                        <span style="color: #888;">›</span>
+                    </button>
+                    <button class="settings-btn" onclick="resetBadge()">
+                        <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять значок</span>
                         <span style="color: #888;">›</span>
                     </button>
                 </div>
@@ -815,6 +838,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=157"></script>
+    <script src="app.js?v=158"></script>
 </body>
 </html>
