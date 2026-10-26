@@ -141,6 +141,11 @@ let previousScreen = 'catalog';
 let searchDebounceTimer;
 let currentShopTab = 'banners';
 
+// Переменные предпросмотра (используются в магазине)
+let isPreviewMode = false;
+let previewItem = null;
+let savedStats = null;
+
 const GENRES = [{ id: '1', name: 'Экшен' }, { id: '22', name: 'Романтика' }, { id: '4', name: 'Комедия' }, { id: '10', name: 'Фэнтези' }, { id: '8', name: 'Драма' }, { id: '2', name: 'Приключения' }, { id: '24', name: 'Фантастика' }];
 const YEARS = [{ id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' }, { id: '2021', name: '2021' }, { id: '2020', name: '2020' }];
 const STATUSES = [{ id: 'ongoing', name: 'Онгоинг' }, { id: 'released', name: 'Завершено' }, { id: 'anons', name: 'Анонс' }];
@@ -540,7 +545,6 @@ function startPreview(type, item) {
     const bar = document.getElementById('previewBar');
     const btn = document.getElementById('preview-btn-buy');
     
-    const isOwned = getStats().coins >= item.price;
     if (item.price === 0) {
         btn.textContent = 'Получить';
     } else {
@@ -1715,6 +1719,7 @@ function switchProfileTab(tab) {
     
     const contentProfile = document.getElementById('profile-content-tab'); 
     const contentSettings = document.getElementById('settings-content-tab'); 
+    const shopContent = document.getElementById('shop-content-tab');
     
     btnProfile.classList.remove('active');
     btnShop.classList.remove('active');
@@ -1724,40 +1729,20 @@ function switchProfileTab(tab) {
         btnProfile.classList.add('active'); 
         contentProfile.style.display = 'block'; 
         contentSettings.style.display = 'none'; 
-        // Скрываем контейнер магазина, если он есть
-        const shopContent = document.getElementById('shop-content-tab');
         if(shopContent) shopContent.style.display = 'none';
     } else if (tab === 'shop') {
         btnShop.classList.add('active');
-        // Показываем контейнер магазина
         contentProfile.style.display = 'none';
         contentSettings.style.display = 'none';
         
-        // Динамически создаем или показываем контейнер магазина
-        let shopContent = document.getElementById('shop-content-tab');
-        if (!shopContent) {
-            shopContent = document.createElement('div');
-            shopContent.id = 'shop-content-tab';
-            shopContent.innerHTML = `
-                <div class="shop-tabs">
-                    <div class="shop-tab active" onclick="switchShopTab('banners', this)">Баннеры</div>
-                    <div class="shop-tab" onclick="switchShopTab('titles', this)">Титулы</div>
-                    <div class="shop-tab" onclick="switchShopTab('frames', this)">Рамки</div>
-                    <div class="shop-tab" onclick="switchShopTab('effects', this)">Эффекты</div>
-                    <div class="shop-tab" onclick="switchShopTab('badges', this)">Значки</div>
-                </div>
-                <div id="shop-items-container" class="shop-grid"></div>
-            `;
-            document.querySelector('.profile-container').appendChild(shopContent);
+        if (shopContent) {
+            shopContent.style.display = 'block';
+            renderShopTab(currentShopTab);
         }
-        shopContent.style.display = 'block';
-        renderShopTab(currentShopTab); // Отрисовываем вкладку
-        return;
     } else { 
         btnSettings.classList.add('active'); 
         contentProfile.style.display = 'none'; 
         contentSettings.style.display = 'block'; 
-        const shopContent = document.getElementById('shop-content-tab');
         if(shopContent) shopContent.style.display = 'none';
     } 
 }
