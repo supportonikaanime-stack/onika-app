@@ -118,7 +118,7 @@
         
         .id-container { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px 15px; display: inline-flex; align-items: center; gap: 10px; margin-bottom: 5px; cursor: pointer; backdrop-filter: blur(5px); }
         
-        /* БЕЙДЖ УРОВНЯ БЕЗ ФОНА И РАМКИ */
+        /* БЕЙДЖ УРОВНЯ С КАРТИНКОЙ */
         .level-row { 
             display: flex; 
             align-items: center; 
@@ -137,64 +137,38 @@
             justify-content: center; 
             flex-shrink: 0; 
             position: relative; 
-        }
-
-        /* ЭФФЕКТ ДЫХАНИЯ */
-        .level-badge::before {
-            content: '';
-            position: absolute;
-            width: 60px;
-            height: 60px;
-            background: radial-gradient(circle, var(--aura-color, rgba(91, 91, 255, 0.6)) 0%, transparent 70%);
             border-radius: 50%;
-            animation: breathe 3s ease-in-out infinite;
-            z-index: 0;
+            overflow: hidden; /* Обрезаем картинку под круг */
+            border: 2px solid rgba(255, 255, 255, 0.1); /* Тонкая рамка для красоты */
         }
 
-        @keyframes breathe {
-            0%, 100% { transform: scale(0.9); opacity: 0.4; }
-            50% { transform: scale(1.3); opacity: 0.8; }
+        /* Картинка на фоне */
+        .level-badge-img {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            z-index: 1;
         }
         
+        /* Цифра уровня поверх картинки */
         .level-number {
             position: relative; 
             z-index: 2; 
-            font-size: 46px; 
+            font-size: 40px; 
             font-weight: 900; 
             font-family: 'Nunito', sans-serif; 
             line-height: 1; 
             display: flex; 
             align-items: center; 
             justify-content: center;
-            transition: color 0.3s, text-shadow 0.3s;
-            animation: floatNumber 3s ease-in-out infinite;
-        }
-        
-        @keyframes floatNumber {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-5px); }
-            100% { transform: translateY(0px); }
-        }
-
-        .level-number::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 30px;
-            height: 6px;
-            background: rgba(0, 0, 0, 0.8);
-            border-radius: 50%;
-            filter: blur(4px);
-            animation: shadowPulse 3s ease-in-out infinite;
-            z-index: -1;
-        }
-
-        @keyframes shadowPulse {
-            0% { transform: translateX(-50%) scale(1); opacity: 0.6; }
-            50% { transform: translateX(-50%) scale(0.8); opacity: 0.3; }
-            100% { transform: translateX(-50%) scale(1); opacity: 0.6; }
+            /* Белая цифра с черной обводкой */
+            color: #ffffff;
+            -webkit-text-stroke: 2px #000000;
+            text-shadow: 0px 2px 4px rgba(0,0,0,0.8);
+            /* Убрали анимации */
+            transition: none;
+            animation: none;
         }
         
         .level-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
@@ -253,7 +227,7 @@
         
         .modal-icon-large { display: flex; justify-content: center; margin-bottom: 15px; color: var(--primary); position: relative; }
         .modal-level-badge { width: 120px !important; height: 120px !important; display: flex; align-items: center; justify-content: center; position: relative; }
-        .modal-level-badge .level-number { font-size: 64px; }
+        .modal-level-badge .level-number { font-size: 64px; -webkit-text-stroke: 3px #000000; }
         
         .modal-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 5px; }
         .modal-subtitle { font-size: 14px; color: #888; margin-bottom: 20px; word-wrap: break-word; line-height: 1.4; }
@@ -588,6 +562,9 @@
                 <div class="user-card-bottom">
                     <div class="level-row" onclick="openLevelModal()">
                         <div class="level-badge" id="profile-level-badge-container">
+                            <!-- Картинка уровня -->
+                            <img src="level_icon.png" class="level-badge-img" alt="level">
+                            <!-- Цифра уровня -->
                             <span id="user-level" class="level-number">1</span>
                         </div>
                         <div class="level-info">
@@ -644,6 +621,9 @@
             
             <div class="modal-icon-large">
                 <div class="level-badge modal-level-badge" id="modal-level-badge-container">
+                    <!-- Картинка уровня -->
+                    <img src="level_icon.png" class="level-badge-img" alt="level">
+                    <!-- Цифра уровня -->
                     <span id="modal-icon-level" class="level-number">1</span>
                 </div>
             </div>
@@ -718,6 +698,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=147"></script>
+    <script src="app.js?v=148"></script>
 </body>
 </html>
