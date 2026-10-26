@@ -120,6 +120,18 @@
         .user-details { text-align: center; width: 100%; }
         .user-details h2 { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
         
+        /* ТИТУЛ В ПРОФИЛЕ */
+        .user-title-display {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+        }
+
         .coin-balance { background: rgba(255, 215, 0, 0.15); border: 1px solid rgba(255, 215, 0, 0.4); border-radius: 12px; padding: 6px 15px; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; color: #ffd700; font-weight: bold; font-size: 16px; backdrop-filter: blur(5px); }
         .coin-balance svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         
@@ -579,6 +591,10 @@
                         </div>
                         <div class="user-details">
                             <h2 id="tg-name">Гость</h2>
+                            <!-- КОНТЕЙНЕР ДЛЯ ТИТУЛА -->
+                            <div id="user-title-container" style="display: none;">
+                                <div class="user-title-display" id="user-active-title"></div>
+                            </div>
                             <div class="coin-balance">
                                 <svg><use href="#oa-coin"></use></svg>
                                 <span id="user-coins">0</span>
@@ -640,6 +656,10 @@
                     <h3 style="margin-bottom: 15px; color: #fff;">Настройки</h3>
                     <button class="settings-btn" onclick="resetBanner()">
                         <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять баннер</span>
+                        <span style="color: #888;">›</span>
+                    </button>
+                    <button class="settings-btn" onclick="resetTitle()">
+                        <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять титул</span>
                         <span style="color: #888;">›</span>
                     </button>
                 </div>
@@ -722,6 +742,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=154"></script>
+    <script src="app.js?v=155"></script>
 </body>
 </html>
