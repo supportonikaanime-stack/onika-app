@@ -20,6 +20,11 @@ let ACTIVE_TITLE_DATA = null;
 let ACTIVE_EFFECT_CSS = '';
 let ACTIVE_BADGE_URL = '';
 
+// ПЕРЕМЕННЫЕ ДЛЯ ПРЕДПРОСМОТРА
+let isPreviewMode = false;
+let previewItem = null;
+let savedStats = null; // Сюда сохраним состояние до примерки
+
 if (tg) {
     tg.expand();
     tg.setHeaderColor('#0a0a0f');
@@ -140,7 +145,6 @@ let currentMyListFilter = 'all';
 let previousScreen = 'catalog'; 
 let searchDebounceTimer;
 let currentShopTab = 'banners';
-let currentPreview = null; // Объект для хранения данных о текущем предпросмотре
 
 const GENRES = [{ id: '1', name: 'Экшен' }, { id: '22', name: 'Романтика' }, { id: '4', name: 'Комедия' }, { id: '10', name: 'Фэнтези' }, { id: '8', name: 'Драма' }, { id: '2', name: 'Приключения' }, { id: '24', name: 'Фантастика' }];
 const YEARS = [{ id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' }, { id: '2021', name: '2021' }, { id: '2020', name: '2020' }];
@@ -226,6 +230,12 @@ function copyMyId() {
 async function loadProfileData() {
     let stats = getStats(); 
     
+    // Если мы в режиме предпросмотра, не перезагружаем данные из БД, чтобы не сбить примерку
+    if (isPreviewMode) {
+        applyStatsToUI(savedStats || stats);
+        return;
+    }
+
     if (stats.active_banner_url) {
         ACTIVE_BANNER_URL = stats.active_banner_url;
     }
@@ -303,7 +313,12 @@ async function loadProfileData() {
     } 
     
     checkAchievements(stats); 
-    
+    applyStatsToUI(stats);
+    syncProfileToDB();
+}
+
+// ФУНКЦИЯ ОТРИСОВКИ ПРОФИЛЯ (вынесена отдельно для предпросмотра)
+function applyStatsToUI(stats) {
     const avatarEl = document.getElementById('tg-avatar'); 
     if (avatarEl && MY_TG_ID) { 
         if (MY_PHOTO_URL) avatarEl.innerHTML = `<img src="${safeUrl(MY_PHOTO_URL)}" style="width:100%; height:100%; object-fit:cover;">`; 
@@ -319,7 +334,6 @@ async function loadProfileData() {
         }
     }
 
-    // ГЕНЕРАЦИЯ ЧАСТИЦ
     renderParticles();
 
     // ЗНАЧОК
@@ -388,8 +402,6 @@ async function loadProfileData() {
         setElText('next-ach-name', 'Все выполнено!'); 
         setElText('next-ach-reward', '0');
     }
-
-    syncProfileToDB();
 }
 
 // ==========================================
@@ -467,102 +479,96 @@ function renderShopTab(tabName) {
     }
 }
 
-// --- ФУНКЦИЯ ОТКРЫТИЯ ПРЕДПРОСМОТРА ---
-function openPreview(type, item) {
-    currentPreview = { type, item };
-    
-    const box = document.getElementById('preview-box');
-    const nameEl = document.getElementById('preview-name');
-    const descEl = document.getElementById('preview-desc');
-    const btn = document.getElementById('preview-action-btn');
-    
-    nameEl.textContent = item.name;
-    descEl.textContent = item.description || (item.price === 0 ? 'Бесплатно' : `Цена: ${item.price} 🪙`);
-    
-    // Очистка
-    box.innerHTML = '';
-    box.className = 'preview-box';
+// --- ФУНКЦИЯ ЗАПУСКА ПРЕДПРОСМОТРА ---
+function startPreview(type, item) {
+    if (isPreviewMode) return; // Защита от повторного клика
 
-    // Рендер в зависимости от типа
-    if (type === 'banner') {
-        box.innerHTML = `<div class="preview-banner" style="background-image: url('${safeUrl(item.image_url)}');"></div>`;
-    } 
-    else if (type === 'title') {
-        box.innerHTML = `<div class="preview-title-text" style="color: ${item.color || '#fff'}; border: 1px solid ${item.color || '#fff'}40; padding: 4px 12px; border-radius: 8px; background: rgba(0,0,0,0.5);">${escapeHTML(item.name)}</div>`;
-    }
-    else if (type === 'effect') {
-        box.innerHTML = `
-            <div class="preview-effect-container ${item.css_class}" id="preview-effect-anim"></div>
-            <div class="preview-avatar-wrap">
-                <div class="preview-avatar">AA</div>
-            </div>
-        `;
-        // Генерируем частицы для превью
-        setTimeout(() => {
-            const pc = document.getElementById('preview-effect-anim');
-            if (pc) {
-                for (let i = 0; i < 30; i++) {
-                    const span = document.createElement('span');
-                    const size = Math.random() * 4 + 2;
-                    span.style.left = `${Math.random() * 100}%`;
-                    span.style.width = `${size}px`;
-                    span.style.height = `${size}px`;
-                    span.style.animationDuration = `${Math.random() * 4 + 3}s`;
-                    span.style.animationDelay = `${Math.random() * 3}s`;
-                    
-                    if (item.css_class === 'effect-sparks') span.style.animationName = 'riseUp';
-                    else if (item.css_class === 'effect-sakura') span.style.animationName = 'fallDown';
-                    else if (item.css_class === 'effect-stars') span.style.animationName = 'twinkle, float';
-                    
-                    pc.appendChild(span);
-                }
-            }
-        }, 50);
-    }
-    else if (type === 'badge') {
-        box.innerHTML = `<img src="${safeUrl(item.image_url)}" class="preview-badge-img" style="width: 80px; height: 80px;">`;
-    }
-    else if (type === 'frame') {
-        box.innerHTML = `
-            <div class="preview-avatar-wrap">
-                <div class="preview-avatar">AA</div>
-                <img src="${safeUrl(item.image_url)}" class="preview-frame-img">
-            </div>
-        `;
-    }
-
-    // Настройка кнопки
-    let isOwned = false;
-    let stats = getStats();
+    isPreviewMode = true;
+    previewItem = { type, item };
     
+    // Сохраняем текущее состояние
+    savedStats = JSON.parse(JSON.stringify(getStats())); 
+    savedStats._active_banner_url = ACTIVE_BANNER_URL;
+    savedStats._active_title_data = ACTIVE_TITLE_DATA;
+    savedStats._active_effect_css = ACTIVE_EFFECT_CSS;
+    savedStats._active_badge_url = ACTIVE_BADGE_URL;
+
+    // Применяем визуально
     if (type === 'banner') {
-        // Для баннеров проверяем user_banners
-        isOwned = stats.active_banner === item.id; // Ну или проверить покупку в базе
-        // Так как в превью мы не знаем наверняка, куплен ли он (нужен запрос), сделаем упрощенно:
-        // Если это текущий активный баннер, кнопка будет "Установлен".
+        ACTIVE_BANNER_URL = safeUrl(item.image_url);
     } else if (type === 'title') {
-        isOwned = stats.active_title === item.id;
+        ACTIVE_TITLE_DATA = item;
     } else if (type === 'effect') {
-        isOwned = stats.active_effect === item.id;
+        ACTIVE_EFFECT_CSS = item.css_class;
     } else if (type === 'badge') {
-        isOwned = stats.active_badge === item.id;
+        ACTIVE_BADGE_URL = safeUrl(item.image_url);
     }
 
-    // Упрощенная логика для кнопки
-    btn.className = 'modal-action-btn btn-buy';
-    btn.textContent = item.price === 0 ? 'Получить' : `Купить за ${item.price} 🪙`;
-    btn.onclick = () => executePurchase(type, item);
+    // Переключаем на вкладку "Профиль" для визуализации
+    switchTab('profile'); 
+    
+    // Показываем панель внизу
+    const bar = document.getElementById('previewBar');
+    const btn = document.getElementById('preview-btn-buy');
+    
+    const isOwned = getStats().coins >= item.price;
+    if (item.price === 0) {
+        btn.textContent = 'Получить';
+    } else {
+        btn.textContent = `Купить и надеть · ${item.price} 🪙`;
+    }
+    
+    if (getStats().coins < item.price) {
+        btn.style.opacity = '0.5';
+    } else {
+        btn.style.opacity = '1';
+    }
 
-    document.getElementById('previewModal').classList.add('active');
+    bar.classList.add('active');
 }
 
-async function executePurchase(type, item) {
-    closeModal('previewModal');
+function cancelPreview() {
+    if (!isPreviewMode) return;
+    
+    // Восстанавливаем состояние
+    if (savedStats) {
+        ACTIVE_BANNER_URL = savedStats._active_banner_url || '';
+        ACTIVE_TITLE_DATA = savedStats._active_title_data || null;
+        ACTIVE_EFFECT_CSS = savedStats._active_effect_css || '';
+        ACTIVE_BADGE_URL = savedStats._active_badge_url || '';
+    }
+
+    isPreviewMode = false;
+    previewItem = null;
+    savedStats = null;
+    
+    document.getElementById('previewBar').classList.remove('active');
+    loadProfileData(); // Возвращаем реальные данные
+}
+
+async function executePreview() {
+    if (!isPreviewMode || !previewItem) return;
+
+    const { type, item } = previewItem;
+    const stats = getStats();
+
+    if (stats.coins < item.price) {
+        showToast('Недостаточно монет!');
+        return;
+    }
+
+    document.getElementById('previewBar').classList.remove('active');
+    isPreviewMode = false;
+
     if (type === 'banner') {
         await buyBanner(item.id, item.price);
     } else {
         await buyItem(type, item.id, item.price);
     }
+    
+    previewItem = null;
+    savedStats = null;
+    loadProfileData();
 }
 
 // --- РЕНДЕР БАННЕРОВ ---
@@ -594,7 +600,7 @@ async function renderBannersInShop(container) {
             }
 
             html += `
-                <div class="shop-item" onclick='openPreview("banner", ${JSON.stringify(b).replace(/'/g, "&#39;")})'>
+                <div class="shop-item" onclick='startPreview("banner", ${JSON.stringify(b).replace(/'/g, "&#39;")})'>
                     <div class="shop-img" style="background-image: url('${safeUrl(b.image_url)}')"></div>
                     <div class="shop-info">
                         <div class="shop-name">${escapeHTML(b.name)}</div>
@@ -634,7 +640,7 @@ async function renderTitlesInShop(container) {
             }
             
             html += `
-                <div class="shop-item" onclick='openPreview("title", ${JSON.stringify(t).replace(/'/g, "&#39;")})'>
+                <div class="shop-item" onclick='startPreview("title", ${JSON.stringify(t).replace(/'/g, "&#39;")})'>
                     <div class="shop-img" style="background: #222; display:flex; align-items:center; justify-content:center; color:${t.color}; font-weight:bold; font-size:16px; text-shadow:0 0 5px ${t.color}80;">${escapeHTML(t.name)}</div>
                     <div class="shop-info">
                         <div class="shop-name">${escapeHTML(t.name)}</div>
@@ -662,7 +668,7 @@ async function renderFramesInShop(container) {
             let btnHtml = `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${f.price} 🪙</div>`;
             
             html += `
-                <div class="shop-item" onclick='openPreview("frame", ${JSON.stringify(f).replace(/'/g, "&#39;")})'>
+                <div class="shop-item" onclick='startPreview("frame", ${JSON.stringify(f).replace(/'/g, "&#39;")})'>
                     <div class="shop-img" style="background-image: url('${safeUrl(f.image_url)}')"></div>
                     <div class="shop-info">
                         <div class="shop-name">${escapeHTML(f.name)}</div>
@@ -698,7 +704,7 @@ async function renderEffectsInShop(container) {
             }
             
             html += `
-                <div class="shop-item" onclick='openPreview("effect", ${JSON.stringify(e).replace(/'/g, "&#39;")})'>
+                <div class="shop-item" onclick='startPreview("effect", ${JSON.stringify(e).replace(/'/g, "&#39;")})'>
                     <div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items:center; justify-content:center;">
                         <div class="avatar" style="width:40px; height:40px; font-size:12px; background:#333; border:1px solid #555;">AA</div>
                     </div>
@@ -736,7 +742,7 @@ async function renderBadgesInShop(container) {
             }
             
             html += `
-                <div class="shop-item" onclick='openPreview("badge", ${JSON.stringify(b).replace(/'/g, "&#39;")})'>
+                <div class="shop-item" onclick='startPreview("badge", ${JSON.stringify(b).replace(/'/g, "&#39;")})'>
                     <div class="shop-img" style="background: #222; display:flex; align-items:center; justify-content:center;">
                         <img src="${safeUrl(b.image_url)}" style="width:50px; height:50px; object-fit:contain;">
                     </div>
