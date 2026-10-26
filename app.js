@@ -136,6 +136,7 @@ let currentFilters = { search: '', genre: '', year: '', status: '', sort: 'popul
 let currentMyListFilter = 'all';
 let previousScreen = 'catalog'; 
 let searchDebounceTimer;
+let currentShopTab = 'banners'; // Вкладка магазина по умолчанию
 
 const GENRES = [{ id: '1', name: 'Экшен' }, { id: '22', name: 'Романтика' }, { id: '4', name: 'Комедия' }, { id: '10', name: 'Фэнтези' }, { id: '8', name: 'Драма' }, { id: '2', name: 'Приключения' }, { id: '24', name: 'Фантастика' }];
 const YEARS = [{ id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' }, { id: '2021', name: '2021' }, { id: '2020', name: '2020' }];
@@ -178,7 +179,8 @@ function switchTab(tabName, element) {
     if (tabName === 'player') document.getElementById('player-title').textContent = 'Выбор плеера';
     if (tabName === 'episodes') document.getElementById('eps-title').textContent = 'Выбор серии';
     if (tabName === 'friends') loadFriends();
-    if (tabName === 'achievements') renderAchievementsPage(); // Рендер страницы достижений
+    if (tabName === 'achievements') renderAchievementsPage(); 
+    if (tabName === 'shop') renderShopTab(currentShopTab);
 }
 
 function goBackFromDetail() {
@@ -293,7 +295,6 @@ async function loadProfileData() {
     setElText('modal-xp-next', 100); 
     setElWidth('modal-xp-bar', progressPercent + '%'); 
     
-    // Обновляем цифру в модальном окне (без цветов и теней)
     const modalLevelNum = document.getElementById('modal-icon-level');
     if (modalLevelNum) {
         modalLevelNum.textContent = currentLevel;
@@ -312,17 +313,35 @@ async function loadProfileData() {
 }
 
 // ==========================================
-// МАГАЗИН БАННЕРОВ
+// МАГАЗИН
 // ==========================================
-async function openShopModal() {
-    const container = document.getElementById('shop-items-container');
-    const coinsEl = document.getElementById('shop-coins');
-    let stats = getStats();
-    
-    document.getElementById('shopModal').classList.add('active');
-    coinsEl.textContent = stats.coins;
-    container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888;">Загрузка...</div>';
+function openShopModal() {
+    // Теперь вместо модалки переключаем таб в профиле
+    switchProfileTab('shop');
+}
 
+function switchShopTab(tabName, element) {
+    currentShopTab = tabName;
+    document.querySelectorAll('.shop-tab').forEach(el => el.classList.remove('active'));
+    if (element) element.classList.add('active');
+    renderShopTab(tabName);
+}
+
+function renderShopTab(tabName) {
+    const container = document.getElementById('shop-items-container');
+    if (!container) return;
+    
+    container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 20px;">Загрузка...</div>';
+
+    if (tabName === 'banners') {
+        renderBannersInShop(container);
+    } else {
+        container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px; font-size: 16px;">🚧 Скоро здесь появятся товары!</div>';
+    }
+}
+
+async function renderBannersInShop(container) {
+    let stats = getStats();
     if (!supabaseClient) return;
 
     try {
@@ -364,7 +383,7 @@ async function openShopModal() {
 
     } catch(e) {
         console.error(e);
-        container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #f44;">Ошибка загрузки магазина</div>';
+        container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #f44;">Ошибка загрузки баннеров</div>';
     }
 }
 
@@ -379,7 +398,7 @@ async function buyBanner(bannerId, price) {
 
     try {
         stats.coins -= price;
-        stats.hasPurchasedBanner = true; // Устанавливаем флаг для достижения
+        stats.hasPurchasedBanner = true; 
         saveStats(stats);
 
         await supabaseClient.from('user_banners').insert({ tg_id: MY_TG_ID, banner_id: bannerId });
@@ -394,11 +413,11 @@ async function buyBanner(bannerId, price) {
         
         saveStats(stats);
         syncProfileToDB();
-        checkAchievements(stats); // Проверяем достижения
+        checkAchievements(stats);
 
         showToast('✅ Баннер получен!');
-        openShopModal(); 
-        loadProfileData(); 
+        renderShopTab('banners'); // Обновляем список в магазине
+        loadProfileData(); // Обновляем баланс в профиле
 
     } catch(e) {
         console.error(e);
@@ -418,7 +437,7 @@ async function applyBanner(bannerId, imageUrl) {
     if (bannerEl) bannerEl.style.backgroundImage = `url('${ACTIVE_BANNER_URL}')`;
 
     showToast('Баннер применен!');
-    openShopModal(); 
+    renderShopTab('banners'); 
 }
 
 async function resetBanner() {
@@ -570,9 +589,7 @@ async function openFriendProfile(id, name) {
                 <div class="user-card-bottom">
                     <div class="level-row">
                         <div class="level-badge">
-                            <!-- Картинка уровня -->
                             <img src="level_icon.png" class="level-badge-img" alt="level">
-                            <!-- Цифра уровня (без стилей цвета) -->
                             <span class="level-number">${lvl}</span>
                         </div>
                         <div class="level-info">
@@ -762,7 +779,7 @@ function setAnimeStatus(status) {
     if (status !== '') { stats.favedAnime.push({ id: id, status: status }); showToast('Статус обновлен!'); } 
     else { showToast('Удалено'); }
     saveStats(stats); closeModal('statusModal');
-    checkAchievements(stats); // Проверяем достижения (например, добавление в избранное)
+    checkAchievements(stats);
     
     const heartBtn = document.querySelector('#detail-content button[onclick^="openStatusModal"]');
     if (heartBtn) { 
@@ -1080,17 +1097,33 @@ function showToast(msg) {
     document.body.appendChild(toast); setTimeout(() => toast.remove(), 2500); 
 }
 
+// ОБНОВЛЕННАЯ ФУНКЦИЯ ПЕРЕКЛЮЧЕНИЯ ТАБОВ В ПРОФИЛЕ
 function switchProfileTab(tab) { 
     const btnProfile = document.getElementById('tab-btn-profile'); 
+    const btnShop = document.getElementById('tab-btn-shop'); 
     const btnSettings = document.getElementById('tab-btn-settings'); 
+    
     const contentProfile = document.getElementById('profile-content-tab'); 
     const contentSettings = document.getElementById('settings-content-tab'); 
+    
+    // Сброс классов
+    btnProfile.classList.remove('active');
+    btnShop.classList.remove('active');
+    btnSettings.classList.remove('active');
+    
     if (tab === 'profile') { 
-        btnProfile.classList.add('active'); btnSettings.classList.remove('active'); 
-        contentProfile.style.display = 'block'; contentSettings.style.display = 'none'; 
+        btnProfile.classList.add('active'); 
+        contentProfile.style.display = 'block'; 
+        contentSettings.style.display = 'none'; 
+    } else if (tab === 'shop') {
+        btnShop.classList.add('active');
+        // Переходим на отдельный экран магазина
+        switchTab('shop');
+        return; // Выходим, чтобы не показывать контент профиля
     } else { 
-        btnProfile.classList.remove('active'); btnSettings.classList.add('active'); 
-        contentProfile.style.display = 'none'; contentSettings.style.display = 'block'; 
+        btnSettings.classList.add('active'); 
+        contentProfile.style.display = 'none'; 
+        contentSettings.style.display = 'block'; 
     } 
 }
 
@@ -1108,11 +1141,9 @@ function renderAchievementsPage() {
     const container = document.getElementById('achievements-list-container'); 
     let html = ''; 
     
-    // Обновляем заголовок страницы
     setElText('page-ach-earned', stats.unlockedAchievements.length);
     setElText('page-ach-total', ACHIEVEMENTS.length);
 
-    // Группируем достижения по редкости
     const rarities = [
         { key: 'common', name: 'Обычные', color: '#ccc', class: 'common' },
         { key: 'rare', name: 'Редкие', color: '#00d2ff', class: 'rare' },
@@ -1121,15 +1152,10 @@ function renderAchievementsPage() {
     ];
 
     rarities.forEach(rarity => {
-        // Фильтруем достижения по текущей редкости
         const list = ACHIEVEMENTS.filter(a => a.rarity === rarity.key);
-        
-        if (list.length === 0) return; // Пропускаем пустые категории
-
-        // Считаем сколько выполнено в этой категории
+        if (list.length === 0) return;
         const completedCount = list.filter(a => stats.unlockedAchievements.includes(a.id)).length;
 
-        // Добавляем заголовок категории
         html += `
             <div class="ach-category-header ${rarity.class}">
                 <span style="color: ${rarity.color};">●</span> 
@@ -1138,14 +1164,12 @@ function renderAchievementsPage() {
             </div>
         `;
 
-        // Выводим достижения этой категории
         list.forEach(ach => { 
             const isDone = stats.unlockedAchievements.includes(ach.id); 
             const rarityStyle = RARITY_STYLES[ach.rarity];
             const progressCurrent = ach.progress(stats);
             const progressPercent = (progressCurrent / ach.max) * 100;
             
-            // Если есть imgUrl - выводим картинку, иначе SVG
             const iconHtml = ach.imgUrl 
                 ? `<img src="${ach.imgUrl}" alt="${ach.name}">` 
                 : `<svg width="100%" height="100%"><use href="#${rarityStyle.icon}"></use></svg>`;
