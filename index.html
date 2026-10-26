@@ -101,23 +101,23 @@
         .profile-container { padding: 0 15px; }
         
         .user-card-wrapper { background: #14141f; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; position: relative; display: flex; flex-direction: column; }
-        .user-card-top { padding: 20px 20px 0 20px; position: relative; background-size: cover; background-position: center; min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 15px; }
+        .user-card-top { padding: 20px 20px 0 20px; position: relative; background-size: cover; background-position: center; min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 15px; overflow: hidden; }
         .user-card-top::before { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(20,20,31,0.1) 0%, rgba(20,20,31,0.7) 60%, #14141f 100%); z-index: 1; pointer-events: none; }
-        .user-card-top-content { position: relative; z-index: 2; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .user-card-top-content { position: relative; z-index: 3; width: 100%; display: flex; flex-direction: column; align-items: center; }
         
         .user-card-bottom { 
             padding: 0 20px 20px 20px; 
             position: relative; 
-            z-index: 3; 
+            z-index: 4; 
             background: #14141f; 
             border-top: 1px solid rgba(255, 255, 255, 0.08); 
         }
 
-        .avatar-container { position: relative; width: 80px; height: 80px; margin: 0 auto 15px auto; }
+        .avatar-container { position: relative; width: 80px; height: 80px; margin: 0 auto 15px auto; z-index: 3; }
         .avatar { width: 100%; height: 100%; border-radius: 50%; background: #222; border: 2px solid #333; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5); position: relative; z-index: 2; }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-        .user-details { text-align: center; width: 100%; }
+        .user-details { text-align: center; width: 100%; position: relative; z-index: 3; }
         .user-details h2 { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
         
         /* ТИТУЛ В ПРОФИЛЕ */
@@ -236,7 +236,7 @@
 
         .shop-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px; }
         .shop-item { background: #1a1a20; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
-        .shop-img { width: 100%; height: 100px; background-size: cover; background-position: center; }
+        .shop-img { width: 100%; height: 100px; background-size: cover; background-position: center; position: relative; overflow: hidden; }
         .shop-info { padding: 10px; text-align: center; display: flex; flex-direction: column; flex: 1; justify-content: space-between; }
         .shop-name { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #fff; }
         .shop-btn { background: var(--primary); color: #fff; border: none; padding: 8px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; margin-top: 5px; }
@@ -334,62 +334,69 @@
         .nav-text { font-size: 11px; font-weight: 500; }
 
         /* ==========================================
-           CSS ЭФФЕКТЫ ДЛЯ АВАТАРКИ
+           CSS ЭФФЕКТЫ ЧАСТИЦ (БАННЕР)
            ========================================== */
-           
-        /* 1. Неоновое синее свечение */
-        .effect-neon-blue .avatar {
-            box-shadow: 0 0 10px #00d2ff, 0 0 20px #00d2ff, 0 0 40px #00d2ff;
-            border-color: #00d2ff;
-            animation: pulse-neon-blue 2s infinite alternate;
-        }
-        @keyframes pulse-neon-blue {
-            0% { box-shadow: 0 0 10px #00d2ff, 0 0 20px #00d2ff; }
-            100% { box-shadow: 0 0 15px #00d2ff, 0 0 30px #00d2ff, 0 0 50px #00d2ff; }
+        
+        .effect-container {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 2;
+            overflow: hidden;
+            border-radius: 20px 20px 0 0;
         }
 
-        /* 2. Кровавая аура (красное свечение) */
-        .effect-blood-red .avatar {
-            box-shadow: 0 0 15px #ff0000, 0 0 30px #ff0000;
-            border-color: #ff0000;
-            animation: pulse-red 1.5s infinite alternate;
+        /* 1. ЗОЛОТЫЕ ИСКРЫ */
+        .effect-sparks span {
+            position: absolute;
+            bottom: -10px;
+            background: #ffd700;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #ffd700, 0 0 20px #ff8c00;
+            opacity: 0;
+            animation: riseUp linear infinite;
         }
-        @keyframes pulse-red {
-            0% { box-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000; }
-            100% { box-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000, 0 0 60px #ff0000; }
-        }
-
-        /* 3. Золотая легенда (желтое свечение) */
-        .effect-gold .avatar {
-            box-shadow: 0 0 15px #ffd700, 0 0 30px #ffd700;
-            border-color: #ffd700;
-            animation: pulse-gold 3s infinite alternate;
-        }
-        @keyframes pulse-gold {
-            0% { box-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700; }
-            100% { box-shadow: 0 0 20px #ffd700, 0 0 40px #ffd700, 0 0 60px #ffd700; }
+        @keyframes riseUp {
+            0% { transform: translateY(0) scale(1); opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateY(-300px) scale(0); opacity: 0; }
         }
 
-        /* 4. Пламя (оранжевое свечение) */
-        .effect-fire .avatar {
-            box-shadow: 0 0 15px #ff4500, 0 0 30px #ff8c00;
-            border-color: #ff4500;
-            animation: pulse-fire 1s infinite alternate;
+        /* 2. ЛЕПЕСТКИ САКУРЫ */
+        .effect-sakura span {
+            position: absolute;
+            top: -20px;
+            background: #ffb7c5;
+            border-radius: 50% 0 50% 50%;
+            box-shadow: 0 0 5px rgba(255,183,197,0.5);
+            opacity: 0;
+            animation: fallDown linear infinite;
         }
-        @keyframes pulse-fire {
-            0% { box-shadow: 0 0 10px #ff4500, 0 0 20px #ff8c00; }
-            100% { box-shadow: 0 0 25px #ff4500, 0 0 45px #ff8c00, 0 0 65px #ff4500; }
+        @keyframes fallDown {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(300px) rotate(360deg); opacity: 0; }
         }
 
-        /* 5. Звездная пыль (фиолетовое мерцание) */
-        .effect-stars .avatar {
-            box-shadow: 0 0 15px #b44aff, 0 0 30px #b44aff;
-            border-color: #b44aff;
-            animation: pulse-stars 2.5s infinite alternate;
+        /* 3. ЗВЕЗДНАЯ ПЫЛЬ */
+        .effect-stars span {
+            position: absolute;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #fff, 0 0 15px #00f5ff;
+            opacity: 0;
+            animation: twinkle float infinite;
         }
-        @keyframes pulse-stars {
-            0% { box-shadow: 0 0 10px #b44aff, 0 0 20px #b44aff; filter: brightness(1); }
-            100% { box-shadow: 0 0 25px #b44aff, 0 0 50px #b44aff; filter: brightness(1.2); }
+        @keyframes twinkle {
+            0% { opacity: 0.2; transform: scale(0.5); }
+            50% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0.2; transform: scale(0.5); }
+        }
+        @keyframes float {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(20px); }
         }
     </style>
 </head>
@@ -644,8 +651,11 @@
         <div class="profile-container">
             <div class="user-card-wrapper">
                 <div class="user-card-top" id="profile-banner">
+                    <!-- КОНТЕЙНЕР ДЛЯ ЧАСТИЦ (СЮДА БУДЕТ ДОБАВЛЯТЬСЯ ЭФФЕКТ) -->
+                    <div class="effect-container" id="particle-effect-container"></div>
+                    
                     <div class="user-card-top-content">
-                        <div class="avatar-container" id="avatar-effect-container">
+                        <div class="avatar-container">
                             <div class="avatar" id="tg-avatar"><span id="avatar-letter">?</span></div>
                         </div>
                         <div class="user-details">
@@ -805,6 +815,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=156"></script>
+    <script src="app.js?v=157"></script>
 </body>
 </html>
