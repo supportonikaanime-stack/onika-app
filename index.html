@@ -220,7 +220,10 @@
             100% { background-position: 300% 50%; }
         }
 
-        /* Цвета текста и обводки для разных типов */
+        /* ==========================================
+           ЦВЕТА ТЕКСТА И ОБВОДКИ ДЛЯ РАЗНЫХ ТИПОВ
+           ========================================== */
+
         .animated-title[data-title="gold"] .title-text     { background-image: linear-gradient(90deg, #ffd700, #fff6b0, #ffd700, #b8860b, #ffd700); }
         .animated-title[data-title="gold"]::before         { border-color: rgba(255, 215, 0, 0.8); background: rgba(255, 215, 0, 0.1); box-shadow: 0 0 10px rgba(255, 215, 0, 0.5), inset 0 0 10px rgba(255, 215, 0, 0.3); }
 
@@ -250,6 +253,121 @@
 
         .animated-title[data-title="absolute"] .title-text { background-image: linear-gradient(90deg, #ffffff, #b44aff, #00f5ff, #ffffff); }
         .animated-title[data-title="absolute"]::before     { border-color: rgba(180, 74, 255, 0.8); background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 10px rgba(180, 74, 255, 0.5), inset 0 0 10px rgba(0, 245, 255, 0.3); }
+
+        /* ==========================================
+           НОВЫЕ АНИМАЦИИ ТИТУЛОВ
+           ========================================== */
+
+        /* 1. Галактика */
+        .animated-title[data-title="galaxy"] .title-text {
+            background-image: linear-gradient(90deg, #1a0b2e, #5b5bff, #b44aff, #ff2d78, #1a0b2e);
+            background-size: 300% 100%;
+            animation: titleShimmer 4s linear infinite;
+        }
+        .animated-title[data-title="galaxy"]::before {
+            border-color: rgba(180, 74, 255, 0.7); background: rgba(26, 11, 46, 0.4);
+            box-shadow: 0 0 15px rgba(91, 91, 255, 0.5), inset 0 0 10px rgba(255, 45, 120, 0.2);
+        }
+
+        /* 2. Огненный шторм */
+        .animated-title[data-title="firestorm"] .title-text {
+            background-image: linear-gradient(90deg, #ff0000, #ff8c00, #ffd700, #ff4500, #ff0000);
+            background-size: 300% 100%;
+            animation: titleShimmer 2s linear infinite;
+        }
+        .animated-title[data-title="firestorm"]::before {
+            border-color: rgba(255, 69, 0, 0.8); background: rgba(255, 0, 0, 0.15);
+            box-shadow: 0 0 15px rgba(255, 69, 0, 0.6), inset 0 0 15px rgba(255, 215, 0, 0.3);
+        }
+
+        /* 3. Изумрудный лес */
+        .animated-title[data-title="forest"] .title-text {
+            background-image: linear-gradient(90deg, #004d00, #00ff88, #a8ff00, #004d00);
+            background-size: 300% 100%;
+            animation: titleShimmer 5s linear infinite;
+        }
+        .animated-title[data-title="forest"]::before {
+            border-color: rgba(0, 255, 136, 0.6); background: rgba(0, 77, 0, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.4), inset 0 0 10px rgba(168, 255, 0, 0.2);
+        }
+
+        /* 4. Ледяная бездна */
+        .animated-title[data-title="deep-ice"] .title-text {
+            background-image: linear-gradient(90deg, #ffffff, #00d2ff, #000080, #ffffff);
+            background-size: 300% 100%;
+            animation: titleShimmer 6s linear infinite;
+        }
+        .animated-title[data-title="deep-ice"]::before {
+            border-color: rgba(0, 210, 255, 0.8); background: rgba(0, 0, 128, 0.3);
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        /* 5. Золотая кровь */
+        .animated-title[data-title="golden-blood"] .title-text {
+            background-image: linear-gradient(90deg, #ffd700, #ff4500, #ffd700, #b8860b, #ffd700);
+            background-size: 300% 100%;
+            animation: titleShimmer 3.5s linear infinite;
+        }
+        .animated-title[data-title="golden-blood"]::before {
+            border-color: rgba(255, 69, 0, 0.8); background: rgba(184, 134, 11, 0.2);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5), inset 0 0 10px rgba(255, 69, 0, 0.4);
+        }
+
+        /* 6. Проклятие */
+        .animated-title[data-title="curse"] .title-text {
+            background-image: linear-gradient(90deg, #333333, #00ff00, #111111, #00ff00, #333333);
+            background-size: 300% 100%;
+            animation: titleShimmer 4s linear infinite;
+        }
+        .animated-title[data-title="curse"]::before {
+            border-color: rgba(0, 255, 0, 0.6); background: rgba(0, 0, 0, 0.6);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3), inset 0 0 15px rgba(0, 0, 0, 0.8);
+        }
+
+        /* 7. Закат */
+        .animated-title[data-title="sunset"] .title-text {
+            background-image: linear-gradient(90deg, #ff7e5f, #feb47b, #ff7e5f, #b44aff, #ff7e5f);
+            background-size: 300% 100%;
+            animation: titleShimmer 5s linear infinite;
+        }
+        .animated-title[data-title="sunset"]::before {
+            border-color: rgba(255, 126, 95, 0.8); background: rgba(180, 74, 255, 0.1);
+            box-shadow: 0 0 15px rgba(255, 126, 95, 0.5), inset 0 0 10px rgba(254, 180, 123, 0.3);
+        }
+
+        /* 8. Кровь демона */
+        .animated-title[data-title="demon"] .title-text {
+            background-image: linear-gradient(90deg, #8b0000, #ff0000, #000000, #ff0000, #8b0000);
+            background-size: 300% 100%;
+            animation: titleShimmer 2.5s linear infinite;
+        }
+        .animated-title[data-title="demon"]::before {
+            border-color: rgba(255, 0, 0, 0.9); background: rgba(139, 0, 0, 0.2);
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.6), inset 0 0 15px rgba(139, 0, 0, 0.5);
+        }
+
+        /* 9. Матрица */
+        .animated-title[data-title="matrix"] .title-text {
+            background-image: linear-gradient(90deg, #003300, #00ff00, #003300, #00ff00);
+            background-size: 300% 100%;
+            animation: titleShimmer 1.5s linear infinite;
+        }
+        .animated-title[data-title="matrix"]::before {
+            border-color: rgba(0, 255, 0, 0.8); background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
+        }
+
+        /* 10. Божественность */
+        .animated-title[data-title="holy"] .title-text {
+            background-image: linear-gradient(90deg, #ffffff, #fffacd, #ffd700, #ffffff);
+            background-size: 300% 100%;
+            animation: titleShimmer 4s linear infinite;
+        }
+        .animated-title[data-title="holy"]::before {
+            border-color: rgba(255, 255, 255, 0.9); background: rgba(255, 250, 205, 0.15);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.6), inset 0 0 10px rgba(255, 215, 0, 0.4);
+        }
+
 
         .coin-balance { background: rgba(255, 215, 0, 0.15); border: 1px solid rgba(255, 215, 0, 0.4); border-radius: 12px; padding: 6px 15px; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; color: #ffd700; font-weight: bold; font-size: 16px; backdrop-filter: blur(5px); }
         .coin-balance svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -993,6 +1111,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=200"></script>
+    <script src="app.js?v=210"></script>
 </body>
 </html>
