@@ -204,8 +204,7 @@ function applyTitleToElement(titleEl, titleData) {
         titleEl.style.display = 'none';
         return;
     }
-    titleEl.style.display = 'inline-block';
-    titleEl.textContent = titleData.name;
+    titleEl.style.display = 'inline-flex';
 
     // Сбрасываем прошлые стили
     titleEl.className = 'user-title-display';
@@ -218,9 +217,13 @@ function applyTitleToElement(titleEl, titleData) {
     if (titleData.is_animated) {
         titleEl.className = 'user-title-display animated-title';
         titleEl.setAttribute('data-title', titleData.animation_key || 'gold');
+        // Оборачиваем текст в span для градиента
+        titleEl.innerHTML = `<span class="title-text">${escapeHTML(titleData.name)}</span>`;
     } else {
+        // Обычный титул
         titleEl.style.color = titleData.color || '#fff';
-        titleEl.style.border = `1px solid ${titleData.color || '#fff'}40`;
+        titleEl.style.borderColor = titleData.color || '#fff';
+        titleEl.textContent = titleData.name;
     }
 }
 
@@ -706,20 +709,18 @@ async function renderTitlesInShop(container) {
             }
 
             // Превью титула: если анимированный — используем тот же класс
-            let previewClass = 'shop-img';
-            let previewStyle = 'background: #222; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:16px;';
-            let previewAttr = '';
+            let titleHtml = '';
             if (t.is_animated) {
-                previewClass = 'shop-img user-title-display animated-title';
-                previewStyle = 'background: #111; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:16px; padding: 10px; box-sizing: border-box;';
-                previewAttr = `data-title="${t.animation_key || 'gold'}"`;
+                titleHtml = `<div class="user-title-display animated-title" data-title="${t.animation_key || 'gold'}" style="position:relative; font-size:11px; padding: 3px 10px;"><span class="title-text">${escapeHTML(t.name)}</span></div>`;
             } else {
-                previewStyle += `color:${t.color}; text-shadow:0 0 5px ${t.color}80;`;
+                titleHtml = `<div class="user-title-display" style="color:${t.color}; border-color:${t.color}; font-size:11px; padding: 3px 10px;">${escapeHTML(t.name)}</div>`;
             }
             
             html += `
                 <div class="shop-item" onclick='startPreview("title", ${JSON.stringify(t).replace(/'/g, "&#39;")})'>
-                    <div class="${previewClass}" ${previewAttr} style="${previewStyle}">${escapeHTML(t.name)}</div>
+                    <div class="shop-img" style="background: #111; display:flex; align-items:center; justify-content:center; padding: 10px; box-sizing: border-box; overflow: hidden;">
+                        ${titleHtml}
+                    </div>
                     <div class="shop-info">
                         <div class="shop-name">${escapeHTML(t.name)}${t.is_animated ? ' ✨' : ''}</div>
                         ${btnHtml}
@@ -1128,9 +1129,9 @@ async function openFriendProfile(id, name) {
             const { data: t } = await supabaseClient.from('titles').select('*').eq('id', friend.active_title).single();
             if (t) {
                 if (t.is_animated) {
-                    friendTitleHtml = `<div class="user-title-display animated-title" data-title="${t.animation_key || 'gold'}">${escapeHTML(t.name)}</div>`;
+                    friendTitleHtml = `<div class="user-title-display animated-title" data-title="${t.animation_key || 'gold'}"><span class="title-text">${escapeHTML(t.name)}</span></div>`;
                 } else {
-                    friendTitleHtml = `<div class="user-title-display" style="color: ${t.color}; border: 1px solid ${t.color}40;">${escapeHTML(t.name)}</div>`;
+                    friendTitleHtml = `<div class="user-title-display" style="color: ${t.color}; border-color: ${t.color};">${escapeHTML(t.name)}</div>`;
                 }
             }
         }
