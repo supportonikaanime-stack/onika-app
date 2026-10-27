@@ -134,6 +134,7 @@
             filter: drop-shadow(0 0 4px rgba(0,0,0,0.5));
         }
         
+        /* ТИТУЛ В ПРОФИЛЕ (обычный) */
         .user-title-display {
             font-size: 13px;
             font-weight: 700;
@@ -144,6 +145,35 @@
             border-radius: 8px;
             background: rgba(0,0,0,0.3);
         }
+
+        /* АНИМИРОВАННЫЙ ТИТУЛ */
+        .user-title-display.animated-title {
+            color: transparent !important;
+            background-size: 300% 100% !important;
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            animation: titleShimmer 3s linear infinite;
+            border: none !important;
+            background-color: transparent !important;
+            text-shadow: none !important;
+        }
+
+        @keyframes titleShimmer {
+            0%   { background-position: 0% 50%; }
+            100% { background-position: 300% 50%; }
+        }
+
+        .animated-title[data-title="gold"]     { background-image: linear-gradient(90deg, #ffd700, #fff6b0, #ffd700, #b8860b, #ffd700); }
+        .animated-title[data-title="neon"]     { background-image: linear-gradient(90deg, #00f5ff, #5b5bff, #b44aff, #00f5ff); }
+        .animated-title[data-title="sakura"]   { background-image: linear-gradient(90deg, #ffb7c5, #ff69b4, #ffb7c5, #ff1493); }
+        .animated-title[data-title="cosmic"]   { background-image: linear-gradient(90deg, #b44aff, #5b5bff, #00f5ff, #b44aff); }
+        .animated-title[data-title="blood"]    { background-image: linear-gradient(90deg, #ff2d78, #8b0000, #ff2d78, #ff0044); }
+        .animated-title[data-title="emerald"]  { background-image: linear-gradient(90deg, #00ff88, #008f5a, #00ff88, #00cc66); }
+        .animated-title[data-title="ice"]      { background-image: linear-gradient(90deg, #00d2ff, #ffffff, #00d2ff, #3a7bd5); }
+        .animated-title[data-title="rainbow"]  { background-image: linear-gradient(90deg, #ff0000, #ff8c00, #ffd700, #00ff00, #00f5ff, #5b5bff, #b44aff, #ff00cc); }
+        .animated-title[data-title="divine"]   { background-image: linear-gradient(90deg, #fff6b0, #ffd700, #ffffff, #ffd700); }
+        .animated-title[data-title="absolute"] { background-image: linear-gradient(90deg, #ffffff, #b44aff, #00f5ff, #ffffff); }
 
         .coin-balance { background: rgba(255, 215, 0, 0.15); border: 1px solid rgba(255, 215, 0, 0.4); border-radius: 12px; padding: 6px 15px; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; color: #ffd700; font-weight: bold; font-size: 16px; backdrop-filter: blur(5px); }
         .coin-balance svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -762,7 +792,6 @@
         </div>
     </div>
 
-    <!-- ЭКРАН ПРЕДПРОСМОТРА -->
     <div id="screen-preview" class="screen">
         <header class="profile-header">
             <h1>Примерка</h1>
@@ -888,6 +917,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=180"></script>
+    <script src="app.js?v=190"></script>
 </body>
 </html>
