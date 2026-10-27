@@ -217,10 +217,8 @@ function applyTitleToElement(titleEl, titleData) {
     if (titleData.is_animated) {
         titleEl.className = 'user-title-display animated-title';
         titleEl.setAttribute('data-title', titleData.animation_key || 'gold');
-        // Оборачиваем текст в span для градиента
         titleEl.innerHTML = `<span class="title-text">${escapeHTML(titleData.name)}</span>`;
     } else {
-        // Обычный титул
         titleEl.style.color = titleData.color || '#fff';
         titleEl.style.borderColor = titleData.color || '#fff';
         titleEl.textContent = titleData.name;
@@ -642,6 +640,7 @@ function renderShopTab(tabName) {
     else if (tabName === 'badges') renderBadgesInShop(container);
 }
 
+// --- РЕНДЕР БАННЕРОВ С РАНГАМИ ---
 async function renderBannersInShop(container) {
     let stats = getStats();
     if (!supabaseClient) return;
@@ -657,29 +656,46 @@ async function renderBannersInShop(container) {
         const currentActiveId = stats.active_banner;
 
         let html = '';
-        banners.forEach(b => {
-            const isOwned = ownedIds.includes(b.id);
-            const isActive = currentActiveId === b.id;
-            
-            let btnHtml = '';
-            if (isActive) {
-                btnHtml = `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Установлен</div>`;
-            } else {
-                const priceText = b.price === 0 ? 'Получить' : `${b.price} 🪙`;
-                btnHtml = `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${priceText}</div>`;
-            }
 
-            html += `
-                <div class="shop-item" onclick='startPreview("banner", ${JSON.stringify(b).replace(/'/g, "&#39;")})'>
-                    <div class="shop-img" style="background-image: url('${safeUrl(b.image_url)}')"></div>
-                    <div class="shop-info">
-                        <div class="shop-name">${escapeHTML(b.name)}</div>
-                        ${btnHtml}
+        // Группируем баннеры по редкости
+        const rarities = [
+            { key: 'common', name: 'Обычные', color: '#ccc', class: 'common' },
+            { key: 'rare', name: 'Редкие', color: '#00d2ff', class: 'rare' },
+            { key: 'epic', name: 'Эпические', color: '#b44aff', class: 'epic' },
+            { key: 'legendary', name: 'Легендарные', color: '#ffd700', class: 'legendary' }
+        ];
+
+        rarities.forEach(rarity => {
+            const list = banners.filter(b => (b.rarity || 'common') === rarity.key);
+            if (list.length === 0) return;
+
+            html += `<div class="shop-category-header ${rarity.class}"><span style="color: ${rarity.color};">●</span> ${rarity.name}<span class="count">${list.length}</span></div>`;
+
+            list.forEach(b => {
+                const isOwned = ownedIds.includes(b.id);
+                const isActive = currentActiveId === b.id;
+                
+                let btnHtml = '';
+                if (isActive) {
+                    btnHtml = `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Установлен</div>`;
+                } else {
+                    const priceText = b.price === 0 ? 'Получить' : `${b.price} 🪙`;
+                    btnHtml = `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${priceText}</div>`;
+                }
+
+                html += `
+                    <div class="shop-item" onclick='startPreview("banner", ${JSON.stringify(b).replace(/'/g, "&#39;")})'>
+                        <div class="shop-img" style="background-image: url('${safeUrl(b.image_url)}')"></div>
+                        <div class="shop-info">
+                            <div class="shop-name">${escapeHTML(b.name)}</div>
+                            ${btnHtml}
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            });
         });
-        container.innerHTML = html;
+
+        container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет баннеров</div>';
 
     } catch(e) {
         console.error(e);
@@ -708,7 +724,6 @@ async function renderTitlesInShop(container) {
                 btnHtml = `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${t.price} 🪙</div>`;
             }
 
-            // Превью титула: если анимированный — используем тот же класс
             let titleHtml = '';
             if (t.is_animated) {
                 titleHtml = `<div class="user-title-display animated-title" data-title="${t.animation_key || 'gold'}" style="position:relative; font-size:11px; padding: 3px 10px;"><span class="title-text">${escapeHTML(t.name)}</span></div>`;
