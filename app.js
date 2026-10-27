@@ -141,7 +141,6 @@ let previousScreen = 'catalog';
 let searchDebounceTimer;
 let currentShopTab = 'banners';
 
-// Переменные предпросмотра
 let isPreviewMode = false;
 let previewItem = null;
 let savedStats = null;
@@ -194,6 +193,35 @@ function goBackFromDetail() {
     if (previousScreen === 'my') switchTab('my');
     else if (previousScreen === 'home') switchTab('home');
     else switchTab('catalog');
+}
+
+// ==========================================
+// ХЕЛПЕР ПРИМЕНЕНИЯ ТИТУЛА К ЭЛЕМЕНТУ
+// ==========================================
+function applyTitleToElement(titleEl, titleData) {
+    if (!titleEl) return;
+    if (!titleData) {
+        titleEl.style.display = 'none';
+        return;
+    }
+    titleEl.style.display = 'inline-block';
+    titleEl.textContent = titleData.name;
+
+    // Сбрасываем прошлые стили
+    titleEl.className = 'user-title-display';
+    titleEl.removeAttribute('data-title');
+    titleEl.style.color = '';
+    titleEl.style.border = '';
+    titleEl.style.background = '';
+    titleEl.style.textShadow = '';
+
+    if (titleData.is_animated) {
+        titleEl.className = 'user-title-display animated-title';
+        titleEl.setAttribute('data-title', titleData.animation_key || 'gold');
+    } else {
+        titleEl.style.color = titleData.color || '#fff';
+        titleEl.style.border = `1px solid ${titleData.color || '#fff'}40`;
+    }
 }
 
 // ==========================================
@@ -333,9 +361,7 @@ async function loadProfileData() {
     
     if (ACTIVE_TITLE_DATA) {
         titleContainer.style.display = 'block';
-        titleEl.textContent = ACTIVE_TITLE_DATA.name;
-        titleEl.style.color = ACTIVE_TITLE_DATA.color || '#fff';
-        titleEl.style.border = `1px solid ${ACTIVE_TITLE_DATA.color || '#fff'}40`;
+        applyTitleToElement(titleEl, ACTIVE_TITLE_DATA);
     } else {
         titleContainer.style.display = 'none';
     }
@@ -383,9 +409,6 @@ async function loadProfileData() {
     syncProfileToDB();
 }
 
-// ==========================================
-// ГЕНЕРАЦИЯ ЧАСТИЦ (профиль)
-// ==========================================
 function renderParticles() {
     const container = document.getElementById('particle-effect-container');
     if (!container) return;
@@ -415,7 +438,7 @@ function renderParticles() {
 }
 
 // ==========================================
-// ПРЕДПРОСМОТР (отдельный экран)
+// ПРЕДПРОСМОТР
 // ==========================================
 function startPreview(type, item) {
     if (isPreviewMode) return; 
@@ -495,9 +518,7 @@ function renderPreviewCard() {
     if (titleContainer && titleEl) {
         if (ACTIVE_TITLE_DATA) {
             titleContainer.style.display = 'block';
-            titleEl.textContent = ACTIVE_TITLE_DATA.name;
-            titleEl.style.color = ACTIVE_TITLE_DATA.color || '#fff';
-            titleEl.style.border = `1px solid ${ACTIVE_TITLE_DATA.color || '#fff'}40`;
+            applyTitleToElement(titleEl, ACTIVE_TITLE_DATA);
         } else {
             titleContainer.style.display = 'none';
         }
@@ -683,12 +704,24 @@ async function renderTitlesInShop(container) {
             } else {
                 btnHtml = `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${t.price} 🪙</div>`;
             }
+
+            // Превью титула: если анимированный — используем тот же класс
+            let previewClass = 'shop-img';
+            let previewStyle = 'background: #222; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:16px;';
+            let previewAttr = '';
+            if (t.is_animated) {
+                previewClass = 'shop-img user-title-display animated-title';
+                previewStyle = 'background: #111; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:16px; padding: 10px; box-sizing: border-box;';
+                previewAttr = `data-title="${t.animation_key || 'gold'}"`;
+            } else {
+                previewStyle += `color:${t.color}; text-shadow:0 0 5px ${t.color}80;`;
+            }
             
             html += `
                 <div class="shop-item" onclick='startPreview("title", ${JSON.stringify(t).replace(/'/g, "&#39;")})'>
-                    <div class="shop-img" style="background: #222; display:flex; align-items:center; justify-content:center; color:${t.color}; font-weight:bold; font-size:16px; text-shadow:0 0 5px ${t.color}80;">${escapeHTML(t.name)}</div>
+                    <div class="${previewClass}" ${previewAttr} style="${previewStyle}">${escapeHTML(t.name)}</div>
                     <div class="shop-info">
-                        <div class="shop-name">${escapeHTML(t.name)}</div>
+                        <div class="shop-name">${escapeHTML(t.name)}${t.is_animated ? ' ✨' : ''}</div>
                         ${btnHtml}
                     </div>
                 </div>
@@ -1094,7 +1127,11 @@ async function openFriendProfile(id, name) {
         if (friend.active_title) {
             const { data: t } = await supabaseClient.from('titles').select('*').eq('id', friend.active_title).single();
             if (t) {
-                friendTitleHtml = `<div class="user-title-display" style="color: ${t.color}; border: 1px solid ${t.color}40;">${escapeHTML(t.name)}</div>`;
+                if (t.is_animated) {
+                    friendTitleHtml = `<div class="user-title-display animated-title" data-title="${t.animation_key || 'gold'}">${escapeHTML(t.name)}</div>`;
+                } else {
+                    friendTitleHtml = `<div class="user-title-display" style="color: ${t.color}; border: 1px solid ${t.color}40;">${escapeHTML(t.name)}</div>`;
+                }
             }
         }
 
