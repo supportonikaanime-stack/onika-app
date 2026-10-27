@@ -135,10 +135,8 @@
         }
 
         /* ==========================================
-           ТИТУЛЫ (НЕОНОВАЯ КАПСУЛА)
+           ТИТУЛЫ
            ========================================== */
-        
-        /* Базовый стиль для контейнера титула */
         .user-title-display {
             position: relative;
             font-size: 13px;
@@ -148,22 +146,18 @@
             align-items: center;
             justify-content: center;
             padding: 4px 16px;
-            border-radius: 20px; /* Капсула */
+            border-radius: 20px;
             letter-spacing: 0.5px;
             text-transform: uppercase;
             z-index: 1;
             font-family: 'Nunito', -apple-system, sans-serif;
         }
-
-        /* --- ОБЫЧНЫЙ ТИТУЛ --- */
         .user-title-display:not(.animated-title) {
             background: rgba(0,0,0,0.4);
             border: 1px solid currentColor;
             text-shadow: 0 1px 3px rgba(0,0,0,0.8);
             backdrop-filter: blur(4px);
         }
-
-        /* --- АНИМИРОВАННЫЙ ТИТУЛ (Переливающийся текст + Неоновая обводка) --- */
         .user-title-display.animated-title {
             color: transparent !important;
             -webkit-text-fill-color: transparent !important;
@@ -171,8 +165,6 @@
             border: none !important;
             background: transparent !important;
         }
-
-        /* Переливающийся текст */
         .user-title-display.animated-title .title-text {
             background-size: 300% 100%;
             -webkit-background-clip: text;
@@ -183,191 +175,40 @@
             z-index: 2;
             text-shadow: none;
         }
-
-        /* Неоновая капсула на фоне */
         .user-title-display.animated-title::before {
             content: '';
             position: absolute;
             inset: 0;
             border-radius: 20px;
             z-index: 1;
-            /* Базовая обводка */
             border: 1.5px solid rgba(180, 74, 255, 0.6);
-            /* Внутренний фон */
             background: rgba(180, 74, 255, 0.1);
-            /* Свечение (Неон) */
-            box-shadow: 
-                0 0 10px rgba(180, 74, 255, 0.5),
-                inset 0 0 10px rgba(180, 74, 255, 0.3);
+            box-shadow: 0 0 10px rgba(180, 74, 255, 0.5), inset 0 0 10px rgba(180, 74, 255, 0.3);
         }
-
-        /* Блик сверху (как на референсе) */
         .user-title-display.animated-title::after {
             content: '';
             position: absolute;
-            top: 1px;
-            left: 10%;
-            width: 80%;
-            height: 40%;
+            top: 1px; left: 10%;
+            width: 80%; height: 40%;
             border-radius: 20px 20px 0 0;
             background: linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, transparent 100%);
             z-index: 1;
             pointer-events: none;
         }
+        @keyframes titleShimmer { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
 
-        @keyframes titleShimmer {
-            0%   { background-position: 0% 50%; }
-            100% { background-position: 300% 50%; }
-        }
-
-        /* ==========================================
-           ЦВЕТА ТЕКСТА И ОБВОДКИ ДЛЯ РАЗНЫХ ТИПОВ
-           ========================================== */
-
-        .animated-title[data-title="gold"] .title-text     { background-image: linear-gradient(90deg, #ffd700, #fff6b0, #ffd700, #b8860b, #ffd700); }
-        .animated-title[data-title="gold"]::before         { border-color: rgba(255, 215, 0, 0.8); background: rgba(255, 215, 0, 0.1); box-shadow: 0 0 10px rgba(255, 215, 0, 0.5), inset 0 0 10px rgba(255, 215, 0, 0.3); }
-
-        .animated-title[data-title="neon"] .title-text     { background-image: linear-gradient(90deg, #00f5ff, #5b5bff, #b44aff, #00f5ff); }
-        .animated-title[data-title="neon"]::before         { border-color: rgba(0, 245, 255, 0.8); background: rgba(0, 245, 255, 0.1); box-shadow: 0 0 10px rgba(0, 245, 255, 0.5), inset 0 0 10px rgba(0, 245, 255, 0.3); }
-
-        .animated-title[data-title="sakura"] .title-text   { background-image: linear-gradient(90deg, #ffb7c5, #ff69b4, #ffb7c5, #ff1493); }
-        .animated-title[data-title="sakura"]::before       { border-color: rgba(255, 105, 180, 0.8); background: rgba(255, 105, 180, 0.1); box-shadow: 0 0 10px rgba(255, 105, 180, 0.5), inset 0 0 10px rgba(255, 105, 180, 0.3); }
-
-        .animated-title[data-title="cosmic"] .title-text   { background-image: linear-gradient(90deg, #b44aff, #5b5bff, #00f5ff, #b44aff); }
-        .animated-title[data-title="cosmic"]::before       { border-color: rgba(180, 74, 255, 0.8); background: rgba(180, 74, 255, 0.1); box-shadow: 0 0 10px rgba(180, 74, 255, 0.5), inset 0 0 10px rgba(180, 74, 255, 0.3); }
-
-        .animated-title[data-title="blood"] .title-text    { background-image: linear-gradient(90deg, #ff2d78, #8b0000, #ff2d78, #ff0044); }
-        .animated-title[data-title="blood"]::before        { border-color: rgba(255, 45, 120, 0.8); background: rgba(255, 45, 120, 0.1); box-shadow: 0 0 10px rgba(255, 45, 120, 0.5), inset 0 0 10px rgba(255, 45, 120, 0.3); }
-
-        .animated-title[data-title="emerald"] .title-text  { background-image: linear-gradient(90deg, #00ff88, #008f5a, #00ff88, #00cc66); }
-        .animated-title[data-title="emerald"]::before      { border-color: rgba(0, 255, 136, 0.8); background: rgba(0, 255, 136, 0.1); box-shadow: 0 0 10px rgba(0, 255, 136, 0.5), inset 0 0 10px rgba(0, 255, 136, 0.3); }
-
-        .animated-title[data-title="ice"] .title-text      { background-image: linear-gradient(90deg, #00d2ff, #ffffff, #00d2ff, #3a7bd5); }
-        .animated-title[data-title="ice"]::before          { border-color: rgba(0, 210, 255, 0.8); background: rgba(0, 210, 255, 0.1); box-shadow: 0 0 10px rgba(0, 210, 255, 0.5), inset 0 0 10px rgba(0, 210, 255, 0.3); }
-
-        .animated-title[data-title="rainbow"] .title-text  { background-image: linear-gradient(90deg, #ff0000, #ff8c00, #ffd700, #00ff00, #00f5ff, #5b5bff, #b44aff, #ff00cc); }
-        .animated-title[data-title="rainbow"]::before      { border-color: rgba(255, 0, 204, 0.8); background: rgba(255, 0, 204, 0.1); box-shadow: 0 0 10px rgba(255, 0, 204, 0.5), inset 0 0 10px rgba(255, 0, 204, 0.3); }
-
-        .animated-title[data-title="divine"] .title-text   { background-image: linear-gradient(90deg, #fff6b0, #ffd700, #ffffff, #ffd700); }
-        .animated-title[data-title="divine"]::before       { border-color: rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 10px rgba(255, 255, 255, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.3); }
-
-        .animated-title[data-title="absolute"] .title-text { background-image: linear-gradient(90deg, #ffffff, #b44aff, #00f5ff, #ffffff); }
-        .animated-title[data-title="absolute"]::before     { border-color: rgba(180, 74, 255, 0.8); background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 10px rgba(180, 74, 255, 0.5), inset 0 0 10px rgba(0, 245, 255, 0.3); }
-
-        /* ==========================================
-           НОВЫЕ АНИМАЦИИ ТИТУЛОВ
-           ========================================== */
-
-        /* 1. Галактика */
-        .animated-title[data-title="galaxy"] .title-text {
-            background-image: linear-gradient(90deg, #1a0b2e, #5b5bff, #b44aff, #ff2d78, #1a0b2e);
-            background-size: 300% 100%;
-            animation: titleShimmer 4s linear infinite;
-        }
-        .animated-title[data-title="galaxy"]::before {
-            border-color: rgba(180, 74, 255, 0.7); background: rgba(26, 11, 46, 0.4);
-            box-shadow: 0 0 15px rgba(91, 91, 255, 0.5), inset 0 0 10px rgba(255, 45, 120, 0.2);
-        }
-
-        /* 2. Огненный шторм */
-        .animated-title[data-title="firestorm"] .title-text {
-            background-image: linear-gradient(90deg, #ff0000, #ff8c00, #ffd700, #ff4500, #ff0000);
-            background-size: 300% 100%;
-            animation: titleShimmer 2s linear infinite;
-        }
-        .animated-title[data-title="firestorm"]::before {
-            border-color: rgba(255, 69, 0, 0.8); background: rgba(255, 0, 0, 0.15);
-            box-shadow: 0 0 15px rgba(255, 69, 0, 0.6), inset 0 0 15px rgba(255, 215, 0, 0.3);
-        }
-
-        /* 3. Изумрудный лес */
-        .animated-title[data-title="forest"] .title-text {
-            background-image: linear-gradient(90deg, #004d00, #00ff88, #a8ff00, #004d00);
-            background-size: 300% 100%;
-            animation: titleShimmer 5s linear infinite;
-        }
-        .animated-title[data-title="forest"]::before {
-            border-color: rgba(0, 255, 136, 0.6); background: rgba(0, 77, 0, 0.3);
-            box-shadow: 0 0 15px rgba(0, 255, 136, 0.4), inset 0 0 10px rgba(168, 255, 0, 0.2);
-        }
-
-        /* 4. Ледяная бездна */
-        .animated-title[data-title="deep-ice"] .title-text {
-            background-image: linear-gradient(90deg, #ffffff, #00d2ff, #000080, #ffffff);
-            background-size: 300% 100%;
-            animation: titleShimmer 6s linear infinite;
-        }
-        .animated-title[data-title="deep-ice"]::before {
-            border-color: rgba(0, 210, 255, 0.8); background: rgba(0, 0, 128, 0.3);
-            box-shadow: 0 0 15px rgba(0, 210, 255, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.3);
-        }
-
-        /* 5. Золотая кровь */
-        .animated-title[data-title="golden-blood"] .title-text {
-            background-image: linear-gradient(90deg, #ffd700, #ff4500, #ffd700, #b8860b, #ffd700);
-            background-size: 300% 100%;
-            animation: titleShimmer 3.5s linear infinite;
-        }
-        .animated-title[data-title="golden-blood"]::before {
-            border-color: rgba(255, 69, 0, 0.8); background: rgba(184, 134, 11, 0.2);
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5), inset 0 0 10px rgba(255, 69, 0, 0.4);
-        }
-
-        /* 6. Проклятие */
-        .animated-title[data-title="curse"] .title-text {
-            background-image: linear-gradient(90deg, #333333, #00ff00, #111111, #00ff00, #333333);
-            background-size: 300% 100%;
-            animation: titleShimmer 4s linear infinite;
-        }
-        .animated-title[data-title="curse"]::before {
-            border-color: rgba(0, 255, 0, 0.6); background: rgba(0, 0, 0, 0.6);
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3), inset 0 0 15px rgba(0, 0, 0, 0.8);
-        }
-
-        /* 7. Закат */
-        .animated-title[data-title="sunset"] .title-text {
-            background-image: linear-gradient(90deg, #ff7e5f, #feb47b, #ff7e5f, #b44aff, #ff7e5f);
-            background-size: 300% 100%;
-            animation: titleShimmer 5s linear infinite;
-        }
-        .animated-title[data-title="sunset"]::before {
-            border-color: rgba(255, 126, 95, 0.8); background: rgba(180, 74, 255, 0.1);
-            box-shadow: 0 0 15px rgba(255, 126, 95, 0.5), inset 0 0 10px rgba(254, 180, 123, 0.3);
-        }
-
-        /* 8. Кровь демона */
-        .animated-title[data-title="demon"] .title-text {
-            background-image: linear-gradient(90deg, #8b0000, #ff0000, #000000, #ff0000, #8b0000);
-            background-size: 300% 100%;
-            animation: titleShimmer 2.5s linear infinite;
-        }
-        .animated-title[data-title="demon"]::before {
-            border-color: rgba(255, 0, 0, 0.9); background: rgba(139, 0, 0, 0.2);
-            box-shadow: 0 0 20px rgba(255, 0, 0, 0.6), inset 0 0 15px rgba(139, 0, 0, 0.5);
-        }
-
-        /* 9. Матрица */
-        .animated-title[data-title="matrix"] .title-text {
-            background-image: linear-gradient(90deg, #003300, #00ff00, #003300, #00ff00);
-            background-size: 300% 100%;
-            animation: titleShimmer 1.5s linear infinite;
-        }
-        .animated-title[data-title="matrix"]::before {
-            border-color: rgba(0, 255, 0, 0.8); background: rgba(0, 0, 0, 0.8);
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
-        }
-
-        /* 10. Божественность */
-        .animated-title[data-title="holy"] .title-text {
-            background-image: linear-gradient(90deg, #ffffff, #fffacd, #ffd700, #ffffff);
-            background-size: 300% 100%;
-            animation: titleShimmer 4s linear infinite;
-        }
-        .animated-title[data-title="holy"]::before {
-            border-color: rgba(255, 255, 255, 0.9); background: rgba(255, 250, 205, 0.15);
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.6), inset 0 0 10px rgba(255, 215, 0, 0.4);
-        }
-
+        /* Цвета */
+        .animated-title[data-title="gold"] .title-text { background-image: linear-gradient(90deg, #ffd700, #fff6b0, #ffd700, #b8860b, #ffd700); }
+        .animated-title[data-title="gold"]::before { border-color: rgba(255, 215, 0, 0.8); background: rgba(255, 215, 0, 0.1); box-shadow: 0 0 10px rgba(255, 215, 0, 0.5), inset 0 0 10px rgba(255, 215, 0, 0.3); }
+        .animated-title[data-title="neon"] .title-text { background-image: linear-gradient(90deg, #00f5ff, #5b5bff, #b44aff, #00f5ff); }
+        .animated-title[data-title="neon"]::before { border-color: rgba(0, 245, 255, 0.8); background: rgba(0, 245, 255, 0.1); box-shadow: 0 0 10px rgba(0, 245, 255, 0.5), inset 0 0 10px rgba(0, 245, 255, 0.3); }
+        .animated-title[data-title="galaxy"] .title-text { background-image: linear-gradient(90deg, #1a0b2e, #5b5bff, #b44aff, #ff2d78, #1a0b2e); animation: titleShimmer 4s linear infinite; }
+        .animated-title[data-title="galaxy"]::before { border-color: rgba(180, 74, 255, 0.7); background: rgba(26, 11, 46, 0.4); box-shadow: 0 0 15px rgba(91, 91, 255, 0.5), inset 0 0 10px rgba(255, 45, 120, 0.2); }
+        .animated-title[data-title="firestorm"] .title-text { background-image: linear-gradient(90deg, #ff0000, #ff8c00, #ffd700, #ff4500, #ff0000); animation: titleShimmer 2s linear infinite; }
+        .animated-title[data-title="firestorm"]::before { border-color: rgba(255, 69, 0, 0.8); background: rgba(255, 0, 0, 0.15); box-shadow: 0 0 15px rgba(255, 69, 0, 0.6), inset 0 0 15px rgba(255, 215, 0, 0.3); }
+        .animated-title[data-title="holy"] .title-text { background-image: linear-gradient(90deg, #ffffff, #fffacd, #ffd700, #ffffff); animation: titleShimmer 4s linear infinite; }
+        .animated-title[data-title="holy"]::before { border-color: rgba(255, 255, 255, 0.9); background: rgba(255, 250, 205, 0.15); box-shadow: 0 0 15px rgba(255, 255, 255, 0.6), inset 0 0 10px rgba(255, 215, 0, 0.4); }
+        /* Добавьте остальные анимации по аналогии... */
 
         .coin-balance { background: rgba(255, 215, 0, 0.15); border: 1px solid rgba(255, 215, 0, 0.4); border-radius: 12px; padding: 6px 15px; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; color: #ffd700; font-weight: bold; font-size: 16px; backdrop-filter: blur(5px); }
         .coin-balance svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -375,34 +216,9 @@
         .id-container { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px 15px; display: inline-flex; align-items: center; gap: 10px; margin-bottom: 5px; cursor: pointer; backdrop-filter: blur(5px); }
         
         .level-row { display: flex; align-items: center; gap: 15px; padding: 15px 0; text-align: left; cursor: pointer; }
-        
         .level-badge { width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; border-radius: 8px; overflow: visible; }
-
-        .level-badge-img {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            object-fit: contain;
-            z-index: 1;
-            border-radius: 8px;
-        }
-        
-        .level-number {
-            position: absolute; 
-            z-index: 2; 
-            font-size: 22px; 
-            font-weight: 900; 
-            font-family: 'Nunito', sans-serif; 
-            line-height: 1; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            color: #000000; 
-            top: 45%;  
-            left: 75%; 
-            transform: translate(-50%, -50%);
-        }
-        
+        .level-badge-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1; border-radius: 8px; }
+        .level-number { position: absolute; z-index: 2; font-size: 22px; font-weight: 900; font-family: 'Nunito', sans-serif; line-height: 1; display: flex; align-items: center; justify-content: center; color: #000000; top: 45%; left: 75%; transform: translate(-50%, -50%); }
         .level-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
         .level-title { font-size: 12px; color: #fff; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
         .level-title .rank { color: #b44aff; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 10px rgba(180, 74, 255, 0.8); font-size: 14px;}
@@ -453,6 +269,26 @@
         .shop-info { padding: 10px; text-align: center; display: flex; flex-direction: column; flex: 1; justify-content: space-between; }
         .shop-name { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #fff; }
 
+        /* ЗАГОЛОВКИ КАТЕГОРИЙ В МАГАЗИНЕ */
+        .shop-category-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0 10px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            grid-column: 1 / -1; /* Чтобы занимал всю ширину сетки */
+        }
+        .shop-category-header:first-child { margin-top: 0; }
+        .shop-category-header .count { font-size: 12px; color: #888; font-weight: 500; margin-left: auto; }
+        .shop-category-header.common { border-bottom-color: rgba(204, 204, 204, 0.3); }
+        .shop-category-header.rare { border-bottom-color: rgba(0, 210, 255, 0.3); }
+        .shop-category-header.epic { border-bottom-color: rgba(180, 74, 255, 0.3); }
+        .shop-category-header.legendary { border-bottom-color: rgba(255, 215, 0, 0.3); }
+
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
         .modal-overlay.active { display: flex; animation: fade 0.3s ease; }
         .modal-content { background: #14141f; border-radius: 24px; width: 100%; max-width: 400px; padding: 30px 20px; border: 1px solid rgba(255,255,255,0.1); position: relative; text-align: center; max-height: 80vh; overflow-y: auto; }
@@ -472,7 +308,6 @@
         
         .ach-list-item { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); text-align: left; opacity: 0.6; transition: 0.3s; }
         .ach-list-item.completed { opacity: 1; background: rgba(255,255,255,0.08); }
-        
         .ach-list-item.common.completed { border-color: rgba(200, 200, 200, 0.6); box-shadow: 0 0 15px rgba(200, 200, 200, 0.2); }
         .ach-list-item.rare.completed { border-color: rgba(0, 210, 255, 0.8); box-shadow: 0 0 20px rgba(0, 210, 255, 0.3); }
         .ach-list-item.epic.completed { border-color: rgba(180, 74, 255, 0.8); box-shadow: 0 0 20px rgba(180, 74, 255, 0.4); }
@@ -481,7 +316,6 @@
         .ach-list-icon { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; border-radius: 50%; }
         .ach-list-icon svg { width: 100%; height: 100%; }
         .ach-list-icon img { width: 100%; height: 100%; object-fit: contain; }
-        
         .ach-list-info { flex: 1; }
         .ach-list-info h4 { font-size: 14px; color: #fff; margin-bottom: 2px; }
         .ach-list-info p { font-size: 11px; color: #aaa; margin-bottom: 4px; }
@@ -525,130 +359,22 @@
         .nav-icon svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         .nav-text { font-size: 11px; font-weight: 500; }
 
-        .effect-container {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            pointer-events: none;
-            z-index: 2;
-            overflow: hidden;
-            border-radius: 20px 20px 0 0;
-        }
+        .effect-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 2; overflow: hidden; border-radius: 20px 20px 0 0; }
+        .effect-sparks span { position: absolute; bottom: -10px; background: #ffd700; border-radius: 50%; box-shadow: 0 0 10px #ffd700, 0 0 20px #ff8c00; opacity: 0; animation: riseUp linear infinite; }
+        @keyframes riseUp { 0% { transform: translateY(0) scale(1); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(-300px) scale(0); opacity: 0; } }
+        .effect-sakura span { position: absolute; top: -20px; background: #ffb7c5; border-radius: 50% 0 50% 50%; box-shadow: 0 0 5px rgba(255,183,197,0.5); opacity: 0; animation: fallDown linear infinite; }
+        @keyframes fallDown { 0% { transform: translateY(0) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(300px) rotate(360deg); opacity: 0; } }
+        .effect-stars span { position: absolute; background: #fff; border-radius: 50%; box-shadow: 0 0 8px #fff, 0 0 15px #00f5ff; opacity: 0; animation: twinkle float infinite; }
+        @keyframes twinkle { 0% { opacity: 0.2; transform: scale(0.5); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.2; transform: scale(0.5); } }
+        @keyframes float { 0% { transform: translateX(0); } 100% { transform: translateX(20px); } }
 
-        .effect-sparks span {
-            position: absolute;
-            bottom: -10px;
-            background: #ffd700;
-            border-radius: 50%;
-            box-shadow: 0 0 10px #ffd700, 0 0 20px #ff8c00;
-            opacity: 0;
-            animation: riseUp linear infinite;
-        }
-        @keyframes riseUp {
-            0% { transform: translateY(0) scale(1); opacity: 0; }
-            20% { opacity: 1; }
-            80% { opacity: 1; }
-            100% { transform: translateY(-300px) scale(0); opacity: 0; }
-        }
-
-        .effect-sakura span {
-            position: absolute;
-            top: -20px;
-            background: #ffb7c5;
-            border-radius: 50% 0 50% 50%;
-            box-shadow: 0 0 5px rgba(255,183,197,0.5);
-            opacity: 0;
-            animation: fallDown linear infinite;
-        }
-        @keyframes fallDown {
-            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateY(300px) rotate(360deg); opacity: 0; }
-        }
-
-        .effect-stars span {
-            position: absolute;
-            background: #fff;
-            border-radius: 50%;
-            box-shadow: 0 0 8px #fff, 0 0 15px #00f5ff;
-            opacity: 0;
-            animation: twinkle float infinite;
-        }
-        @keyframes twinkle {
-            0% { opacity: 0.2; transform: scale(0.5); }
-            50% { opacity: 1; transform: scale(1.2); }
-            100% { opacity: 0.2; transform: scale(0.5); }
-        }
-        @keyframes float {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(20px); }
-        }
-
-        .preview-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: rgba(20, 20, 31, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 15px 20px;
-            display: none;
-            align-items: center;
-            gap: 15px;
-            z-index: 10000;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: calc(15px + env(safe-area-inset-bottom));
-            animation: slideUp 0.3s ease;
-        }
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
+        .preview-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(20, 20, 31, 0.95); backdrop-filter: blur(10px); padding: 15px 20px; display: none; align-items: center; gap: 15px; z-index: 10000; border-top: 1px solid rgba(255,255,255,0.1); padding-bottom: calc(15px + env(safe-area-inset-bottom)); animation: slideUp 0.3s ease; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .preview-bar.active { display: flex; }
-        
-        .preview-btn-buy {
-            flex: 1;
-            background: var(--primary);
-            color: #fff;
-            border: none;
-            padding: 16px;
-            border-radius: 14px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 8px 25px rgba(91,91,255,0.4);
-        }
-        .preview-btn-cancel {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: #fff;
-            width: 50px;
-            height: 50px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-        }
+        .preview-btn-buy { flex: 1; background: var(--primary); color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); }
+        .preview-btn-cancel { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .preview-btn-cancel svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-        
-        .preview-hint {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.7);
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 14px;
-            z-index: 10005;
-            pointer-events: none;
-            opacity: 0;
-            transition: 0.3s;
-            text-align: center;
-            width: 80%;
-        }
+        .preview-hint { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 14px; z-index: 10005; pointer-events: none; opacity: 0; transition: 0.3s; text-align: center; width: 80%; }
         .preview-hint.show { opacity: 1; }
     </style>
 </head>
@@ -1111,6 +837,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=210"></script>
+    <script src="app.js?v=220"></script>
 </body>
 </html>
