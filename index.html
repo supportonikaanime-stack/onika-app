@@ -197,18 +197,43 @@
         }
         @keyframes titleShimmer { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
 
-        /* Цвета */
+        /* Цвета титулов */
         .animated-title[data-title="gold"] .title-text { background-image: linear-gradient(90deg, #ffd700, #fff6b0, #ffd700, #b8860b, #ffd700); }
         .animated-title[data-title="gold"]::before { border-color: rgba(255, 215, 0, 0.8); background: rgba(255, 215, 0, 0.1); box-shadow: 0 0 10px rgba(255, 215, 0, 0.5), inset 0 0 10px rgba(255, 215, 0, 0.3); }
         .animated-title[data-title="neon"] .title-text { background-image: linear-gradient(90deg, #00f5ff, #5b5bff, #b44aff, #00f5ff); }
         .animated-title[data-title="neon"]::before { border-color: rgba(0, 245, 255, 0.8); background: rgba(0, 245, 255, 0.1); box-shadow: 0 0 10px rgba(0, 245, 255, 0.5), inset 0 0 10px rgba(0, 245, 255, 0.3); }
+        .animated-title[data-title="sakura"] .title-text { background-image: linear-gradient(90deg, #ffb7c5, #ff69b4, #ffb7c5, #ff1493); }
+        .animated-title[data-title="sakura"]::before { border-color: rgba(255, 105, 180, 0.8); background: rgba(255, 105, 180, 0.1); box-shadow: 0 0 10px rgba(255, 105, 180, 0.5), inset 0 0 10px rgba(255, 105, 180, 0.3); }
+        .animated-title[data-title="cosmic"] .title-text { background-image: linear-gradient(90deg, #b44aff, #5b5bff, #00f5ff, #b44aff); }
+        .animated-title[data-title="cosmic"]::before { border-color: rgba(180, 74, 255, 0.8); background: rgba(180, 74, 255, 0.1); box-shadow: 0 0 10px rgba(180, 74, 255, 0.5), inset 0 0 10px rgba(180, 74, 255, 0.3); }
+        .animated-title[data-title="blood"] .title-text { background-image: linear-gradient(90deg, #ff2d78, #8b0000, #ff2d78, #ff0044); }
+        .animated-title[data-title="blood"]::before { border-color: rgba(255, 45, 120, 0.8); background: rgba(255, 45, 120, 0.1); box-shadow: 0 0 10px rgba(255, 45, 120, 0.5), inset 0 0 10px rgba(255, 45, 120, 0.3); }
+        .animated-title[data-title="emerald"] .title-text { background-image: linear-gradient(90deg, #00ff88, #008f5a, #00ff88, #00cc66); }
+        .animated-title[data-title="emerald"]::before { border-color: rgba(0, 255, 136, 0.8); background: rgba(0, 255, 136, 0.1); box-shadow: 0 0 10px rgba(0, 255, 136, 0.5), inset 0 0 10px rgba(0, 255, 136, 0.3); }
+        .animated-title[data-title="ice"] .title-text { background-image: linear-gradient(90deg, #00d2ff, #ffffff, #00d2ff, #3a7bd5); }
+        .animated-title[data-title="ice"]::before { border-color: rgba(0, 210, 255, 0.8); background: rgba(0, 210, 255, 0.1); box-shadow: 0 0 10px rgba(0, 210, 255, 0.5), inset 0 0 10px rgba(0, 210, 255, 0.3); }
+        .animated-title[data-title="rainbow"] .title-text { background-image: linear-gradient(90deg, #ff0000, #ff8c00, #ffd700, #00ff00, #00f5ff, #5b5bff, #b44aff, #ff00cc); }
+        .animated-title[data-title="rainbow"]::before { border-color: rgba(255, 0, 204, 0.8); background: rgba(255, 0, 204, 0.1); box-shadow: 0 0 10px rgba(255, 0, 204, 0.5), inset 0 0 10px rgba(255, 0, 204, 0.3); }
+        .animated-title[data-title="divine"] .title-text { background-image: linear-gradient(90deg, #fff6b0, #ffd700, #ffffff, #ffd700); }
+        .animated-title[data-title="divine"]::before { border-color: rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 10px rgba(255, 255, 255, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.3); }
+        .animated-title[data-title="absolute"] .title-text { background-image: linear-gradient(90deg, #ffffff, #b44aff, #00f5ff, #ffffff); }
+        .animated-title[data-title="absolute"]::before { border-color: rgba(180, 74, 255, 0.8); background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 10px rgba(180, 74, 255, 0.5), inset 0 0 10px rgba(0, 245, 255, 0.3); }
         .animated-title[data-title="galaxy"] .title-text { background-image: linear-gradient(90deg, #1a0b2e, #5b5bff, #b44aff, #ff2d78, #1a0b2e); animation: titleShimmer 4s linear infinite; }
         .animated-title[data-title="galaxy"]::before { border-color: rgba(180, 74, 255, 0.7); background: rgba(26, 11, 46, 0.4); box-shadow: 0 0 15px rgba(91, 91, 255, 0.5), inset 0 0 10px rgba(255, 45, 120, 0.2); }
         .animated-title[data-title="firestorm"] .title-text { background-image: linear-gradient(90deg, #ff0000, #ff8c00, #ffd700, #ff4500, #ff0000); animation: titleShimmer 2s linear infinite; }
         .animated-title[data-title="firestorm"]::before { border-color: rgba(255, 69, 0, 0.8); background: rgba(255, 0, 0, 0.15); box-shadow: 0 0 15px rgba(255, 69, 0, 0.6), inset 0 0 15px rgba(255, 215, 0, 0.3); }
+        .animated-title[data-title="forest"] .title-text { background-image: linear-gradient(90deg, #004d00, #00ff88, #a8ff00, #004d00); animation: titleShimmer 5s linear infinite; }
+        .animated-title[data-title="forest"]::before { border-color: rgba(0, 255, 136, 0.6); background: rgba(0, 77, 0, 0.3); box-shadow: 0 0 15px rgba(0, 255, 136, 0.4), inset 0 0 10px rgba(168, 255, 0, 0.2); }
+        .animated-title[data-title="deep-ice"] .title-text { background-image: linear-gradient(90deg, #ffffff, #00d2ff, #000080, #ffffff); animation: titleShimmer 6s linear infinite; }
+        .animated-title[data-title="deep-ice"]::before { border-color: rgba(0, 210, 255, 0.8); background: rgba(0, 0, 128, 0.3); box-shadow: 0 0 15px rgba(0, 210, 255, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.3); }
+        .animated-title[data-title="sunset"] .title-text { background-image: linear-gradient(90deg, #ff7e5f, #feb47b, #ff7e5f, #b44aff, #ff7e5f); animation: titleShimmer 5s linear infinite; }
+        .animated-title[data-title="sunset"]::before { border-color: rgba(255, 126, 95, 0.8); background: rgba(180, 74, 255, 0.1); box-shadow: 0 0 15px rgba(255, 126, 95, 0.5), inset 0 0 10px rgba(254, 180, 123, 0.3); }
+        .animated-title[data-title="demon"] .title-text { background-image: linear-gradient(90deg, #8b0000, #ff0000, #000000, #ff0000, #8b0000); animation: titleShimmer 2.5s linear infinite; }
+        .animated-title[data-title="demon"]::before { border-color: rgba(255, 0, 0, 0.9); background: rgba(139, 0, 0, 0.2); box-shadow: 0 0 20px rgba(255, 0, 0, 0.6), inset 0 0 15px rgba(139, 0, 0, 0.5); }
+        .animated-title[data-title="matrix"] .title-text { background-image: linear-gradient(90deg, #003300, #00ff00, #003300, #00ff00); animation: titleShimmer 1.5s linear infinite; }
+        .animated-title[data-title="matrix"]::before { border-color: rgba(0, 255, 0, 0.8); background: rgba(0, 0, 0, 0.8); box-shadow: 0 0 15px rgba(0, 255, 0, 0.4); }
         .animated-title[data-title="holy"] .title-text { background-image: linear-gradient(90deg, #ffffff, #fffacd, #ffd700, #ffffff); animation: titleShimmer 4s linear infinite; }
         .animated-title[data-title="holy"]::before { border-color: rgba(255, 255, 255, 0.9); background: rgba(255, 250, 205, 0.15); box-shadow: 0 0 15px rgba(255, 255, 255, 0.6), inset 0 0 10px rgba(255, 215, 0, 0.4); }
-        /* Добавьте остальные анимации по аналогии... */
 
         .coin-balance { background: rgba(255, 215, 0, 0.15); border: 1px solid rgba(255, 215, 0, 0.4); border-radius: 12px; padding: 6px 15px; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; color: #ffd700; font-weight: bold; font-size: 16px; backdrop-filter: blur(5px); }
         .coin-balance svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -227,9 +252,9 @@
         .xp-text { font-size: 12px; color: #aaa; text-align: right; font-weight: 600; }
         
         .profile-tabs { display: flex; background: #14141f; border-radius: 15px; padding: 5px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.05); }
-        .tab-btn { flex: 1; padding: 12px 5px; border: none; background: transparent; color: #888; font-size: 12px; font-weight: 600; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        .tab-btn { flex: 1; padding: 12px 5px; border: none; background: transparent; color: #888; font-size: 11px; font-weight: 600; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
         .tab-btn.active { background: #2a2a3e; color: #fff; }
-        .tab-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .tab-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         
         .achievements-card, .settings-card { background: #14141f; border-radius: 20px; padding: 20px; margin-top: 15px; border: 1px solid rgba(255, 215, 0, 0.2); position: relative; cursor: pointer; transition: 0.2s; }
         .achievements-card:active { transform: scale(0.98); }
@@ -269,7 +294,7 @@
         .shop-info { padding: 10px; text-align: center; display: flex; flex-direction: column; flex: 1; justify-content: space-between; }
         .shop-name { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #fff; }
 
-        /* ЗАГОЛОВКИ КАТЕГОРИЙ В МАГАЗИНЕ */
+        /* ЗАГОЛОВКИ КАТЕГОРИЙ */
         .shop-category-header {
             display: flex;
             align-items: center;
@@ -280,7 +305,7 @@
             font-size: 16px;
             font-weight: 700;
             color: #fff;
-            grid-column: 1 / -1; /* Чтобы занимал всю ширину сетки */
+            grid-column: 1 / -1;
         }
         .shop-category-header:first-child { margin-top: 0; }
         .shop-category-header .count { font-size: 12px; color: #888; font-weight: 500; margin-left: auto; }
@@ -367,6 +392,17 @@
         .effect-stars span { position: absolute; background: #fff; border-radius: 50%; box-shadow: 0 0 8px #fff, 0 0 15px #00f5ff; opacity: 0; animation: twinkle float infinite; }
         @keyframes twinkle { 0% { opacity: 0.2; transform: scale(0.5); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.2; transform: scale(0.5); } }
         @keyframes float { 0% { transform: translateX(0); } 100% { transform: translateX(20px); } }
+
+        .effect-snow span { position: absolute; top: -20px; background: #fff; border-radius: 50%; box-shadow: 0 0 5px rgba(255,255,255,0.8); opacity: 0; animation: snowFall linear infinite; }
+        @keyframes snowFall { 0% { transform: translateY(0) translateX(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(300px) translateX(20px); opacity: 0; } }
+        .effect-bubbles span { position: absolute; bottom: -20px; background: rgba(0, 245, 255, 0.2); border: 1px solid rgba(0, 245, 255, 0.5); border-radius: 50%; box-shadow: inset 0 0 5px rgba(0, 245, 255, 0.5); opacity: 0; animation: bubbleUp linear infinite; }
+        @keyframes bubbleUp { 0% { transform: translateY(0) scale(1); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(-250px) scale(1.5); opacity: 0; } }
+        .effect-leaves span { position: absolute; top: -20px; background: #ff8c00; border-radius: 50% 0 50% 0; box-shadow: 0 0 5px rgba(255, 140, 0, 0.5); opacity: 0; animation: leafFall linear infinite; }
+        @keyframes leafFall { 0% { transform: translateY(0) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(300px) rotate(180deg) translateX(30px); opacity: 0; } }
+        .effect-matrix span { position: absolute; top: -20px; background: #00ff00; width: 2px !important; height: 15px !important; box-shadow: 0 0 5px #00ff00; opacity: 0; animation: matrixFall linear infinite; }
+        @keyframes matrixFall { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(300px); opacity: 0; } }
+        .effect-fire span { position: absolute; bottom: -10px; background: #ff4500; border-radius: 50%; box-shadow: 0 0 10px #ff4500, 0 0 20px #ff0000; opacity: 0; animation: fireRise linear infinite; }
+        @keyframes fireRise { 0% { transform: translateY(0) scale(1); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(-250px) scale(0.5); opacity: 0; } }
 
         .preview-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(20, 20, 31, 0.95); backdrop-filter: blur(10px); padding: 15px 20px; display: none; align-items: center; gap: 15px; z-index: 10000; border-top: 1px solid rgba(255,255,255,0.1); padding-bottom: calc(15px + env(safe-area-inset-bottom)); animation: slideUp 0.3s ease; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -654,6 +690,7 @@
             <div class="profile-tabs">
                 <button class="tab-btn active" id="tab-btn-profile" onclick="switchProfileTab('profile')"><svg><use href="#oa-profile"></use></svg> Профиль</button>
                 <button class="tab-btn" id="tab-btn-shop" onclick="switchProfileTab('shop')"><svg><use href="#oa-shop"></use></svg> Магазин</button>
+                <button class="tab-btn" id="tab-btn-inventory" onclick="switchProfileTab('inventory')"><svg><use href="#oa-catalog"></use></svg> Инвентарь</button>
                 <button class="tab-btn" id="tab-btn-settings" onclick="switchProfileTab('settings')"><svg><use href="#oa-settings"></use></svg> Настройки</button>
             </div>
 
@@ -684,6 +721,10 @@
                     <div class="shop-tab" onclick="switchShopTab('badges', this)">Значки</div>
                 </div>
                 <div id="shop-items-container" class="shop-grid"></div>
+            </div>
+
+            <div id="inventory-content-tab" style="display: none;">
+                <div id="inventory-items-container"></div>
             </div>
 
             <div class="settings-card" id="settings-content-tab" style="display: none;">
@@ -837,6 +878,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=220"></script>
+    <script src="app.js?v=250"></script>
 </body>
 </html>
