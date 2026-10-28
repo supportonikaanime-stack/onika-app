@@ -252,9 +252,9 @@
         .xp-text { font-size: 12px; color: #aaa; text-align: right; font-weight: 600; }
         
         .profile-tabs { display: flex; background: #14141f; border-radius: 15px; padding: 5px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.05); }
-        .tab-btn { flex: 1; padding: 12px 5px; border: none; background: transparent; color: #888; font-size: 11px; font-weight: 600; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        .tab-btn { flex: 1; padding: 12px 5px; border: none; background: transparent; color: #888; font-size: 12px; font-weight: 600; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
         .tab-btn.active { background: #2a2a3e; color: #fff; }
-        .tab-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .tab-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         
         .achievements-card, .settings-card { background: #14141f; border-radius: 20px; padding: 20px; margin-top: 15px; border: 1px solid rgba(255, 215, 0, 0.2); position: relative; cursor: pointer; transition: 0.2s; }
         .achievements-card:active { transform: scale(0.98); }
@@ -294,7 +294,7 @@
         .shop-info { padding: 10px; text-align: center; display: flex; flex-direction: column; flex: 1; justify-content: space-between; }
         .shop-name { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #fff; }
 
-        /* ЗАГОЛОВКИ КАТЕГОРИЙ */
+        /* ЗАГОЛОВКИ КАТЕГОРИЙ В МАГАЗИНЕ */
         .shop-category-header {
             display: flex;
             align-items: center;
@@ -392,7 +392,6 @@
         .effect-stars span { position: absolute; background: #fff; border-radius: 50%; box-shadow: 0 0 8px #fff, 0 0 15px #00f5ff; opacity: 0; animation: twinkle float infinite; }
         @keyframes twinkle { 0% { opacity: 0.2; transform: scale(0.5); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.2; transform: scale(0.5); } }
         @keyframes float { 0% { transform: translateX(0); } 100% { transform: translateX(20px); } }
-
         .effect-snow span { position: absolute; top: -20px; background: #fff; border-radius: 50%; box-shadow: 0 0 5px rgba(255,255,255,0.8); opacity: 0; animation: snowFall linear infinite; }
         @keyframes snowFall { 0% { transform: translateY(0) translateX(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(300px) translateX(20px); opacity: 0; } }
         .effect-bubbles span { position: absolute; bottom: -20px; background: rgba(0, 245, 255, 0.2); border: 1px solid rgba(0, 245, 255, 0.5); border-radius: 50%; box-shadow: inset 0 0 5px rgba(0, 245, 255, 0.5); opacity: 0; animation: bubbleUp linear infinite; }
@@ -437,79 +436,6 @@
       <symbol id="oa-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
       <symbol id="oa-dice" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="8" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="8" cy="16" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="1.5" fill="currentColor" stroke="none"/></symbol>
       <symbol id="oa-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v12m-3-9h6m-6 6h6"/></symbol>
-
-      <symbol id="ach-icon-crystal" viewBox="0 0 55 55" fill="none">
-          <defs>
-              <linearGradient id="orbitalGradient" x1="8" y1="8" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#55C7FF"/><stop offset="0.5" stop-color="#9B5CFF"/><stop offset="1" stop-color="#FF4FD8"/>
-              </linearGradient>
-              <linearGradient id="crystalGradient" x1="27.5" y1="13" x2="27.5" y2="39" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#FFF6B0"/><stop offset="0.45" stop-color="#FFD166"/><stop offset="1" stop-color="#FF65C3"/>
-              </linearGradient>
-              <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
-                <feGaussianBlur stdDeviation="1.7" result="blur"/>
-                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
-          </defs>
-          <circle cx="27.5" cy="25" r="20" stroke="url(#orbitalGradient)" stroke-width="2" opacity=".3" filter="url(#glow)"/>
-          <ellipse cx="27.5" cy="25" rx="21" ry="9" transform="rotate(-25 27.5 25)" stroke="url(#orbitalGradient)" stroke-width="1.4" opacity=".9"/>
-          <ellipse cx="27.5" cy="25" rx="21" ry="9" transform="rotate(25 27.5 25)" stroke="#9B5CFF" stroke-width=".8" opacity=".45"/>
-          <circle cx="27.5" cy="25" r="15.5" fill="#111321" stroke="url(#orbitalGradient)" stroke-width="2.2" filter="url(#glow)"/>
-          <circle cx="27.5" cy="25" r="12.5" stroke="#BFA7FF" stroke-width=".8" opacity=".65"/>
-          <path d="M27.5 12.5 L36 20 L33.5 34 L27.5 40 L21.5 34 L19 20 Z" fill="url(#crystalGradient)" stroke="#FFF4B0" stroke-width="1" stroke-linejoin="round" filter="url(#glow)"/>
-          <path d="M27.5 12.5 V40" stroke="#FFFBE0" stroke-width=".8" opacity=".8"/>
-          <path d="M19 20 L27.5 24 L36 20" stroke="#FFFBE0" stroke-width=".8" opacity=".8"/>
-          <path d="M21.5 34 L27.5 24 L33.5 34" stroke="#FFB7E8" stroke-width=".8" opacity=".8"/>
-          <circle cx="27.5" cy="24" r="2" fill="#FFFBE0" filter="url(#glow)"/>
-          <path d="M20 38 L18.5 51 L25 47.5 L28 51 L29 38 Z" fill="url(#orbitalGradient)" stroke="#9B5CFF" stroke-width="1.1" stroke-linejoin="round"/>
-          <path d="M26 38 L27 51 L30 47.5 L36.5 51 L35 38 Z" fill="url(#orbitalGradient)" stroke="#FF4FD8" stroke-width="1.1" stroke-linejoin="round"/>
-          <path d="M8 13 L9.2 16 L12 17 L9.2 18 L8 21 L6.8 18 L4 17 L6.8 16 Z" fill="#55C7FF"/>
-          <path d="M47 10 L48 12.5 L50.5 13.5 L48 14.5 L47 17 L46 14.5 L43.5 13.5 L46 12.5 Z" fill="#FF4FD8"/>
-      </symbol>
-
-      <symbol id="ach-icon-flower" viewBox="0 0 55 55" fill="none">
-          <defs>
-              <linearGradient id="pink" x1="27.5" y1="6" x2="27.5" y2="48" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#FFB0F2"/><stop offset=".35" stop-color="#FF4EDB"/><stop offset="1" stop-color="#A90091"/>
-              </linearGradient>
-              <linearGradient id="petal" x1="17" y1="13" x2="39" y2="43" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#FF9DEA"/><stop offset=".45" stop-color="#F83CCF"/><stop offset="1" stop-color="#8E087E"/>
-              </linearGradient>
-              <filter id="glow2" x="-100%" y="-100%" width="300%" height="300%">
-                <feGaussianBlur stdDeviation="1.4" result="blur"/>
-                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
-              <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
-                <feGaussianBlur stdDeviation="3"/>
-              </filter>
-          </defs>
-          <path d="M27.5 5 L49 27.5 L27.5 50 L6 27.5 Z" stroke="#FF35D6" stroke-width="3" opacity=".22" filter="url(#softGlow)"/>
-          <g stroke="#FF5DE1" stroke-width=".65" opacity=".85" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow2)">
-              <path d="M27.5 4 L49 27.5 L27.5 49 L6 27.5 Z"/><path d="M27.5 8 L45 27.5 L27.5 45 L10 27.5"/><path d="M8 27.5 H18"/><path d="M37 27.5 H47"/>
-          </g>
-          <g stroke="#FF75E6" stroke-width=".8" stroke-linecap="round" opacity=".9" filter="url(#glow2)">
-              <path d="M4 22 Q9 19 14 22"/><path d="M5 25 Q10 22 16 25"/><path d="M4 29 Q9 32 15 29"/>
-              <path d="M41 22 Q46 19 51 22"/><path d="M39 25 Q45 22 50 25"/><path d="M40 29 Q46 32 51 29"/>
-          </g>
-          <path d="M27.5 27 C22.5 22 21.7 15.7 24.3 8.2 C25 6.2 26.2 5.2 27.5 4 C28.8 5.2 30 6.2 30.7 8.2 C33.3 15.7 32.5 22 27.5 27 Z" fill="url(#pink)" stroke="#FF35CF" stroke-width="1" stroke-linejoin="round" filter="url(#glow2)"/>
-          <path d="M27.5 27 C22.5 21 17.2 15.8 10.2 15.1 C8.4 14.9 7.3 16.1 8.2 17.8 C10.9 23.3 16.4 27.6 23.2 30.2 Z" fill="url(#petal)" stroke="#D71AB7" stroke-width="1" stroke-linejoin="round" filter="url(#glow2)"/>
-          <path d="M27.5 27 C32.5 21 37.8 15.8 44.8 15.1 C46.6 14.9 47.7 16.1 46.8 17.8 C44.1 23.3 38.6 27.6 31.8 30.2 Z" fill="url(#petal)" stroke="#D71AB7" stroke-width="1" stroke-linejoin="round" filter="url(#glow2)"/>
-          <path d="M27.5 27 C22.4 27.5 15.2 30.3 10.8 36.6 C9.7 38.2 10.5 39.5 12.3 39.4 C19.5 39.1 25 35.5 28.5 30.2 Z" fill="url(#petal)" stroke="#C516A9" stroke-width="1" stroke-linejoin="round" filter="url(#glow2)"/>
-          <path d="M27.5 27 C32.6 27.5 39.8 30.3 44.2 36.6 C45.3 38.2 44.5 39.5 42.7 39.4 C35.5 39.1 30 35.5 26.5 30.2 Z" fill="url(#petal)" stroke="#C516A9" stroke-width="1" stroke-linejoin="round" filter="url(#glow2)"/>
-          <g stroke="#8B087A" stroke-width=".8" stroke-linecap="round" opacity=".9">
-              <path d="M27.5 8 L27.5 20"/><path d="M27.5 12 L25.4 9.5"/><path d="M27.5 12 L29.6 9.5"/>
-          </g>
-          <g stroke="#8C087D" stroke-width=".75" stroke-linecap="round" stroke-linejoin="round" opacity=".9">
-              <path d="M12 18 L15 21 L13.5 23.5 L18 25"/><path d="M43 18 L40 21 L41.5 23.5 L37 25"/>
-              <path d="M13 36 L17 34 L18 37 L22 35"/><path d="M42 36 L38 34 L37 37 L33 35"/>
-          </g>
-          <g fill="url(#pink)" stroke="#8A087A" stroke-width=".8" filter="url(#glow2)">
-              <path d="M27.5 22 C24 19.3 20.8 21.5 21.7 25 C22.4 28.2 25.2 29.5 27.5 27.3 C29.8 29.5 32.6 28.2 33.3 25 C34.2 21.5 31 19.3 27.5 22 Z"/>
-              <circle cx="24.5" cy="24.5" r="1.15" fill="#6E0066"/><circle cx="30.5" cy="24.5" r="1.15" fill="#6E0066"/><circle cx="27.5" cy="27" r="1" fill="#6E0066"/>
-          </g>
-          <path d="M27.5 28 C24.7 32 24.7 37.8 27.5 43 C30.3 37.8 30.3 32 27.5 28 Z" fill="url(#pink)" stroke="#C516A9" stroke-width="1" filter="url(#glow2)"/>
-          <circle cx="27.5" cy="25.5" r="1.1" fill="#FFE7FC" filter="url(#glow2)"/>
-      </symbol>
     </svg>
 
     <div class="level-up-popup" id="levelUpPopup">
@@ -690,7 +616,6 @@
             <div class="profile-tabs">
                 <button class="tab-btn active" id="tab-btn-profile" onclick="switchProfileTab('profile')"><svg><use href="#oa-profile"></use></svg> Профиль</button>
                 <button class="tab-btn" id="tab-btn-shop" onclick="switchProfileTab('shop')"><svg><use href="#oa-shop"></use></svg> Магазин</button>
-                <button class="tab-btn" id="tab-btn-inventory" onclick="switchProfileTab('inventory')"><svg><use href="#oa-catalog"></use></svg> Инвентарь</button>
                 <button class="tab-btn" id="tab-btn-settings" onclick="switchProfileTab('settings')"><svg><use href="#oa-settings"></use></svg> Настройки</button>
             </div>
 
@@ -721,10 +646,6 @@
                     <div class="shop-tab" onclick="switchShopTab('badges', this)">Значки</div>
                 </div>
                 <div id="shop-items-container" class="shop-grid"></div>
-            </div>
-
-            <div id="inventory-content-tab" style="display: none;">
-                <div id="inventory-items-container"></div>
             </div>
 
             <div class="settings-card" id="settings-content-tab" style="display: none;">
@@ -878,6 +799,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=250"></script>
+    <script src="app.js?v=260"></script>
 </body>
 </html>
