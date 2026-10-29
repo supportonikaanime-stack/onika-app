@@ -196,7 +196,7 @@ function goBackFromDetail() {
 }
 
 // ==========================================
-// ХЕЛПЕР ПРИМЕНЕНИЯ ТИТУЛА К ЭЛЕМЕНТУ
+// ХЕЛПЕР ПРИМЕНЕНИЯ ТИТУЛА
 // ==========================================
 function applyTitleToElement(titleEl, titleData) {
     if (!titleEl) return;
@@ -205,7 +205,6 @@ function applyTitleToElement(titleEl, titleData) {
         return;
     }
     titleEl.style.display = 'inline-flex';
-
     titleEl.className = 'user-title-display';
     titleEl.removeAttribute('data-title');
     titleEl.style.color = '';
@@ -232,11 +231,19 @@ async function syncProfileToDB() {
     let stats = getStats();
     try {
         await supabaseClient.from('users').upsert({
-            tg_id: MY_TG_ID, name: MY_NAME, avatar_url: MY_PHOTO_URL,
-            xp: stats.xp, coins: stats.coins, episodes_watched: stats.episodesWatched, 
-            minutes_watched: stats.minutesWatched, days_streak: stats.daysStreak,
-            active_banner: stats.active_banner, active_title: stats.active_title,
-            active_effect: stats.active_effect, active_badge: stats.active_badge,
+            tg_id: MY_TG_ID, 
+            name: MY_NAME, 
+            avatar_url: MY_PHOTO_URL,
+            xp: stats.xp,
+            coins: stats.coins,
+            episodes_watched: stats.episodesWatched, 
+            minutes_watched: stats.minutesWatched, 
+            days_streak: stats.daysStreak,
+            active_banner: stats.active_banner,
+            active_title: stats.active_title,
+            active_effect: stats.active_effect,
+            active_badge: stats.active_badge,
+            unlocked_achievements: stats.unlockedAchievements, // ОТПРАВЛЯЕМ ДОСТИЖЕНИЯ В БАЗУ
             last_watched: stats.favedAnime.length > 0 ? stats.favedAnime[stats.favedAnime.length - 1].id : null
         }, { onConflict: 'tg_id' });
     } catch (e) { console.error('Ошибка синхронизации:', e); }
@@ -350,7 +357,6 @@ async function loadProfileData() {
 function renderParticles() {
     const container = document.getElementById('particle-effect-container');
     if (!container) return;
-    
     container.innerHTML = ''; container.className = 'effect-container'; 
     if (!ACTIVE_EFFECT_CSS) return;
     container.classList.add(ACTIVE_EFFECT_CSS);
@@ -385,7 +391,6 @@ function startPreview(type, item) {
     if (isPreviewMode) return; 
     isPreviewMode = true;
     previewItem = { type, item };
-    
     savedStats = JSON.parse(JSON.stringify(getStats())); 
     savedStats._active_banner_url = ACTIVE_BANNER_URL;
     savedStats._active_title_data = ACTIVE_TITLE_DATA;
@@ -403,7 +408,6 @@ function startPreview(type, item) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
     renderPreviewCard();
-
     const bar = document.getElementById('previewBar');
     const btn = document.getElementById('preview-btn-buy');
     btn.textContent = item.price === 0 ? 'Получить' : `Купить и надеть · ${item.price} 🪙`;
@@ -421,7 +425,6 @@ function renderPreviewCard() {
         if (MY_PHOTO_URL) avatarEl.innerHTML = `<img src="${safeUrl(MY_PHOTO_URL)}" style="width:100%; height:100%; object-fit:cover;">`;
         else avatarEl.innerHTML = `<span>${escapeHTML((MY_NAME || '?')[0].toUpperCase())}</span>`;
     }
-
     setElText('preview-name', MY_NAME || 'Гость');
 
     const badgeEl = document.getElementById('preview-badge-img');
@@ -438,7 +441,6 @@ function renderPreviewCard() {
     }
 
     setElText('preview-coins', stats.coins || 0);
-
     const currentLevel = Math.floor(stats.xp / 100) + 1;
     setElText('preview-level', currentLevel);
     setElText('preview-level-text', currentLevel);
@@ -453,7 +455,6 @@ function renderPreviewCard() {
 function renderPreviewParticles() {
     const container = document.getElementById('preview-particle-container');
     if (!container) return;
-    
     container.innerHTML = ''; container.className = 'effect-container'; 
     if (!ACTIVE_EFFECT_CSS) return;
     container.classList.add(ACTIVE_EFFECT_CSS);
@@ -483,14 +484,12 @@ function renderPreviewParticles() {
 
 function cancelPreview() {
     if (!isPreviewMode) return;
-    
     if (savedStats) {
         ACTIVE_BANNER_URL = savedStats._active_banner_url || '';
         ACTIVE_TITLE_DATA = savedStats._active_title_data || null;
         ACTIVE_EFFECT_CSS = savedStats._active_effect_css || '';
         ACTIVE_BADGE_URL = savedStats._active_badge_url || '';
     }
-
     isPreviewMode = false; previewItem = null; savedStats = null;
     const bar = document.getElementById('previewBar');
     if (bar) bar.classList.remove('active');
@@ -777,101 +776,6 @@ async function resetBanner() {
 }
 
 // ==========================================
-// ИНВЕНТАРЬ
-// ==========================================
-async function renderInventoryTab() {
-    const container = document.getElementById('inventory-items-container');
-    if (!container) return;
-    if (!supabaseClient || !MY_TG_ID) {
-        container.innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">Ошибка подключения</div>';
-        return;
-    }
-    container.innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">Загрузка...</div>';
-
-    try {
-        const stats = getStats();
-        let html = '';
-
-        // 1. Баннеры
-        const { data: userBanners } = await supabaseClient.from('user_banners').select('banner_id').eq('tg_id', MY_TG_ID);
-        if (userBanners && userBanners.length > 0) {
-            const bannerIds = userBanners.map(b => b.banner_id);
-            const { data: bannersData } = await supabaseClient.from('banners').select('*').in('id', bannerIds);
-            
-            if (bannersData && bannersData.length > 0) {
-                html += `<div class="shop-category-header" style="margin-top: 0;"><span style="color: #5b5bff;">●</span> Баннеры<span class="count">${bannersData.length}</span></div>`;
-                html += `<div class="shop-grid" style="margin-bottom: 20px;">`;
-                bannersData.forEach(b => {
-                    const isActive = stats.active_banner === b.id;
-                    html += `
-                        <div class="shop-item" onclick='startPreview("banner", ${JSON.stringify(b).replace(/'/g, "&#39;")})'>
-                            <div class="shop-img" style="background-image: url('${safeUrl(b.image_url)}')"></div>
-                            <div class="shop-info"><div class="shop-name">${escapeHTML(b.name)}</div>${isActive ? '<div style="font-size:10px; color:#2ecc71; font-weight:bold; margin-top:4px;">Надет</div>' : ''}</div>
-                        </div>`;
-                });
-                html += `</div>`;
-            }
-        }
-
-        // 2. Остальное
-        const { data: inventory } = await supabaseClient.from('user_inventory').select('item_id, item_type').eq('tg_id', MY_TG_ID);
-        if (inventory && inventory.length > 0) {
-            const grouped = { title: [], effect: [], badge: [], frame: [] };
-            inventory.forEach(item => { if (grouped[item.item_type]) grouped[item.item_type].push(item.item_id); });
-
-            const categories = [
-                { type: 'title', table: 'titles', name: 'Титулы', color: '#b44aff' },
-                { type: 'effect', table: 'effects', name: 'Эффекты', color: '#00f5ff' },
-                { type: 'badge', table: 'badges', name: 'Значки', color: '#ffd700' },
-                { type: 'frame', table: 'frames', name: 'Рамки', color: '#ff2d78' }
-            ];
-
-            for (const cat of categories) {
-                const ids = grouped[cat.type];
-                if (!ids || ids.length === 0) continue;
-                const { data: itemsData } = await supabaseClient.from(cat.table).select('*').in('id', ids);
-                if (!itemsData || itemsData.length === 0) continue;
-
-                html += `<div class="shop-category-header"><span style="color: ${cat.color};">●</span> ${cat.name}<span class="count">${itemsData.length}</span></div>`;
-                html += `<div class="shop-grid" style="margin-bottom: 20px;">`;
-
-                itemsData.forEach(item => {
-                    let isActive = false;
-                    let previewHtml = '';
-
-                    if (cat.type === 'title') {
-                        isActive = stats.active_title === item.id;
-                        if (item.is_animated) previewHtml = `<div class="user-title-display animated-title" data-title="${item.animation_key || 'gold'}" style="position:relative; font-size:11px; padding: 3px 10px;"><span class="title-text">${escapeHTML(item.name)}</span></div>`;
-                        else previewHtml = `<div class="user-title-display" style="color:${item.color}; border-color:${item.color}; font-size:11px; padding: 3px 10px;">${escapeHTML(item.name)}</div>`;
-                    } else if (cat.type === 'effect') {
-                        isActive = stats.active_effect === item.id;
-                        previewHtml = `<div class="avatar ${item.css_class}" style="width:40px; height:40px; font-size:12px; background:#333; border:1px solid #555; display:flex; align-items:center; justify-content:center;">AA</div>`;
-                    } else if (cat.type === 'badge') {
-                        isActive = stats.active_badge === item.id;
-                        previewHtml = `<img src="${safeUrl(item.image_url)}" style="width:50px; height:50px; object-fit:contain;">`;
-                    } else if (cat.type === 'frame') {
-                        previewHtml = `<img src="${safeUrl(item.image_url)}" style="width:100%; height:100%; object-fit:contain;">`;
-                    }
-
-                    const clickAction = (cat.type === 'banner' || cat.type === 'title') ? `onclick='startPreview("${cat.type}", ${JSON.stringify(item).replace(/'/g, "&#39;")})'` : '';
-                    const activeLabel = isActive ? `<div style="font-size:10px; color:#2ecc71; font-weight:bold; margin-top:4px;">Надет</div>` : '';
-
-                    html += `
-                        <div class="shop-item" ${clickAction}>
-                            <div class="shop-img" style="background: #111; display:flex; align-items:center; justify-content:center; padding: 10px; box-sizing: border-box;">${previewHtml}</div>
-                            <div class="shop-info"><div class="shop-name">${escapeHTML(item.name)}</div>${activeLabel}</div>
-                        </div>`;
-                });
-                html += `</div>`;
-            }
-        }
-
-        if (!html) html = '<div style="text-align: center; color: #888; padding: 40px;">У вас пока ничего нет. Купите что-нибудь в магазине!</div>';
-        container.innerHTML = html;
-    } catch (e) { console.error(e); container.innerHTML = '<div style="text-align: center; color: #ff4444; padding: 20px;">Ошибка загрузки инвентаря</div>'; }
-}
-
-// ==========================================
 // 6. ДРУЗЬЯ
 // ==========================================
 async function loadFriends() {
@@ -957,6 +861,16 @@ async function openFriendProfile(id, name) {
         const lvl = Math.floor((friend.xp || 0) / 100) + 1;
         const rank = LEVEL_TITLES[Math.min(lvl - 1, 99)];
         
+        // ИСПРАВЛЕНИЕ ДОСТИЖЕНИЙ ДРУГА
+        let friendAchCount = 0;
+        if (friend.unlocked_achievements && Array.isArray(friend.unlocked_achievements)) {
+            friendAchCount = friend.unlocked_achievements.length;
+        } else if (friend.unlocked_achievements) {
+            try { friendAchCount = JSON.parse(friend.unlocked_achievements).length; } catch(e) {}
+        }
+        const totalAchCount = ACHIEVEMENTS.length;
+        const achPoints = friendAchCount * 10;
+
         let lastWatchedHtml = '';
         if (friend.last_watched) {
             const animeData = await API.getDetails(friend.last_watched);
@@ -972,7 +886,6 @@ async function openFriendProfile(id, name) {
             }
         }
 
-        const friendAchCount = Math.min(Math.floor(lvl / 2) + 1, 50); 
         const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
         const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : escapeHTML(friend.name[0].toUpperCase());
 
@@ -1029,14 +942,27 @@ async function openFriendProfile(id, name) {
                     </div>
                 </div>
             </div>
+
+            <!-- БЛОК ДОСТИЖЕНИЙ -->
             <div class="achievements-card" style="margin-top: 15px; cursor: default;">
-                <div class="ach-header"><div class="ach-icon-big"><svg><use href="#oa-achievement"></use></svg></div><div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p>${friendAchCount * 10} очков</p></div><div class="ach-total">${friendAchCount}/50</div></div>
-                <div class="ach-progress-wrap"><div class="ach-progress-bar" style="width: ${(friendAchCount / 50) * 100}%;"></div></div>
+                <div class="ach-header">
+                    <div class="ach-icon-big">
+                        <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='🏆';">
+                    </div>
+                    <div class="ach-info">
+                        <h3>ДОСТИЖЕНИЯ</h3>
+                        <p>${achPoints} очков</p>
+                    </div>
+                    <div class="ach-total">${friendAchCount}/${totalAchCount}</div>
+                </div>
+                <div class="ach-progress-wrap"><div class="ach-progress-bar" style="width: ${(friendAchCount / totalAchCount) * 100}%;"></div></div>
             </div>
+
             ${lastWatchedHtml}
             <button onclick="removeFriend(${friend.tg_id})" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">🗑️ Удалить из друзей</button>
         `;
 
+        // Запускаем генерацию частиц для друга (если есть эффект)
         setTimeout(() => {
             const fContainer = document.getElementById('friend-particle-container');
             if (fContainer && friendEffectClass) {
@@ -1051,10 +977,16 @@ async function openFriendProfile(id, name) {
                     if (friendEffectClass === 'effect-sparks') span.style.animationName = 'riseUp';
                     else if (friendEffectClass === 'effect-sakura') span.style.animationName = 'fallDown';
                     else if (friendEffectClass === 'effect-stars') span.style.animationName = 'twinkle, float';
+                    else if (friendEffectClass === 'effect-snow') span.style.animationName = 'snowFall';
+                    else if (friendEffectClass === 'effect-bubbles') span.style.animationName = 'bubbleUp';
+                    else if (friendEffectClass === 'effect-leaves') span.style.animationName = 'leafFall';
+                    else if (friendEffectClass === 'effect-matrix') span.style.animationName = 'matrixFall';
+                    else if (friendEffectClass === 'effect-fire') span.style.animationName = 'fireRise';
                     fContainer.appendChild(span);
                 }
             }
         }, 100);
+
     } catch (e) { container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка</div>'; }
 }
 
@@ -1382,23 +1314,19 @@ function showToast(msg) {
 function switchProfileTab(tab) { 
     const btnProfile = document.getElementById('tab-btn-profile'); 
     const btnShop = document.getElementById('tab-btn-shop'); 
-    const btnInventory = document.getElementById('tab-btn-inventory');
     const btnSettings = document.getElementById('tab-btn-settings'); 
     
     const contentProfile = document.getElementById('profile-content-tab'); 
     const contentSettings = document.getElementById('settings-content-tab'); 
     const shopContent = document.getElementById('shop-content-tab');
-    const inventoryContent = document.getElementById('inventory-content-tab');
     
     if (btnProfile) btnProfile.classList.remove('active');
     if (btnShop) btnShop.classList.remove('active');
-    if (btnInventory) btnInventory.classList.remove('active');
     if (btnSettings) btnSettings.classList.remove('active');
     
     if (contentProfile) contentProfile.style.display = 'none';
     if (contentSettings) contentSettings.style.display = 'none';
     if (shopContent) shopContent.style.display = 'none';
-    if (inventoryContent) inventoryContent.style.display = 'none';
     
     if (tab === 'profile') { 
         if (btnProfile) btnProfile.classList.add('active'); 
@@ -1406,9 +1334,6 @@ function switchProfileTab(tab) {
     } else if (tab === 'shop') {
         if (btnShop) btnShop.classList.add('active');
         if (shopContent) { shopContent.style.display = 'block'; renderShopTab(currentShopTab); }
-    } else if (tab === 'inventory') {
-        if (btnInventory) btnInventory.classList.add('active');
-        if (inventoryContent) { inventoryContent.style.display = 'block'; renderInventoryTab(); }
     } else { 
         if (btnSettings) btnSettings.classList.add('active'); 
         if (contentSettings) contentSettings.style.display = 'block'; 
