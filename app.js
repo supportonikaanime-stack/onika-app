@@ -68,13 +68,13 @@ const API_Shikimori = {
         
         if (filters.search) args.push(`search:"${filters.search}"`);
         
-        // Жанры в GraphQL Shikimori — это числовые ID
+        // Жанры в GraphQL Shikimori — это ЧИСЛОВЫЕ ID (1, 22, 4...)
         if (filters.genre) {
             const genreId = GENRES.find(g => g.name === filters.genre)?.id;
             if (genreId) args.push(`genre:${genreId}`); 
         }
         
-        // Год в GraphQL Shikimori передается как season (строка)
+        // Год передается в параметр season (строка)
         if (filters.year) args.push(`season:"${filters.year}"`); 
         if (filters.status) args.push(`status:${filters.status}`);
         
@@ -91,11 +91,11 @@ const API_Shikimori = {
         const d = await this.fetch(q);
         return d.animes && d.animes.length > 0 ? this.convert(d.animes[0]) : null;
     },
-    // ИСПРАВЛЕНО: Запрашиваем только онгоинги с высоким рейтингом
     async getRandom(limit) {
-        const q = `{animes(status:ongoing, order:ranked, limit:20){id name russian score episodes status poster{originalUrl} genres{name}}}`;
+        // ИСПРАВЛЕНО: Запрашиваем топ онгоингов по рейтингу (ranked)
+        const q = `{animes(status:ongoing, order:ranked, limit:${limit}){id name russian score episodes status poster{originalUrl} genres{name}}}`;
         const d = await this.fetch(q);
-        return d.animes.filter(a => a.score >= 7).sort(() => Math.random() - 0.5).slice(0, limit).map(this.convert);
+        return d.animes.sort(() => Math.random() - 0.5).map(this.convert);
     },
     convert(a) {
         return {
@@ -150,7 +150,7 @@ let isPreviewMode = false;
 let previewItem = null;
 let savedStats = null;
 
-// ИСПРАВЛЕНО: Числовые ID жанров из Shikimori API
+// ИСПРАВЛЕНО: Возвращены ЧИСЛОВЫЕ ID жанров
 const GENRES = [
     { id: '1', name: 'Экшен' }, 
     { id: '22', name: 'Романтика' }, 
