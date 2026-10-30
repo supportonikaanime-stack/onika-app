@@ -314,6 +314,9 @@
         .shop-category-header.epic { border-bottom-color: rgba(180, 74, 255, 0.3); }
         .shop-category-header.legendary { border-bottom-color: rgba(255, 215, 0, 0.3); }
 
+        /* АНИМАЦИЯ ДЛЯ ФИЛЬТРОВ */
+        .filters-collapsed { display: none !important; }
+
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
         .modal-overlay.active { display: flex; animation: fade 0.3s ease; }
         .modal-content { background: #14141f; border-radius: 24px; width: 100%; max-width: 400px; padding: 30px 20px; border: 1px solid rgba(255,255,255,0.1); position: relative; text-align: center; max-height: 80vh; overflow-y: auto; }
@@ -437,6 +440,7 @@
       <symbol id="oa-dice" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="8" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="8" cy="16" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="1.5" fill="currentColor" stroke="none"/></symbol>
       <symbol id="oa-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v12m-3-9h6m-6 6h6"/></symbol>
       <symbol id="oa-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></symbol>
+      <symbol id="oa-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
     </svg>
 
     <div class="level-up-popup" id="levelUpPopup">
@@ -488,11 +492,24 @@
                 </div>
                 <div style="color: #888; font-size: 20px;">›</div>
             </div>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;" id="genre-filters"></div>
-            <div style="display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 10px;" id="dropdown-filters">
-                <button class="filter-btn" onclick="openFilterModal('year')">Год ⌄</button>
-                <button class="filter-btn" onclick="openFilterModal('status')">Статус ⌄</button>
-                <button class="filter-btn" onclick="openFilterModal('sort')">Сортировка ⌄</button>
+            
+            <!-- Кнопка показа фильтров -->
+            <div onclick="toggleFilters()" style="display: flex; align-items: center; justify-content: space-between; background: #14141f; border-radius: 12px; padding: 12px 16px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;">
+                <div style="display: flex; align-items: center; gap: 8px; color: #ccc;">
+                    <svg style="width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-filter"></use></svg>
+                    <span style="font-size: 14px; font-weight: 600;">Фильтры</span>
+                </div>
+                <span id="filter-chevron" style="color: #888; font-size: 16px; transition: transform 0.3s;">▼</span>
+            </div>
+
+            <!-- Скрываемый блок фильтров -->
+            <div id="filters-wrapper" class="filters-collapsed">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;" id="genre-filters"></div>
+                <div style="display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 10px;" id="dropdown-filters">
+                    <button class="filter-btn" onclick="openFilterModal('year')">Год ⌄</button>
+                    <button class="filter-btn" onclick="openFilterModal('status')">Статус ⌄</button>
+                    <button class="filter-btn" onclick="openFilterModal('sort')">Сортировка ⌄</button>
+                </div>
             </div>
         </div>
         <div class="grid-catalog" id="catalog-grid"></div>
@@ -800,6 +817,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=270"></script>
+    <script src="app.js?v=280"></script>
 </body>
 </html>
