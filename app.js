@@ -68,12 +68,13 @@ const API_Shikimori = {
         
         if (filters.search) args.push(`search:"${filters.search}"`);
         
-        // Жанры в Shikimori — это строковые ключи (action, romance и т.д.)
+        // Жанры в GraphQL Shikimori — это числовые ID
         if (filters.genre) {
             const genreId = GENRES.find(g => g.name === filters.genre)?.id;
             if (genreId) args.push(`genre:${genreId}`); 
         }
         
+        // Год в GraphQL Shikimori передается как season (строка)
         if (filters.year) args.push(`season:"${filters.year}"`); 
         if (filters.status) args.push(`status:${filters.status}`);
         
@@ -90,11 +91,11 @@ const API_Shikimori = {
         const d = await this.fetch(q);
         return d.animes && d.animes.length > 0 ? this.convert(d.animes[0]) : null;
     },
+    // ИСПРАВЛЕНО: Запрашиваем только онгоинги с высоким рейтингом
     async getRandom(limit) {
-        const p = Math.floor(Math.random()*50)+1;
-        const q = `{animes(page:${p},limit:20,order:ranked){id name russian score episodes status poster{originalUrl} genres{name}}}`;
+        const q = `{animes(status:ongoing, order:ranked, limit:20){id name russian score episodes status poster{originalUrl} genres{name}}}`;
         const d = await this.fetch(q);
-        return d.animes.filter(a=>a.score>=6).sort(()=>Math.random()-0.5).slice(0,limit).map(this.convert);
+        return d.animes.filter(a => a.score >= 7).sort(() => Math.random() - 0.5).slice(0, limit).map(this.convert);
     },
     convert(a) {
         return {
@@ -149,19 +150,19 @@ let isPreviewMode = false;
 let previewItem = null;
 let savedStats = null;
 
-// Жанры теперь имеют английские id (ключи Shikimori)
+// ИСПРАВЛЕНО: Числовые ID жанров из Shikimori API
 const GENRES = [
-    { id: 'action', name: 'Экшен' }, 
-    { id: 'romance', name: 'Романтика' }, 
-    { id: 'comedy', name: 'Комедия' }, 
-    { id: 'fantasy', name: 'Фэнтези' }, 
-    { id: 'drama', name: 'Драма' }, 
-    { id: 'adventure', name: 'Приключения' }, 
-    { id: 'sci-fi', name: 'Фантастика' },
-    { id: 'slice_of_life', name: 'Повседневность' },
-    { id: 'thriller', name: 'Триллер' },
-    { id: 'horror', name: 'Ужасы' },
-    { id: 'mystery', name: 'Детектив' }
+    { id: '1', name: 'Экшен' }, 
+    { id: '22', name: 'Романтика' }, 
+    { id: '4', name: 'Комедия' }, 
+    { id: '10', name: 'Фэнтези' }, 
+    { id: '8', name: 'Драма' }, 
+    { id: '2', name: 'Приключения' }, 
+    { id: '24', name: 'Фантастика' },
+    { id: '36', name: 'Повседневность' },
+    { id: '41', name: 'Триллер' },
+    { id: '14', name: 'Ужасы' },
+    { id: '7', name: 'Детектив' }
 ];
 const YEARS = [{ id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' }, { id: '2021', name: '2021' }, { id: '2020', name: '2020' }];
 const STATUSES = [{ id: 'ongoing', name: 'Онгоинг' }, { id: 'released', name: 'Завершено' }, { id: 'anons', name: 'Анонс' }];
