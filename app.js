@@ -68,25 +68,22 @@ const API_Shikimori = {
         return d.data;
     },
     async getCatalog(page, limit, filters) {
-        // Запрашиваем БЕЗ genre и status, чтобы прокси не тупил
-        let args = [`page:${page}`, `limit:${limit}`];
+        // Запрашиваем ТОЛЬКО популярность (это работает)
+        let args = [`page:${page}`, `limit:${limit}`, `order:popularity`];
         
+        // Добавляем поиск и год (они работают)
         if (filters.search) args.push(`search:"${filters.search}"`);
         if (filters.year) args.push(`season:"${filters.year}"`); 
-        
-        if (filters.sort) args.push(`order:${filters.sort}`);
-        else args.push('order:popularity');
 
         const q = `{animes(${args.join(',')}){id name russian score episodes status poster{originalUrl} genres{name}}}`;
         const d = await this.fetch(q);
         let results = d.animes.map(this.convert);
 
-        // КЛИЕНТСКАЯ ФИЛЬТРАЦИЯ (обход проблем с прокси)
+        // ФИЛЬТРАЦИЯ НА КЛИЕНТЕ
         if (filters.genre) {
             results = results.filter(a => a.genres.includes(filters.genre));
         }
         if (filters.status) {
-            // Переводим английский статус (ongoing) в русский (Онгоинг)
             const statusMap = { 'ongoing': 'Онгоинг', 'released': 'Завершено', 'anons': 'Анонс' };
             const targetStatus = statusMap[filters.status];
             if (targetStatus) {
@@ -103,15 +100,13 @@ const API_Shikimori = {
         return d.animes && d.animes.length > 0 ? this.convert(d.animes[0]) : null;
     },
     async getRandom(limit) {
-        // Сначала пробуем онгоинги, если пусто — берем просто топ
-        let q = `{animes(status:"ongoing", order:ranked, limit:${limit}){id name russian score episodes status poster{originalUrl} genres{name}}}`;
-        let d = await this.fetch(q);
-        
+        // Просто берем топ-10 по популярности и перемешиваем
+        const q = `{animes(order:popularity, limit:10){id name russian score episodes status poster{originalUrl} genres{name}}}`;
+        const d = await this.fetch(q);
         if (!d.animes || d.animes.length === 0) {
-            q = `{animes(order:ranked, limit:${limit}){id name russian score episodes status poster{originalUrl} genres{name}}}`;
-            d = await this.fetch(q);
+            console.warn('[getRandom] API вернул пустой список');
+            return [];
         }
-        
         return d.animes.sort(() => Math.random() - 0.5).map(this.convert);
     },
     convert(a) {
@@ -133,7 +128,7 @@ const API = {
     _cache: new Map(),
     async _cachedFetch(method, ...args) {
         const key = method + '_' + JSON.stringify(args);
-        if (this._cache.has(key) && Date.now() - this._cache.get(key).time < 15*60*1000) return this._cache.get(key).data;
+        if (this._cache.has(key) && Date.now() - this._cache.get(key).time < 5*60*1000) return this._cache.get(key).data;
         try {
             const data = await API_Shikimori[method](...args);
             this._cache.set(key, { data, time: Date.now() });
@@ -1141,7 +1136,6 @@ async function loadCatalog(reset = false) {
     const loadMoreBtn = document.getElementById('load-more-btn');
     if (reset) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Загрузка...</div>'; hasMoreCatalog = true; catalogPage = 1; }
     try {
-        // Запрашиваем больше данных, чтобы клиентская фильтрация по жанрам/статусу работала
         const items = await API.getCatalog(catalogPage, 50, currentFilters);
         const displayItems = items.slice(0, 12);
         if (reset) grid.innerHTML = '';
