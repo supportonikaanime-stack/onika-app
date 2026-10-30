@@ -195,6 +195,18 @@ function goBackFromDetail() {
     else switchTab('catalog');
 }
 
+function toggleFilters() {
+    const wrapper = document.getElementById('filters-wrapper');
+    const chevron = document.getElementById('filter-chevron');
+    if (wrapper.classList.contains('filters-collapsed')) {
+        wrapper.classList.remove('filters-collapsed');
+        chevron.style.transform = 'rotate(180deg)';
+    } else {
+        wrapper.classList.add('filters-collapsed');
+        chevron.style.transform = 'rotate(0deg)';
+    }
+}
+
 // ==========================================
 // ХЕЛПЕР ПРИМЕНЕНИЯ ТИТУЛА
 // ==========================================
@@ -1179,7 +1191,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 <div style="margin-bottom: 25px;">
                     <h3 style="font-size: 16px; margin-bottom: 10px; color: #fff; display: flex; align-items: center; gap: 8px;"><svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-book"></use></svg> Описание</h3>
                     <p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p>
-                    <button id="desc-btn" onclick="toggleDescription()" style="background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button>
+                    <button id="desc-btn" onclick="toggleDescription()" style="display: none; background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button>
                 </div>
 
                 <!-- БЛОК РЕЙТИНГА -->
@@ -1202,6 +1214,20 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                     </div>
                 </div>
             </div>`;
+
+        // Проверка на обрезку текста
+        setTimeout(() => {
+            const descEl = document.getElementById('desc-text');
+            const btnEl = document.getElementById('desc-btn');
+            if (descEl && btnEl) {
+                if (descEl.scrollHeight > descEl.clientHeight) {
+                    btnEl.style.display = 'block';
+                } else {
+                    btnEl.style.display = 'none';
+                }
+            }
+        }, 50);
+
     } catch (e) { 
         console.error(e);
         container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>'; 
