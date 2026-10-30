@@ -53,7 +53,6 @@ const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 const API_Shikimori = {
     BASE_URL: 'https://shikimori.io/api/graphql',
     async fetch(query) {
-        console.log('[GraphQL Query]:', query);
         const res = await fetch(PROXY_URL + encodeURIComponent(this.BASE_URL), {
             method: 'POST', 
             headers: { 'Content-Type': 'application/json', 'User-Agent': 'OnikaAnime/1.0' }, 
@@ -61,17 +60,13 @@ const API_Shikimori = {
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const d = await res.json();
-        if (d.errors) {
-            console.error('[GraphQL Errors]:', d.errors);
-            throw new Error(d.errors[0].message);
-        }
+        if (d.errors) throw new Error(d.errors[0].message);
         return d.data;
     },
     async getCatalog(page, limit, filters) {
-        // Запрашиваем ТОЛЬКО популярность (это работает)
+        // Запрашиваем ТОЛЬКО поиск и год (остальное фильтруем на клиенте)
         let args = [`page:${page}`, `limit:${limit}`, `order:popularity`];
         
-        // Добавляем поиск и год (они работают)
         if (filters.search) args.push(`search:"${filters.search}"`);
         if (filters.year) args.push(`season:"${filters.year}"`); 
 
@@ -100,14 +95,19 @@ const API_Shikimori = {
         return d.animes && d.animes.length > 0 ? this.convert(d.animes[0]) : null;
     },
     async getRandom(limit) {
-        // Просто берем топ-10 по популярности и перемешиваем
-        const q = `{animes(order:popularity, limit:10){id name russian score episodes status poster{originalUrl} genres{name}}}`;
+        // Запрашиваем 20 просто популярных аниме
+        const q = `{animes(order:popularity, limit:20){id name russian score episodes status poster{originalUrl} genres{name}}}`;
         const d = await this.fetch(q);
+        
         if (!d.animes || d.animes.length === 0) {
-            console.warn('[getRandom] API вернул пустой список');
-            return [];
+            // Запасной вариант, если прокси вообще ничего не вернул
+            return [
+                { id: 'shikimori_1', title: 'Магическая битва', score: 8.5, episodes: 24, status: 'Завершено', images: { jpg: { image_url: 'https://shikimori.io/system/animes/original/40748.jpg' } }, genres: ['Экшен', 'Фэнтези'] }
+            ].slice(0, limit);
         }
-        return d.animes.sort(() => Math.random() - 0.5).map(this.convert);
+        
+        // Берем 5 случайных из 20
+        return d.animes.sort(() => Math.random() - 0.5).slice(0, limit).map(this.convert);
     },
     convert(a) {
         return {
@@ -1631,9 +1631,12 @@ async function loadHomePage() {
 function initHeroSlider() { 
     const slider = document.getElementById('heroSlider'); const dotsContainer = document.getElementById('heroDots'); 
     if (!slider || heroData.length === 0) return; let sliderHTML = '', dotsHTML = ''; 
-    const stats = getStats(); const favedList = (stats.favedAnime || []).map(a => a.id); 
+    const stats = getStats(); const favedList = (stats.favedAnime || []).map(a => a.rawId || a.id.split('_')[1]); 
     heroData.forEach((anime, index) => { 
-        const isFaved = favedList.includes(anime.id); const heartClass = isFaved ? 'faved' : ''; const heartIcon = isFaved ? '<svg style="width:24px;height:24px;fill:currentColor;stroke:none;"><use href="#oa-favorite"></use></svg>' : '<svg><use href="#oa-favorite"></use></svg>'; 
+        const cleanId = anime.rawId || anime.id.split('_')[1];
+        const isFaved = favedList.includes(cleanId); 
+        const heartClass = isFaved ? 'faved' : ''; 
+        const heartIcon = isFaved ? '<svg style="width:24px;height:24px;fill:currentColor;stroke:none;"><use href="#oa-favorite"></use></svg>' : '<svg><use href="#oa-favorite"></use></svg>'; 
         sliderHTML += `<div class="hero-slide ${index === 0 ? 'active' : ''}"><div class="hero-bg" style="background-image: url('${safeUrl(anime.img)}')"></div><div class="hero-gradient"></div><div class="hero-content"><div class="hero-badges"><span class="badge star">⭐ ${anime.score}</span><span class="badge">${escapeHTML(anime.type)}</span><span class="badge">${escapeHTML(anime.year)}</span></div><h1 class="hero-title">${escapeHTML(anime.title)}</h1><div class="hero-actions"><button class="btn-primary" onclick="openAnimeDetail('${anime.id}', 'home')">▶ Смотреть</button><button class="btn-icon-heart ${heartClass}" onclick="openStatusModal('${anime.id}')">${heartIcon}</button></div></div></div>`; 
         dotsHTML += `<div class="hero-dot ${index === 0 ? 'active' : ''}" onclick="goToSlide(${index})"></div>`; 
     }); 
