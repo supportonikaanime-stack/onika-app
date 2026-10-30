@@ -230,6 +230,7 @@ async function syncProfileToDB() {
     if (!MY_TG_ID || !supabaseClient) return;
     let stats = getStats();
     try {
+        const achString = JSON.stringify(stats.unlockedAchievements || []);
         await supabaseClient.from('users').upsert({
             tg_id: MY_TG_ID, 
             name: MY_NAME, 
@@ -243,7 +244,7 @@ async function syncProfileToDB() {
             active_title: stats.active_title,
             active_effect: stats.active_effect,
             active_badge: stats.active_badge,
-            unlocked_achievements: stats.unlockedAchievements, // ОТПРАВЛЯЕМ ДОСТИЖЕНИЯ В БАЗУ
+            unlocked_achievements: achString,
             last_watched: stats.favedAnime.length > 0 ? stats.favedAnime[stats.favedAnime.length - 1].id : null
         }, { onConflict: 'tg_id' });
     } catch (e) { console.error('Ошибка синхронизации:', e); }
@@ -855,19 +856,27 @@ async function openFriendProfile(id, name) {
     container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
 
     try {
-        const { data: friend } = await supabaseClient.from('users').select('*').eq('tg_id', id).single();
-        if (!friend) throw new Error();
+        const { data: friend, error } = await supabaseClient.from('users').select('*').eq('tg_id', id).single();
+        if (error || !friend) throw new Error('Не найден');
 
         const lvl = Math.floor((friend.xp || 0) / 100) + 1;
         const rank = LEVEL_TITLES[Math.min(lvl - 1, 99)];
         
-        // ИСПРАВЛЕНИЕ ДОСТИЖЕНИЙ ДРУГА
         let friendAchCount = 0;
-        if (friend.unlocked_achievements && Array.isArray(friend.unlocked_achievements)) {
-            friendAchCount = friend.unlocked_achievements.length;
-        } else if (friend.unlocked_achievements) {
-            try { friendAchCount = JSON.parse(friend.unlocked_achievements).length; } catch(e) {}
+        let achSource = friend.unlocked_achievements;
+
+        if (id === MY_TG_ID) {
+            const localStats = getStats();
+            friendAchCount = (localStats.unlockedAchievements || []).length;
+        } else {
+            if (achSource) {
+                try {
+                    let parsed = typeof achSource === 'string' ? JSON.parse(achSource) : achSource;
+                    if (Array.isArray(parsed)) friendAchCount = parsed.length;
+                } catch(e) { console.log('Ошибка парсинга достижений:', e); }
+            }
         }
+        
         const totalAchCount = ACHIEVEMENTS.length;
         const achPoints = friendAchCount * 10;
 
@@ -943,7 +952,6 @@ async function openFriendProfile(id, name) {
                 </div>
             </div>
 
-            <!-- БЛОК ДОСТИЖЕНИЙ -->
             <div class="achievements-card" style="margin-top: 15px; cursor: default;">
                 <div class="ach-header">
                     <div class="ach-icon-big">
@@ -962,7 +970,6 @@ async function openFriendProfile(id, name) {
             <button onclick="removeFriend(${friend.tg_id})" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">🗑️ Удалить из друзей</button>
         `;
 
-        // Запускаем генерацию частиц для друга (если есть эффект)
         setTimeout(() => {
             const fContainer = document.getElementById('friend-particle-container');
             if (fContainer && friendEffectClass) {
@@ -1025,7 +1032,7 @@ function playEpisode(epNum) {
 }
 
 // ==========================================
-// 8. КАТАЛОГ И ДЕТАЛИ
+// 8. КАТАЛОГ, ДЕТАЛИ, КОММЕНТАРИИ
 // ==========================================
 function initCatalogFilters() { 
     const genreContainer = document.getElementById('genre-filters'); 
@@ -1091,26 +1098,167 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
     previousScreen = fromScreen; switchTab('detail');
     const container = document.getElementById('detail-content');
     container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
+    
     try {
         const anime = await API.getDetails(id);
         if (!anime) throw new Error();
-        const title = escapeHTML(anime.title); const desc = escapeHTML(anime.description); const score = anime.score ? Number(anime.score).toFixed(1) : '?'; const poster = safeUrl(anime.images.jpg.image_url);
-        let statusColor = '#2ecc71'; if (anime.status === 'Онгоинг') statusColor = '#3498db'; if (anime.status === 'Анонс') statusColor = '#e74c3c';
-        const stats = getStats(); const favEntry = (stats.favedAnime || []).find(a => a.id === anime.id); const isFaved = !!favEntry;
+        
+        let userRating = 0;
+        const { data: listItem } = await supabaseClient.from('user_lists').select('rating, status').eq('tg_id', MY_TG_ID).eq('anime_id', id).single();
+        if (listItem && listItem.rating) userRating = listItem.rating;
+        
+        const { data: comments } = await supabaseClient.from('anime_comments').select('*').eq('anime_id', id).order('created_at', { ascending: false });
+
+        const title = escapeHTML(anime.title); 
+        const desc = escapeHTML(anime.description); 
+        const score = anime.score ? Number(anime.score).toFixed(1) : '?'; 
+        const poster = safeUrl(anime.images.jpg.image_url);
+        
+        let statusColor = '#2ecc71'; 
+        if (anime.status === 'Онгоинг') statusColor = '#3498db'; 
+        if (anime.status === 'Анонс') statusColor = '#e74c3c';
+        
+        const stats = getStats(); 
+        const favEntry = (stats.favedAnime || []).find(a => a.id === anime.id); 
+        const isFaved = !!favEntry;
         window._tempAnimeData = anime; 
+        
         const heartSvg = `<svg style="width: 26px; height: 26px;"><use href="#oa-favorite"></use></svg>`;
+
+        let starsHtml = '';
+        for (let i = 1; i <= 5; i++) {
+            const active = i <= userRating ? 'color: #ffd700;' : 'color: #444;';
+            starsHtml += `<span onclick="rateAnime('${anime.id}', ${i})" style="font-size: 28px; cursor: pointer; ${active} transition: 0.2s;">★</span>`;
+        }
+
+        let commentsHtml = '';
+        if (comments && comments.length > 0) {
+            comments.forEach(c => {
+                const avatarUrl = c.user_avatar ? safeUrl(c.user_avatar) : '';
+                const avatar = avatarUrl ? `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : escapeHTML(c.user_name[0].toUpperCase());
+                const date = new Date(c.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+                commentsHtml += `
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <div class="friend-avatar" style="width: 36px; height: 36px; flex-shrink: 0; font-size: 14px;">${avatar}</div>
+                        <div style="flex: 1; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; border-top-left-radius: 4px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="font-size: 13px; font-weight: bold; color: #fff;">${escapeHTML(c.user_name)}</span>
+                                <span style="font-size: 11px; color: #888;">${date}</span>
+                            </div>
+                            <p style="font-size: 13px; color: #ccc; line-height: 1.4;">${escapeHTML(c.text)}</p>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            commentsHtml = '<div style="font-size: 13px; color: #888; text-align: center; padding: 10px;">Пока нет комментариев. Будьте первым!</div>';
+        }
 
         container.innerHTML = `
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;"><img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"></div>
-            <div style="padding-top: 30px;"><div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;"><img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 2px solid rgba(255,255,255,0.1);"><div style="flex: 1; padding-bottom: 5px;"><h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">${title}</h1><div style="display: flex; flex-wrap: wrap; gap: 6px;"><span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;">⭐ ${score}</span><span style="background: rgba(255,255,255,0.15); backdrop-filter: blur(5px); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">📺 ${anime.episodes || '?'} эп.</span><span style="background: ${statusColor}; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">${anime.status}</span></div></div></div>
+            <div style="padding-top: 30px;">
+                <div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;">
+                    <img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 2px solid rgba(255,255,255,0.1);">
+                    <div style="flex: 1; padding-bottom: 5px;">
+                        <h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">${title}</h1>
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                            <span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;">⭐ ${score}</span>
+                            <span style="background: rgba(255,255,255,0.15); backdrop-filter: blur(5px); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">📺 ${anime.episodes || '?'} эп.</span>
+                            <span style="background: ${statusColor}; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">${anime.status}</span>
+                        </div>
+                    </div>
+                </div>
+                
                 <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                     <button onclick="startWatching(window._tempAnimeData)" style="flex: 1; background: #5b5bff; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); display: flex; justify-content: center; align-items: center; gap: 8px;">▶ Смотреть</button>
                     <button onclick="openStatusModal('${anime.id}')" class="btn-icon-heart ${isFaved ? 'faved' : ''}" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'}; border: 1px solid ${isFaved ? '#ff2d78' : 'rgba(255,255,255,0.15)'};">${heartSvg}</button>
                 </div>
+                
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;">${escapeHTML(g)}</span>`).join('')}</div>
-                <div style="margin-bottom: 20px;"><h3 style="font-size: 16px; margin-bottom: 10px; color: #fff; display: flex; align-items: center; gap: 8px;"><svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-book"></use></svg> Описание</h3><p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p><button id="desc-btn" onclick="toggleDescription()" style="background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button></div>
+                
+                <div style="margin-bottom: 25px;">
+                    <h3 style="font-size: 16px; margin-bottom: 10px; color: #fff; display: flex; align-items: center; gap: 8px;"><svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-book"></use></svg> Описание</h3>
+                    <p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p>
+                    <button id="desc-btn" onclick="toggleDescription()" style="background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button>
+                </div>
+
+                <!-- БЛОК РЕЙТИНГА -->
+                <div style="background: #14141f; border-radius: 16px; padding: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); text-align: center;">
+                    <h3 style="font-size: 15px; color: #fff; margin-bottom: 10px;">Ваша оценка:</h3>
+                    <div style="display: flex; justify-content: center; gap: 5px;">${starsHtml}</div>
+                </div>
+
+                <!-- БЛОК КОММЕНТАРИЕВ -->
+                <div style="margin-bottom: 40px;">
+                    <h3 style="font-size: 16px; margin-bottom: 15px; color: #fff; display: flex; align-items: center; gap: 8px;"><svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-edit"></use></svg> Комментарии</h3>
+                    
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <input type="text" id="comment-input" placeholder="Написать отзыв..." style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+                        <button onclick="sendComment('${anime.id}')" style="background: #5b5bff; border: none; border-radius: 12px; padding: 0 15px; color: #fff; font-weight: bold; cursor: pointer;">➤</button>
+                    </div>
+                    
+                    <div id="comments-list">
+                        ${commentsHtml}
+                    </div>
+                </div>
             </div>`;
-    } catch (e) { container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка</div>'; }
+    } catch (e) { 
+        console.error(e);
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>'; 
+    }
+}
+
+async function rateAnime(animeId, rating) {
+    if (!supabaseClient || !MY_TG_ID) return;
+    
+    try {
+        const { data: existing } = await supabaseClient.from('user_lists')
+            .select('id, status')
+            .eq('tg_id', MY_TG_ID)
+            .eq('anime_id', animeId)
+            .single();
+            
+        if (existing) {
+            await supabaseClient.from('user_lists')
+                .update({ rating: rating })
+                .eq('tg_id', MY_TG_ID)
+                .eq('anime_id', animeId);
+        } else {
+            await supabaseClient.from('user_lists')
+                .insert({ tg_id: MY_TG_ID, anime_id: animeId, status: 'planned', rating: rating });
+        }
+        
+        showToast(`⭐ Вы поставили оценку ${rating}`);
+        openAnimeDetail(animeId, previousScreen);
+    } catch(e) {
+        console.error(e);
+        showToast('Ошибка сохранения оценки');
+    }
+}
+
+async function sendComment(animeId) {
+    const input = document.getElementById('comment-input');
+    const text = input.value.trim();
+    
+    if (!text) { showToast('Напишите текст!'); return; }
+    if (!supabaseClient || !MY_TG_ID) { showToast('Ошибка'); return; }
+    
+    try {
+        await supabaseClient.from('anime_comments').insert({
+            anime_id: animeId,
+            tg_id: MY_TG_ID,
+            user_name: MY_NAME,
+            user_avatar: MY_PHOTO_URL,
+            text: text
+        });
+        
+        input.value = '';
+        showToast('✅ Комментарий отправлен!');
+        openAnimeDetail(animeId, previousScreen);
+    } catch(e) {
+        console.error(e);
+        showToast('Ошибка отправки');
+    }
 }
 
 function openStatusModal(id) { 
