@@ -67,12 +67,16 @@ const API_Shikimori = {
         let args = [`page:${page}`, `limit:${limit}`];
         
         if (filters.search) args.push(`search:"${filters.search}"`);
+        
+        // Жанры в Shikimori — это строковые ключи (action, romance и т.д.)
         if (filters.genre) {
             const genreId = GENRES.find(g => g.name === filters.genre)?.id;
-            if (genreId) args.push(`genre:${genreId}`);
+            if (genreId) args.push(`genre:${genreId}`); 
         }
+        
         if (filters.year) args.push(`season:"${filters.year}"`); 
         if (filters.status) args.push(`status:${filters.status}`);
+        
         if (filters.sort) args.push(`order:${filters.sort}`);
         else args.push('order:popularity');
 
@@ -145,7 +149,20 @@ let isPreviewMode = false;
 let previewItem = null;
 let savedStats = null;
 
-const GENRES = [{ id: '1', name: 'Экшен' }, { id: '22', name: 'Романтика' }, { id: '4', name: 'Комедия' }, { id: '10', name: 'Фэнтези' }, { id: '8', name: 'Драма' }, { id: '2', name: 'Приключения' }, { id: '24', name: 'Фантастика' }];
+// Жанры теперь имеют английские id (ключи Shikimori)
+const GENRES = [
+    { id: 'action', name: 'Экшен' }, 
+    { id: 'romance', name: 'Романтика' }, 
+    { id: 'comedy', name: 'Комедия' }, 
+    { id: 'fantasy', name: 'Фэнтези' }, 
+    { id: 'drama', name: 'Драма' }, 
+    { id: 'adventure', name: 'Приключения' }, 
+    { id: 'sci-fi', name: 'Фантастика' },
+    { id: 'slice_of_life', name: 'Повседневность' },
+    { id: 'thriller', name: 'Триллер' },
+    { id: 'horror', name: 'Ужасы' },
+    { id: 'mystery', name: 'Детектив' }
+];
 const YEARS = [{ id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' }, { id: '2021', name: '2021' }, { id: '2020', name: '2020' }];
 const STATUSES = [{ id: 'ongoing', name: 'Онгоинг' }, { id: 'released', name: 'Завершено' }, { id: 'anons', name: 'Анонс' }];
 const SORTS = [{ id: 'popularity', name: 'По популярности' }, { id: 'ranked', name: 'По рейтингу' }, { id: 'aired_on', name: 'Новинки' }];
@@ -205,6 +222,25 @@ function toggleFilters() {
         wrapper.classList.add('filters-collapsed');
         chevron.style.transform = 'rotate(0deg)';
     }
+}
+
+function resetCatalogFilters() {
+    currentFilters = { search: '', genre: '', year: '', status: '', sort: 'popularity' };
+    document.getElementById('search-input').value = '';
+    
+    const btns = document.querySelectorAll('#dropdown-filters .filter-btn');
+    if (btns[0]) btns[0].innerHTML = 'Год ⌄';
+    if (btns[1]) btns[1].innerHTML = 'Статус ⌄';
+    if (btns[2]) btns[2].innerHTML = 'Сортировка ⌄';
+    
+    document.querySelectorAll('#genre-filters .genre-pill').forEach(el => el.classList.remove('active'));
+    const allBtn = document.querySelector('#genre-filters .genre-pill');
+    if (allBtn) {
+        allBtn.classList.add('active');
+        allBtn.innerHTML = '<div class="dot"></div>Все';
+    }
+    
+    loadCatalog(true);
 }
 
 // ==========================================
