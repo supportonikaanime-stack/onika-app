@@ -53,6 +53,7 @@ const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 const API_Shikimori = {
     BASE_URL: 'https://shikimori.io/api/graphql',
     async fetch(query) {
+        console.log('[GraphQL Query]:', query);
         const res = await fetch(PROXY_URL + encodeURIComponent(this.BASE_URL), {
             method: 'POST', 
             headers: { 'Content-Type': 'application/json', 'User-Agent': 'OnikaAnime/1.0' }, 
@@ -60,7 +61,11 @@ const API_Shikimori = {
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const d = await res.json();
-        if (d.errors) throw new Error(d.errors[0].message);
+        if (d.errors) {
+            console.error('[GraphQL Errors]:', d.errors);
+            throw new Error(d.errors[0].message);
+        }
+        console.log('[GraphQL Response]:', d.data);
         return d.data;
     },
     async getCatalog(page, limit, filters) {
@@ -68,13 +73,11 @@ const API_Shikimori = {
         
         if (filters.search) args.push(`search:"${filters.search}"`);
         
-        // Жанры в GraphQL Shikimori — это ЧИСЛОВЫЕ ID (1, 22, 4...)
         if (filters.genre) {
             const genreId = GENRES.find(g => g.name === filters.genre)?.id;
-            if (genreId) args.push(`genre:${genreId}`); 
+            if (genreId) args.push(`genre:${genreId}`);
         }
         
-        // Год передается в параметр season (строка)
         if (filters.year) args.push(`season:"${filters.year}"`); 
         if (filters.status) args.push(`status:${filters.status}`);
         
@@ -92,9 +95,12 @@ const API_Shikimori = {
         return d.animes && d.animes.length > 0 ? this.convert(d.animes[0]) : null;
     },
     async getRandom(limit) {
-        // ИСПРАВЛЕНО: Запрашиваем топ онгоингов по рейтингу (ranked)
         const q = `{animes(status:ongoing, order:ranked, limit:${limit}){id name russian score episodes status poster{originalUrl} genres{name}}}`;
         const d = await this.fetch(q);
+        if (!d.animes || d.animes.length === 0) {
+            console.warn('[getRandom] API вернул пустой список');
+            return [];
+        }
         return d.animes.sort(() => Math.random() - 0.5).map(this.convert);
     },
     convert(a) {
@@ -150,7 +156,6 @@ let isPreviewMode = false;
 let previewItem = null;
 let savedStats = null;
 
-// ИСПРАВЛЕНО: Возвращены ЧИСЛОВЫЕ ID жанров
 const GENRES = [
     { id: '1', name: 'Экшен' }, 
     { id: '22', name: 'Романтика' }, 
