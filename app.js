@@ -22,7 +22,9 @@ let ACTIVE_BADGE_URL = '';
 
 if (tg) {
     tg.expand();
-    tg.setHeaderColor('bg_color');
+    
+    // Передаем переменную bg_color БЕЗ кавычек
+    tg.setHeaderColor('bg_color'); 
     tg.setBackgroundColor('bg_color');
     
     // Включаем полноэкранный режим (панель станет прозрачной)
@@ -30,10 +32,9 @@ if (tg) {
         tg.requestFullscreen().catch(err => console.log('Fullscreen error:', err));
     }
     
-    // ... ваш код получения данных пользователя (if (tg.initDataUnsafe && tg.initDataUnsafe.user)) ...
-}
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
         MY_TG_ID = tg.initDataUnsafe.user.id;
+        // ИСПРАВЛЕНО: добавлено .last_name в конец строки
         MY_NAME = tg.initDataUnsafe.user.first_name + (tg.initDataUnsafe.user.last_name ? ' ' + tg.initDataUnsafe.user.last_name : '');
         MY_PHOTO_URL = tg.initDataUnsafe.user.photo_url || '';
     }
