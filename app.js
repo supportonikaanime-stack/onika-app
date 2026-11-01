@@ -24,6 +24,9 @@ if (tg) {
     tg.expand();
     tg.setHeaderColor('bg_color');
     tg.setBackgroundColor('bg_color');
+    if (tg.requestFullscreen) {
+        tg.requestFullscreen().catch(err => console.log('Fullscreen error:', err));
+    }
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
         MY_TG_ID = tg.initDataUnsafe.user.id;
         MY_NAME = tg.initDataUnsafe.user.first_name + (tg.initDataUnsafe.user.last_name ? ' ' + tg.initDataUnsafe.user.last_name : '');
