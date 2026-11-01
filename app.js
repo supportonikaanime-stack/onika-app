@@ -22,8 +22,8 @@ let ACTIVE_BADGE_URL = '';
 
 if (tg) {
     tg.expand();
-    tg.setHeaderColor('#0a0a0f');
-    tg.setBackgroundColor('#0a0a0f');
+    tg.setHeaderColor('bg_color');
+    tg.setBackgroundColor('bg_color');
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
         MY_TG_ID = tg.initDataUnsafe.user.id;
         MY_NAME = tg.initDataUnsafe.user.first_name + (tg.initDataUnsafe.user.last_name ? ' ' + tg.initDataUnsafe.user.last_name : '');
