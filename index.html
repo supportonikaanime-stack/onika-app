@@ -10,9 +10,31 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@900&display=swap');
         
-        :root { --bg: #0a0a0f; --card: #1a1a20; --primary: #5b5bff; --text: #fff; --muted: #888; --nav-h: 65px; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background: var(--bg); color: var(--text); padding-bottom: calc(var(--nav-h) + 20px); overflow-x: hidden; }
+        :root { 
+    --bg: #0a0a0f; 
+    --card: #1a1a20; 
+    --primary: #5b5bff; 
+    --text: #fff; 
+    --muted: #888; 
+    --nav-h: 65px; 
+    
+    /* Переменные для полноэкранного режима Telegram */
+    --tg-safe-area-inset-top: 0px;
+    --tg-safe-area-inset-bottom: 0px;
+    --tg-content-safe-area-inset-top: 0px;
+    --tg-content-safe-area-inset-bottom: 0px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+
+body { 
+    background: var(--bg); 
+    color: var(--text); 
+    /* Добавлены отступы сверху и снизу для безопасных зон Telegram */
+    padding-top: var(--tg-content-safe-area-inset-top, 0px); 
+    padding-bottom: calc(var(--nav-h) + 20px + var(--tg-content-safe-area-inset-bottom, 0px)); 
+    overflow-x: hidden; 
+}
         
         .screen { display: none; }
         .screen.active { display: block; animation: fade 0.3s ease; }
