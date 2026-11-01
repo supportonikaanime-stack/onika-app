@@ -46,7 +46,7 @@ function safeUrl(url) {
 }
 
 // ==========================================
-// 2. API МОДУЛЬ (Только Shikimori)
+// 2. API МОДУЛЬ (Shikimori)
 // ==========================================
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 
@@ -54,8 +54,8 @@ const API_Shikimori = {
     BASE_URL: 'https://shikimori.io/api/graphql',
     async fetch(query) {
         const res = await fetch(PROXY_URL + encodeURIComponent(this.BASE_URL), {
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json', 'User-Agent': 'OnikaAnime/1.0' }, 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'User-Agent': 'OnikaAnime/1.0' },
             body: JSON.stringify({ query })
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -64,28 +64,18 @@ const API_Shikimori = {
         return d.data;
     },
     async getCatalog(page, limit, filters) {
-        // Запрашиваем ТОЛЬКО поиск и год (остальное фильтруем на клиенте)
         let args = [`page:${page}`, `limit:${limit}`, `order:popularity`];
-        
         if (filters.search) args.push(`search:"${filters.search}"`);
-        if (filters.year) args.push(`season:"${filters.year}"`); 
-
+        if (filters.year) args.push(`season:"${filters.year}"`);
         const q = `{animes(${args.join(',')}){id name russian score episodes status poster{originalUrl} genres{name}}}`;
         const d = await this.fetch(q);
         let results = d.animes.map(this.convert);
-
-        // ФИЛЬТРАЦИЯ НА КЛИЕНТЕ
-        if (filters.genre) {
-            results = results.filter(a => a.genres.includes(filters.genre));
-        }
+        if (filters.genre) results = results.filter(a => a.genres.includes(filters.genre));
         if (filters.status) {
             const statusMap = { 'ongoing': 'Онгоинг', 'released': 'Завершено', 'anons': 'Анонс' };
             const targetStatus = statusMap[filters.status];
-            if (targetStatus) {
-                results = results.filter(a => a.status === targetStatus);
-            }
+            if (targetStatus) results = results.filter(a => a.status === targetStatus);
         }
-
         return results;
     },
     async getDetails(id) {
@@ -95,18 +85,11 @@ const API_Shikimori = {
         return d.animes && d.animes.length > 0 ? this.convert(d.animes[0]) : null;
     },
     async getRandom(limit) {
-        // Запрашиваем 20 просто популярных аниме
         const q = `{animes(order:popularity, limit:20){id name russian score episodes status poster{originalUrl} genres{name}}}`;
         const d = await this.fetch(q);
-        
         if (!d.animes || d.animes.length === 0) {
-            // Запасной вариант, если прокси вообще ничего не вернул
-            return [
-                { id: 'shikimori_1', title: 'Магическая битва', score: 8.5, episodes: 24, status: 'Завершено', images: { jpg: { image_url: 'https://shikimori.io/system/animes/original/40748.jpg' } }, genres: ['Экшен', 'Фэнтези'] }
-            ].slice(0, limit);
+            return [{ id: 'shikimori_1', title: 'Магическая битва', score: 8.5, episodes: 24, status: 'Завершено', images: { jpg: { image_url: 'https://shikimori.io/system/animes/original/40748.jpg' } }, genres: ['Экшен', 'Фэнтези'] }].slice(0, limit);
         }
-        
-        // Берем 5 случайных из 20
         return d.animes.sort(() => Math.random() - 0.5).slice(0, limit).map(this.convert);
     },
     convert(a) {
@@ -116,7 +99,7 @@ const API_Shikimori = {
             year: '--', episodes: a.episodes || '?',
             images: { jpg: { image_url: a.poster?.originalUrl || '' } },
             description: a.description || 'Описание отсутствует.',
-            genres: (a.genres || []).map(g=>g.name),
+            genres: (a.genres || []).map(g => g.name),
             score: a.score || 0,
             status: a.status === 'ongoing' ? 'Онгоинг' : a.status === 'released' ? 'Завершено' : 'Анонс',
             kind: 'TV'
@@ -141,7 +124,7 @@ const API = {
 };
 
 // ==========================================
-// 3. ПЕРЕМЕННЫЕ ПЛЕЕРА И КАТАЛОГА
+// 3. ПЕРЕМЕННЫЕ
 // ==========================================
 let currentAnimeForPlayer = null;
 let selectedVoice = '';
@@ -154,7 +137,7 @@ let isCatalogLoading = false;
 let hasMoreCatalog = true;
 let currentFilters = { search: '', genre: '', year: '', status: '', sort: 'popularity' };
 let currentMyListFilter = 'all';
-let previousScreen = 'catalog'; 
+let previousScreen = 'catalog';
 let searchDebounceTimer;
 let currentShopTab = 'banners';
 
@@ -163,17 +146,10 @@ let previewItem = null;
 let savedStats = null;
 
 const GENRES = [
-    { id: '1', name: 'Экшен' }, 
-    { id: '22', name: 'Романтика' }, 
-    { id: '4', name: 'Комедия' }, 
-    { id: '10', name: 'Фэнтези' }, 
-    { id: '8', name: 'Драма' }, 
-    { id: '2', name: 'Приключения' }, 
-    { id: '24', name: 'Фантастика' },
-    { id: '36', name: 'Повседневность' },
-    { id: '41', name: 'Триллер' },
-    { id: '14', name: 'Ужасы' },
-    { id: '7', name: 'Детектив' }
+    { id: '1', name: 'Экшен' }, { id: '22', name: 'Романтика' }, { id: '4', name: 'Комедия' },
+    { id: '10', name: 'Фэнтези' }, { id: '8', name: 'Драма' }, { id: '2', name: 'Приключения' },
+    { id: '24', name: 'Фантастика' }, { id: '36', name: 'Повседневность' }, { id: '41', name: 'Триллер' },
+    { id: '14', name: 'Ужасы' }, { id: '7', name: 'Детектив' }
 ];
 const YEARS = [{ id: '2024', name: '2024' }, { id: '2023', name: '2023' }, { id: '2022', name: '2022' }, { id: '2021', name: '2021' }, { id: '2020', name: '2020' }];
 const STATUSES = [{ id: 'ongoing', name: 'Онгоинг' }, { id: 'released', name: 'Завершено' }, { id: 'anons', name: 'Анонс' }];
@@ -208,14 +184,11 @@ function switchTab(tabName, element) {
         }
     }
     if (tabName === 'my') renderMyList();
-    if (tabName === 'voice') { 
-        document.getElementById('voice-title').textContent = 'Выбор озвучки'; 
-        renderVoiceSelection(); 
-    }
+    if (tabName === 'voice') { document.getElementById('voice-title').textContent = 'Выбор озвучки'; renderVoiceSelection(); }
     if (tabName === 'player') document.getElementById('player-title').textContent = 'Выбор плеера';
     if (tabName === 'episodes') document.getElementById('eps-title').textContent = 'Выбор серии';
     if (tabName === 'friends') loadFriends();
-    if (tabName === 'achievements') renderAchievementsPage(); 
+    if (tabName === 'achievements') renderAchievementsPage();
 }
 
 function goBackFromDetail() {
@@ -239,31 +212,19 @@ function toggleFilters() {
 function resetCatalogFilters() {
     currentFilters = { search: '', genre: '', year: '', status: '', sort: 'popularity' };
     document.getElementById('search-input').value = '';
-    
     const btns = document.querySelectorAll('#dropdown-filters .filter-btn');
     if (btns[0]) btns[0].innerHTML = 'Год ⌄';
     if (btns[1]) btns[1].innerHTML = 'Статус ⌄';
     if (btns[2]) btns[2].innerHTML = 'Сортировка ⌄';
-    
     document.querySelectorAll('#genre-filters .genre-pill').forEach(el => el.classList.remove('active'));
     const allBtn = document.querySelector('#genre-filters .genre-pill');
-    if (allBtn) {
-        allBtn.classList.add('active');
-        allBtn.innerHTML = '<div class="dot"></div>Все';
-    }
-    
+    if (allBtn) { allBtn.classList.add('active'); allBtn.innerHTML = '<div class="dot"></div>Все'; }
     loadCatalog(true);
 }
 
-// ==========================================
-// ХЕЛПЕР ПРИМЕНЕНИЯ ТИТУЛА
-// ==========================================
 function applyTitleToElement(titleEl, titleData) {
     if (!titleEl) return;
-    if (!titleData) {
-        titleEl.style.display = 'none';
-        return;
-    }
+    if (!titleData) { titleEl.style.display = 'none'; return; }
     titleEl.style.display = 'inline-flex';
     titleEl.className = 'user-title-display';
     titleEl.removeAttribute('data-title');
@@ -271,7 +232,6 @@ function applyTitleToElement(titleEl, titleData) {
     titleEl.style.border = '';
     titleEl.style.background = '';
     titleEl.style.textShadow = '';
-
     if (titleData.is_animated) {
         titleEl.className = 'user-title-display animated-title';
         titleEl.setAttribute('data-title', titleData.animation_key || 'gold');
@@ -292,14 +252,10 @@ async function syncProfileToDB() {
     try {
         const achString = JSON.stringify(stats.unlockedAchievements || []);
         await supabaseClient.from('users').upsert({
-            tg_id: MY_TG_ID, 
-            name: MY_NAME, 
-            avatar_url: MY_PHOTO_URL,
-            xp: stats.xp,
-            coins: stats.coins,
-            episodes_watched: stats.episodesWatched, 
-            minutes_watched: stats.minutesWatched, 
-            days_streak: stats.daysStreak,
+            tg_id: MY_TG_ID, name: MY_NAME, avatar_url: MY_PHOTO_URL,
+            xp: stats.xp, coins: stats.coins,
+            episodes_watched: stats.episodesWatched, minutes_watched: stats.minutesWatched, days_streak: stats.daysStreak,
+            active_banner:// ПРОДОЛЖЕНИЕ syncProfileToDB (продолжаем с active_banner)
             active_banner: stats.active_banner,
             active_title: stats.active_title,
             active_effect: stats.active_effect,
@@ -316,23 +272,20 @@ function copyMyId() {
 }
 
 async function loadProfileData() {
-    let stats = getStats(); 
+    let stats = getStats();
     if (stats.active_banner_url) ACTIVE_BANNER_URL = stats.active_banner_url;
-    
+
     if (MY_TG_ID && supabaseClient) {
         try {
             const { data: dbUser } = await supabaseClient.from('users').select('*').eq('tg_id', MY_TG_ID).single();
             if (dbUser) {
                 stats.coins = Math.max(stats.coins || 0, dbUser.coins || 0);
                 stats.xp = Math.max(stats.xp || 0, dbUser.xp || 0);
-                
+
                 if (dbUser.active_banner) {
                     stats.active_banner = dbUser.active_banner;
                     const { data: banner } = await supabaseClient.from('banners').select('image_url').eq('id', dbUser.active_banner).single();
-                    if (banner) {
-                        ACTIVE_BANNER_URL = safeUrl(banner.image_url);
-                        stats.active_banner_url = ACTIVE_BANNER_URL;
-                    }
+                    if (banner) { ACTIVE_BANNER_URL = safeUrl(banner.image_url); stats.active_banner_url = ACTIVE_BANNER_URL; }
                 }
                 if (dbUser.active_title) {
                     const { data: titleData } = await supabaseClient.from('titles').select('*').eq('id', dbUser.active_title).single();
@@ -350,21 +303,21 @@ async function loadProfileData() {
             }
         } catch(e) { console.log('Ошибка синхронизации', e); }
     }
-    
-    const today = new Date().toDateString(); 
-    if (stats.lastVisit !== today) { 
-        stats.daysStreak += 1; stats.lastVisit = today; stats.xp += 5; stats.coins += 10; 
+
+    const today = new Date().toDateString();
+    if (stats.lastVisit !== today) {
+        stats.daysStreak += 1; stats.lastVisit = today; stats.xp += 5; stats.coins += 10;
         stats.watchedToday = []; saveStats(stats); showToast('📅 Ежедневный вход! +5 XP');
-    } 
-    
-    checkAchievements(stats); 
-    
-    const avatarEl = document.getElementById('tg-avatar'); 
-    if (avatarEl && MY_TG_ID) { 
-        if (MY_PHOTO_URL) avatarEl.innerHTML = `<img src="${safeUrl(MY_PHOTO_URL)}" style="width:100%; height:100%; object-fit:cover;">`; 
-        else avatarEl.innerHTML = `<span>${escapeHTML(MY_NAME[0].toUpperCase())}</span>`; 
-    } 
-    
+    }
+
+    checkAchievements(stats);
+
+    const avatarEl = document.getElementById('tg-avatar');
+    if (avatarEl && MY_TG_ID) {
+        if (MY_PHOTO_URL) avatarEl.innerHTML = `<img src="${safeUrl(MY_PHOTO_URL)}" style="width:100%; height:100%; object-fit:cover;">`;
+        else avatarEl.innerHTML = `<span>${escapeHTML(MY_NAME[0].toUpperCase())}</span>`;
+    }
+
     const bannerEl = document.getElementById('profile-banner');
     if (bannerEl) bannerEl.style.backgroundImage = ACTIVE_BANNER_URL ? `url('${ACTIVE_BANNER_URL}')` : 'none';
 
@@ -388,28 +341,28 @@ async function loadProfileData() {
         titleContainer.style.display = 'none';
     }
 
-    const currentLevel = Math.floor(stats.xp / 100) + 1; 
-    const xpCurrentLevel = stats.xp % 100; 
-    const rankTitle = LEVEL_TITLES[Math.min(currentLevel - 1, 99)]; 
+    const currentLevel = Math.floor(stats.xp / 100) + 1;
+    const xpCurrentLevel = stats.xp % 100;
+    const rankTitle = LEVEL_TITLES[Math.min(currentLevel - 1, 99)];
 
-    setElText('user-level', currentLevel); setElText('user-level-text', currentLevel); setElText('user-rank', rankTitle); 
+    setElText('user-level', currentLevel); setElText('user-level-text', currentLevel); setElText('user-rank', rankTitle);
     setElText('user-xp-current', xpCurrentLevel); setElText('user-xp-next', 100);
     setElWidth('user-xp-bar', xpCurrentLevel + '%'); setElText('user-coins', stats.coins || 0);
 
     const totalAch = ACHIEVEMENTS.length;
-    setElText('ach-points', stats.unlockedAchievements.length * 10); 
-    setElText('ach-earned', stats.unlockedAchievements.length); 
+    setElText('ach-points', stats.unlockedAchievements.length * 10);
+    setElText('ach-earned', stats.unlockedAchievements.length);
     setElText('ach-total-count', totalAch);
-    setElWidth('ach-bar', (stats.unlockedAchievements.length / totalAch) * 100 + '%'); 
-    
-    setElText('modal-level-num', currentLevel); setElText('modal-rank', rankTitle); 
-    setElText('modal-xp-cur', xpCurrentLevel); setElText('modal-xp-next', 100); 
-    setElWidth('modal-xp-bar', xpCurrentLevel + '%'); 
+    setElWidth('ach-bar', (stats.unlockedAchievements.length / totalAch) * 100 + '%');
+
+    setElText('modal-level-num', currentLevel); setElText('modal-rank', rankTitle);
+    setElText('modal-xp-cur', xpCurrentLevel); setElText('modal-xp-next', 100);
+    setElWidth('modal-xp-bar', xpCurrentLevel + '%');
     const modalLevelNum = document.getElementById('modal-icon-level');
     if (modalLevelNum) modalLevelNum.textContent = currentLevel;
 
-    const nextAch = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id)); 
-    if (nextAch) { setElText('next-ach-name', nextAch.name); setElText('next-ach-reward', nextAch.coins); } 
+    const nextAch = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id));
+    if (nextAch) { setElText('next-ach-name', nextAch.name); setElText('next-ach-reward', nextAch.coins); }
     else { setElText('next-ach-name', 'Все выполнено!'); setElText('next-ach-reward', '0'); }
 
     syncProfileToDB();
@@ -418,7 +371,7 @@ async function loadProfileData() {
 function renderParticles() {
     const container = document.getElementById('particle-effect-container');
     if (!container) return;
-    container.innerHTML = ''; container.className = 'effect-container'; 
+    container.innerHTML = ''; container.className = 'effect-container';
     if (!ACTIVE_EFFECT_CSS) return;
     container.classList.add(ACTIVE_EFFECT_CSS);
     const count = ACTIVE_EFFECT_CSS === 'effect-matrix' ? 50 : 30;
@@ -449,10 +402,10 @@ function renderParticles() {
 // ПРЕДПРОСМОТР
 // ==========================================
 function startPreview(type, item) {
-    if (isPreviewMode) return; 
+    if (isPreviewMode) return;
     isPreviewMode = true;
     previewItem = { type, item };
-    savedStats = JSON.parse(JSON.stringify(getStats())); 
+    savedStats = JSON.parse(JSON.stringify(getStats()));
     savedStats._active_banner_url = ACTIVE_BANNER_URL;
     savedStats._active_title_data = ACTIVE_TITLE_DATA;
     savedStats._active_effect_css = ACTIVE_EFFECT_CSS;
@@ -516,7 +469,7 @@ function renderPreviewCard() {
 function renderPreviewParticles() {
     const container = document.getElementById('preview-particle-container');
     if (!container) return;
-    container.innerHTML = ''; container.className = 'effect-container'; 
+    container.innerHTML = ''; container.className = 'effect-container';
     if (!ACTIVE_EFFECT_CSS) return;
     container.classList.add(ACTIVE_EFFECT_CSS);
     const count = ACTIVE_EFFECT_CSS === 'effect-matrix' ? 50 : 30;
@@ -570,7 +523,7 @@ async function executePreview() {
 
     if (type === 'banner') await buyBanner(item.id, item.price);
     else await buyItem(type, item.id, item.price);
-    
+
     savedStats = null;
     switchTab('profile'); switchProfileTab('shop'); loadProfileData();
 }
@@ -650,7 +603,7 @@ async function renderTitlesInShop(container) {
             let titleHtml = '';
             if (t.is_animated) titleHtml = `<div class="user-title-display animated-title" data-title="${t.animation_key || 'gold'}" style="position:relative; font-size:11px; padding: 3px 10px;"><span class="title-text">${escapeHTML(t.name)}</span></div>`;
             else titleHtml = `<div class="user-title-display" style="color:${t.color}; border-color:${t.color}; font-size:11px; padding: 3px 10px;">${escapeHTML(t.name)}</div>`;
-            
+
             html += `
                 <div class="shop-item" onclick='startPreview("title", ${JSON.stringify(t).replace(/'/g, "&#39;")})'>
                     <div class="shop-img" style="background: #111; display:flex; align-items:center; justify-content:center; padding: 10px; box-sizing: border-box; overflow: hidden;">${titleHtml}</div>
@@ -716,7 +669,7 @@ async function renderBadgesInShop(container) {
             const list = items.filter(b => (b.rarity || 'common') === rarity.key);
             if (list.length === 0) return;
             html += `<div class="shop-category-header ${rarity.class}"><span style="color: ${rarity.color};">●</span> ${rarity.name}<span class="count">${list.length}</span></div>`;
-            
+
             list.forEach(b => {
                 const isActive = stats.active_badge === b.id;
                 let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${b.price} 🪙</div>`;
@@ -742,7 +695,7 @@ async function buyItem(type, itemId, price) {
         stats.coins -= price; saveStats(stats);
         await supabaseClient.from('user_inventory').insert({ tg_id: MY_TG_ID, item_type: type, item_id: itemId, is_active: false });
         syncProfileToDB(); showToast('✅ Покупка успешна!');
-        
+
         if (type === 'title') await applyTitle(itemId);
         else if (type === 'effect') await applyEffect(itemId);
         else if (type === 'badge') await applyBadge(itemId);
@@ -835,7 +788,6 @@ async function resetBanner() {
     if (bannerEl) bannerEl.style.backgroundImage = 'none';
     showToast('Баннер снят');
 }
-
 // ==========================================
 // 6. ДРУЗЬЯ
 // ==========================================
@@ -921,7 +873,7 @@ async function openFriendProfile(id, name) {
 
         const lvl = Math.floor((friend.xp || 0) / 100) + 1;
         const rank = LEVEL_TITLES[Math.min(lvl - 1, 99)];
-        
+
         let friendAchCount = 0;
         let achSource = friend.unlocked_achievements;
 
@@ -936,7 +888,7 @@ async function openFriendProfile(id, name) {
                 } catch(e) { console.log('Ошибка парсинга достижений:', e); }
             }
         }
-        
+
         const totalAchCount = ACHIEVEMENTS.length;
         const achPoints = friendAchCount * 10;
 
@@ -1061,72 +1013,72 @@ async function openFriendProfile(id, name) {
 // 7. ПЛЕЕР
 // ==========================================
 function startWatching(anime) { currentAnimeForPlayer = anime; switchTab('voice'); }
-function renderVoiceSelection() { 
-    const container = document.getElementById('voice-list'); 
-    let html = ''; 
-    VOICES.forEach(v => { html += `<div onclick="selectVoice('${v.id}', '${v.name}')" style="background: #14141f; border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 14px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.2s;"><div style="font-size: 24px;">${v.icon}</div><div style="font-size: 16px; font-weight: 600; color: #fff;">${v.name}</div></div>`; }); 
-    container.innerHTML = html; 
+function renderVoiceSelection() {
+    const container = document.getElementById('voice-list');
+    let html = '';
+    VOICES.forEach(v => { html += `<div onclick="selectVoice('${v.id}', '${v.name}')" style="background: #14141f; border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 14px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.2s;"><div style="font-size: 24px;">${v.icon}</div><div style="font-size: 16px; font-weight: 600; color: #fff;">${v.name}</div></div>`; });
+    container.innerHTML = html;
 }
 function selectVoice(id, name) { selectedVoice = name; switchTab('player'); renderPlayerSelection(); }
-function renderPlayerSelection() { 
-    const container = document.getElementById('player-list'); 
-    let html = ''; 
-    PLAYERS.forEach(p => { html += `<div onclick="selectPlayer('${p.id}', '${p.name}')" style="background: #14141f; border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 14px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.2s;"><div style="font-size: 24px;">${p.icon}</div><div style="font-size: 16px; font-weight: 600; color: #fff;">${p.name}</div></div>`; }); 
-    container.innerHTML = html; 
+function renderPlayerSelection() {
+    const container = document.getElementById('player-list');
+    let html = '';
+    PLAYERS.forEach(p => { html += `<div onclick="selectPlayer('${p.id}', '${p.name}')" style="background: #14141f; border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 14px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.2s;"><div style="font-size: 24px;">${p.icon}</div><div style="font-size: 16px; font-weight: 600; color: #fff;">${p.name}</div></div>`; });
+    container.innerHTML = html;
 }
 function selectPlayer(id, name) { selectedPlayer = name; switchTab('episodes'); renderEpisodesSelection(); }
-function renderEpisodesSelection() { 
-    document.getElementById('selected-voice-text').textContent = selectedVoice; 
-    document.getElementById('selected-player-text').textContent = selectedPlayer; 
-    const container = document.getElementById('episodes-list'); 
-    if (!currentAnimeForPlayer) return; 
-    let totalEpisodes = currentAnimeForPlayer.episodes || 12; if (totalEpisodes > 50) totalEpisodes = 50; 
-    let html = ''; 
-    for (let i = 1; i <= totalEpisodes; i++) html += `<div onclick="playEpisode(${i})" style="background: #1a1a20; border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; text-align: center; font-size: 16px; font-weight: bold; color: #fff; cursor: pointer; transition: 0.2s;">${i}</div>`; 
-    container.innerHTML = html; 
+function renderEpisodesSelection() {
+    document.getElementById('selected-voice-text').textContent = selectedVoice;
+    document.getElementById('selected-player-text').textContent = selectedPlayer;
+    const container = document.getElementById('episodes-list');
+    if (!currentAnimeForPlayer) return;
+    let totalEpisodes = currentAnimeForPlayer.episodes || 12; if (totalEpisodes > 50) totalEpisodes = 50;
+    let html = '';
+    for (let i = 1; i <= totalEpisodes; i++) html += `<div onclick="playEpisode(${i})" style="background: #1a1a20; border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; text-align: center; font-size: 16px; font-weight: bold; color: #fff; cursor: pointer; transition: 0.2s;">${i}</div>`;
+    container.innerHTML = html;
 }
-function playEpisode(epNum) { 
-    let stats = getStats(); stats.episodesWatched += 1; stats.minutesWatched += 24; saveStats(stats); 
-    if (tg) tg.showAlert(`🎬 Просмотр:\n${currentAnimeForPlayer.title}\n${selectedVoice}\n${selectedPlayer}\nСерия: ${epNum}`); 
+function playEpisode(epNum) {
+    let stats = getStats(); stats.episodesWatched += 1; stats.minutesWatched += 24; saveStats(stats);
+    if (tg) tg.showAlert(`🎬 Просмотр:\n${currentAnimeForPlayer.title}\n${selectedVoice}\n${selectedPlayer}\nСерия: ${epNum}`);
     currentAnimeForPlayer = null; switchTab('home');
 }
 
 // ==========================================
-// 8. КАТАЛОГ, ДЕТАЛИ, КОММЕНТАРИИ
+// 8. КАТАЛОГ
 // ==========================================
-function initCatalogFilters() { 
-    const genreContainer = document.getElementById('genre-filters'); 
-    if (!genreContainer) return; 
-    let html = `<div class="genre-pill active" onclick="setGenreFilter('', this)"><div class="dot"></div>Все</div>`; 
-    GENRES.forEach(g => { html += `<div class="genre-pill" onclick="setGenreFilter('${g.name}', this)">${g.name}</div>`; }); 
-    genreContainer.innerHTML = html; 
+function initCatalogFilters() {
+    const genreContainer = document.getElementById('genre-filters');
+    if (!genreContainer) return;
+    let html = `<div class="genre-pill active" onclick="setGenreFilter('', this)"><div class="dot"></div>Все</div>`;
+    GENRES.forEach(g => { html += `<div class="genre-pill" onclick="setGenreFilter('${g.name}', this)">${g.name}</div>`; });
+    genreContainer.innerHTML = html;
 }
-function setGenreFilter(genreName, btn) { 
-    currentFilters.genre = genreName; document.querySelectorAll('#genre-filters .genre-pill').forEach(el => el.classList.remove('active')); btn.classList.add('active'); 
-    if (genreName === '') btn.innerHTML = '<div class="dot"></div>Все'; loadCatalog(true); 
+function setGenreFilter(genreName, btn) {
+    currentFilters.genre = genreName; document.querySelectorAll('#genre-filters .genre-pill').forEach(el => el.classList.remove('active')); btn.classList.add('active');
+    if (genreName === '') btn.innerHTML = '<div class="dot"></div>Все'; loadCatalog(true);
 }
-function searchAnime() { 
+function searchAnime() {
     clearTimeout(searchDebounceTimer);
     searchDebounceTimer = setTimeout(() => { currentFilters.search = document.getElementById('search-input').value.trim(); loadCatalog(true); }, 500);
 }
-function openFilterModal(type) { 
-    const modal = document.getElementById('filterModal'); const title = document.getElementById('filter-modal-title'); const container = document.getElementById('filter-options-container'); 
-    let options = []; let currentVal = currentFilters[type]; 
-    if (type === 'year') { options = YEARS; title.textContent = 'Год выхода'; } 
-    if (type === 'status') { options = STATUSES; title.textContent = 'Статус'; } 
-    if (type === 'sort') { options = SORTS; title.textContent = 'Сортировка'; } 
-    let html = `<button class="filter-option-btn ${currentVal === '' ? 'active' : ''}" onclick="applyFilter('${type}', '')">Любой</button>`; 
-    options.forEach(opt => { html += `<button class="filter-option-btn ${currentVal === opt.id ? 'active' : ''}" onclick="applyFilter('${type}', '${opt.id}')">${opt.name}</button>`; }); 
-    container.innerHTML = html; modal.classList.add('active'); 
+function openFilterModal(type) {
+    const modal = document.getElementById('filterModal'); const title = document.getElementById('filter-modal-title'); const container = document.getElementById('filter-options-container');
+    let options = []; let currentVal = currentFilters[type];
+    if (type === 'year') { options = YEARS; title.textContent = 'Год выхода'; }
+    if (type === 'status') { options = STATUSES; title.textContent = 'Статус'; }
+    if (type === 'sort') { options = SORTS; title.textContent = 'Сортировка'; }
+    let html = `<button class="filter-option-btn ${currentVal === '' ? 'active' : ''}" onclick="applyFilter('${type}', '')">Любой</button>`;
+    options.forEach(opt => { html += `<button class="filter-option-btn ${currentVal === opt.id ? 'active' : ''}" onclick="applyFilter('${type}', '${opt.id}')">${opt.name}</button>`; });
+    container.innerHTML = html; modal.classList.add('active');
 }
-function applyFilter(type, value) { 
-    currentFilters[type] = value; closeModal('filterModal'); 
-    const btnIndex = type === 'year' ? 0 : type === 'status' ? 1 : 2; 
-    const btns = document.querySelectorAll('#dropdown-filters .filter-btn'); 
-    let optName = 'Любой'; 
-    if (value) { const list = type === 'year' ? YEARS : type === 'status' ? STATUSES : SORTS; optName = list.find(o => o.id === value)?.name || 'Любой'; } 
-    else optName = type === 'year' ? 'Год' : type === 'status' ? 'Статус' : 'Сортировка'; 
-    btns[btnIndex].innerHTML = `${optName} ⌄`; loadCatalog(true); 
+function applyFilter(type, value) {
+    currentFilters[type] = value; closeModal('filterModal');
+    const btnIndex = type === 'year' ? 0 : type === 'status' ? 1 : 2;
+    const btns = document.querySelectorAll('#dropdown-filters .filter-btn');
+    let optName = 'Любой';
+    if (value) { const list = type === 'year' ? YEARS : type === 'status' ? STATUSES : SORTS; optName = list.find(o => o.id === value)?.name || 'Любой'; }
+    else optName = type === 'year' ? 'Год' : type === 'status' ? 'Статус' : 'Сортировка';
+    btns[btnIndex].innerHTML = `${optName} ⌄`; loadCatalog(true);
 }
 
 async function loadCatalog(reset = false) {
@@ -1139,50 +1091,53 @@ async function loadCatalog(reset = false) {
         const items = await API.getCatalog(catalogPage, 50, currentFilters);
         const displayItems = items.slice(0, 12);
         if (reset) grid.innerHTML = '';
-        if (displayItems.length === 0) { 
-            if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Ничего не найдено</div>'; 
-            hasMoreCatalog = false; if (loadMoreBtn) loadMoreBtn.style.display = 'none'; return; 
+        if (displayItems.length === 0) {
+            if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Ничего не найдено</div>';
+            hasMoreCatalog = false; if (loadMoreBtn) loadMoreBtn.style.display = 'none'; return;
         }
-        displayItems.forEach(anime => { 
-            const title = escapeHTML(anime.title); const img = safeUrl(anime.images.jpg.image_url); const score = anime.score ? Number(anime.score).toFixed(1) : '?'; 
+        displayItems.forEach(anime => {
+            const title = escapeHTML(anime.title); const img = safeUrl(anime.images.jpg.image_url); const score = anime.score ? Number(anime.score).toFixed(1) : '?';
             grid.insertAdjacentHTML('beforeend', `<div class="catalog-card" onclick="openAnimeDetail('${anime.id}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`);
         });
-        if (items.length < 50) { hasMoreCatalog = false; if (loadMoreBtn) loadMoreBtn.style.display = 'none'; } 
+        if (items.length < 50) { hasMoreCatalog = false; if (loadMoreBtn) loadMoreBtn.style.display = 'none'; }
         else { if (loadMoreBtn) loadMoreBtn.style.display = 'inline-block'; }
-    } catch (e) { if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ff4444;">Ошибка</div>'; } 
+    } catch (e) { if (reset) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ff4444;">Ошибка</div>'; }
     finally { isCatalogLoading = false; }
 }
 function loadMoreCatalog() { if (!hasMoreCatalog || isCatalogLoading) return; catalogPage++; loadCatalog(false); }
 
+// ==========================================
+// 9. ДЕТАЛИ АНИМЕ
+// ==========================================
 async function openAnimeDetail(id, fromScreen = 'catalog') {
     previousScreen = fromScreen; switchTab('detail');
     const container = document.getElementById('detail-content');
     container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
-    
+
     try {
         const anime = await API.getDetails(id);
         if (!anime) throw new Error();
-        
+
         let userRating = 0;
         const { data: listItem } = await supabaseClient.from('user_lists').select('rating, status').eq('tg_id', MY_TG_ID).eq('anime_id', id).single();
         if (listItem && listItem.rating) userRating = listItem.rating;
-        
+
         const { data: comments } = await supabaseClient.from('anime_comments').select('*').eq('anime_id', id).order('created_at', { ascending: false });
 
-        const title = escapeHTML(anime.title); 
-        const desc = escapeHTML(anime.description); 
-        const score = anime.score ? Number(anime.score).toFixed(1) : '?'; 
+        const title = escapeHTML(anime.title);
+        const desc = escapeHTML(anime.description);
+        const score = anime.score ? Number(anime.score).toFixed(1) : '?';
         const poster = safeUrl(anime.images.jpg.image_url);
-        
-        let statusColor = '#2ecc71'; 
-        if (anime.status === 'Онгоинг') statusColor = '#3498db'; 
+
+        let statusColor = '#2ecc71';
+        if (anime.status === 'Онгоинг') statusColor = '#3498db';
         if (anime.status === 'Анонс') statusColor = '#e74c3c';
-        
-        const stats = getStats(); 
-        const favEntry = (stats.favedAnime || []).find(a => a.id === anime.id); 
+
+        const stats = getStats();
+        const favEntry = (stats.favedAnime || []).find(a => a.id === anime.id);
         const isFaved = !!favEntry;
-        window._tempAnimeData = anime; 
-        
+        window._tempAnimeData = anime;
+
         const heartSvg = `<svg style="width: 26px; height: 26px;"><use href="#oa-favorite"></use></svg>`;
 
         let starsHtml = '';
@@ -1228,42 +1183,40 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                         </div>
                     </div>
                 </div>
-                
+
                 <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                     <button onclick="startWatching(window._tempAnimeData)" style="flex: 1; background: #5b5bff; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); display: flex; justify-content: center; align-items: center; gap: 8px;">▶ Смотреть</button>
                     <button onclick="openStatusModal('${anime.id}')" class="btn-icon-heart ${isFaved ? 'faved' : ''}" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'}; border: 1px solid ${isFaved ? '#ff2d78' : 'rgba(255,255,255,0.15)'};">${heartSvg}</button>
                 </div>
-                
+
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;">${escapeHTML(g)}</span>`).join('')}</div>
-                
+
                 <div style="margin-bottom: 25px;">
                     <h3 style="font-size: 16px; margin-bottom: 10px; color: #fff; display: flex; align-items: center; gap: 8px;"><svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-book"></use></svg> Описание</h3>
                     <p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p>
                     <button id="desc-btn" onclick="toggleDescription()" style="display: none; background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button>
                 </div>
 
-                <!-- БЛОК РЕЙТИНГА -->
                 <div style="background: #14141f; border-radius: 16px; padding: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); text-align: center;">
                     <h3 style="font-size: 15px; color: #fff; margin-bottom: 10px;">Ваша оценка:</h3>
                     <div style="display: flex; justify-content: center; gap: 5px;">${starsHtml}</div>
                 </div>
 
-                <!-- БЛОК КОММЕНТАРИЕВ -->
                 <div style="margin-bottom: 40px;">
+                    <h3 style="font-size: 16px; margin-bottom: 15px; color: #fff; display: flex// ПРОДОЛЖЕНИЕ openAnimeDetail — блок комментариев и закрытие шаблона
                     <h3 style="font-size: 16px; margin-bottom: 15px; color: #fff; display: flex; align-items: center; gap: 8px;"><svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-edit"></use></svg> Комментарии</h3>
-                    
+
                     <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                         <input type="text" id="comment-input" placeholder="Написать отзыв..." style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
                         <button onclick="sendComment('${anime.id}')" style="background: #5b5bff; border: none; border-radius: 12px; padding: 0 15px; color: #fff; font-weight: bold; cursor: pointer;">➤</button>
                     </div>
-                    
+
                     <div id="comments-list">
                         ${commentsHtml}
                     </div>
                 </div>
             </div>`;
 
-        // Проверка на обрезку текста
         setTimeout(() => {
             const descEl = document.getElementById('desc-text');
             const btnEl = document.getElementById('desc-btn');
@@ -1276,22 +1229,21 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             }
         }, 50);
 
-    } catch (e) { 
+    } catch (e) {
         console.error(e);
-        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>'; 
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>';
     }
 }
 
 async function rateAnime(animeId, rating) {
     if (!supabaseClient || !MY_TG_ID) return;
-    
     try {
         const { data: existing } = await supabaseClient.from('user_lists')
             .select('id, status')
             .eq('tg_id', MY_TG_ID)
             .eq('anime_id', animeId)
             .single();
-            
+
         if (existing) {
             await supabaseClient.from('user_lists')
                 .update({ rating: rating })
@@ -1301,7 +1253,7 @@ async function rateAnime(animeId, rating) {
             await supabaseClient.from('user_lists')
                 .insert({ tg_id: MY_TG_ID, anime_id: animeId, status: 'planned', rating: rating });
         }
-        
+
         showToast(`⭐ Вы поставили оценку ${rating}`);
         openAnimeDetail(animeId, previousScreen);
     } catch(e) {
@@ -1313,10 +1265,10 @@ async function rateAnime(animeId, rating) {
 async function sendComment(animeId) {
     const input = document.getElementById('comment-input');
     const text = input.value.trim();
-    
+
     if (!text) { showToast('Напишите текст!'); return; }
     if (!supabaseClient || !MY_TG_ID) { showToast('Ошибка'); return; }
-    
+
     try {
         await supabaseClient.from('anime_comments').insert({
             anime_id: animeId,
@@ -1325,7 +1277,7 @@ async function sendComment(animeId) {
             user_avatar: MY_PHOTO_URL,
             text: text
         });
-        
+
         input.value = '';
         showToast('✅ Комментарий отправлен!');
         openAnimeDetail(animeId, previousScreen);
@@ -1335,11 +1287,11 @@ async function sendComment(animeId) {
     }
 }
 
-function openStatusModal(id) { 
+function openStatusModal(id) {
     const animeTitle = window._tempAnimeData ? window._tempAnimeData.title : 'Аниме';
-    document.getElementById('status-anime-title').textContent = animeTitle; 
-    document.getElementById('statusModal').classList.add('active'); 
-    window._currentAnimeForStatus = id; 
+    document.getElementById('status-anime-title').textContent = animeTitle;
+    document.getElementById('statusModal').classList.add('active');
+    window._currentAnimeForStatus = id;
 }
 
 async function setAnimeStatus(status) {
@@ -1355,34 +1307,34 @@ async function setAnimeStatus(status) {
             await supabaseClient.from('user_lists').insert({ tg_id: MY_TG_ID, anime_id: id, status: status });
             showToast('Статус обновлен!');
         } else showToast('Удалено из списка');
-        
+
         const heartBtn = document.querySelector('#detail-content button[onclick^="openStatusModal"]');
-        if (heartBtn) { 
-            if (status !== '') { heartBtn.style.background = 'rgba(255,45,120,0.2)'; heartBtn.style.borderColor = '#ff2d78'; heartBtn.style.color = '#ff2d78'; heartBtn.innerHTML = '<svg style="width: 26px; height: 26px;"><use href="#oa-favorite"></use></svg>'; } 
-            else { heartBtn.style.background = 'rgba(255,255,255,0.1)'; heartBtn.style.borderColor = 'rgba(255,255,255,0.15)'; heartBtn.style.color = '#fff'; heartBtn.innerHTML = '<svg style="width: 26px; height: 26px;"><use href="#oa-favorite"></use></svg>'; } 
+        if (heartBtn) {
+            if (status !== '') { heartBtn.style.background = 'rgba(255,45,120,0.2)'; heartBtn.style.borderColor = '#ff2d78'; heartBtn.style.color = '#ff2d78'; heartBtn.innerHTML = '<svg style="width: 26px; height: 26px;"><use href="#oa-favorite"></use></svg>'; }
+            else { heartBtn.style.background = 'rgba(255,255,255,0.1)'; heartBtn.style.borderColor = 'rgba(255,255,255,0.15)'; heartBtn.style.color = '#fff'; heartBtn.innerHTML = '<svg style="width: 26px; height: 26px;"><use href="#oa-favorite"></use></svg>'; }
         }
-        checkAchievements(getStats()); 
+        checkAchievements(getStats());
     } catch (e) { console.error(e); showToast('Ошибка сохранения'); }
 }
 
-function toggleDescription() { 
-    const descEl = document.getElementById('desc-text'); const btnEl = document.getElementById('desc-btn'); 
-    if (descEl.style.webkitLineClamp === '4' || descEl.style.webkitLineClamp === '') { descEl.style.webkitLineClamp = 'unset'; btnEl.innerHTML = 'Свернуть ▲'; } 
-    else { descEl.style.webkitLineClamp = '4'; btnEl.innerHTML = 'Читать полностью ▼'; } 
+function toggleDescription() {
+    const descEl = document.getElementById('desc-text'); const btnEl = document.getElementById('desc-btn');
+    if (descEl.style.webkitLineClamp === '4' || descEl.style.webkitLineClamp === '') { descEl.style.webkitLineClamp = 'unset'; btnEl.innerHTML = 'Свернуть ▲'; }
+    else { descEl.style.webkitLineClamp = '4'; btnEl.innerHTML = 'Читать полностью ▼'; }
 }
-async function openRandomAnime() { 
-    if (tg) tg.HapticFeedback.impactOccurred('medium'); 
-    showToast('🎲 Ищем...'); 
-    try { const items = await API.getRandom(1); if (items && items.length > 0) openAnimeDetail(items[0].id, 'catalog'); } catch (e) {} 
+async function openRandomAnime() {
+    if (tg) tg.HapticFeedback.impactOccurred('medium');
+    showToast('🎲 Ищем...');
+    try { const items = await API.getRandom(1); if (items && items.length > 0) openAnimeDetail(items[0].id, 'catalog'); } catch (e) {}
 }
 
 // ==========================================
-// 9. СПИСОК "МОЁ"
+// 10. СПИСОК "МОЁ"
 // ==========================================
-function filterMyList(type, btn) { 
-    currentMyListFilter = type; 
-    document.querySelectorAll('.my-list-tab').forEach(el => el.classList.remove('active')); btn.classList.add('active'); 
-    renderMyList(); 
+function filterMyList(type, btn) {
+    currentMyListFilter = type;
+    document.querySelectorAll('.my-list-tab').forEach(el => el.classList.remove('active')); btn.classList.add('active');
+    renderMyList();
 }
 
 async function renderMyList() {
@@ -1399,7 +1351,7 @@ async function renderMyList() {
         if (!list || list.length === 0) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">Тут пусто</div>'; return; }
         const cachedAnime = getStats().cachedAnime || {};
         grid.innerHTML = '';
-        
+
         list.forEach(favItem => {
             let anime = cachedAnime[favItem.anime_id];
             if (anime) renderMyListCard(anime, grid);
@@ -1419,7 +1371,7 @@ function renderMyListCard(anime, grid) {
 }
 
 // ==========================================
-// 10. СИСТЕМА ДОСТИЖЕНИЙ И XP
+// 11. ДОСТИЖЕНИЯ И XP
 // ==========================================
 const RARITY_STYLES = {
     common: { color: '#ccc', class: 'common', icon: 'ach-icon-crystal' },
@@ -1445,62 +1397,62 @@ const ACHIEVEMENTS = [
 
 const LEVEL_TITLES = ["Первый эпизод", "Любопытный зритель", "Случайный странник", "Ученик манги", "Читатель субтитров", "Собиратель тайтлов", "Ночной марафонец", "Ценитель опенингов", "Знаток сейю", "Ловец спойлеров", "Страж таймлайна", "Искатель шедевров", "Коллекционер жанров", "Следопыт сезона", "Архивариус эпизодов", "Пилот меха", "Ученик додзё", "Начинающий маг", "Дух сакуры", "Странник измерений", "Хранитель клинка", "Проводник сюжета", "Алхимик эмоций", "Писец рецензий", "Охотник за онгоингами", "Мастер бинджвотча", "Сэнпай сайта", "Хранитель лора", "Ткач теорий", "Лунный самурай", "Небесный курьер", "Хранитель опенингов", "Повелитель плейлистов", "Критик с катаной", "Мудрец субтитров", "Дубляжный маг", "Страж спойлеров", "Картограф арок", "Коллекционер аватарок", "Ловец редких тайтлов", "Хроникёр сезонов", "Мастер клиффхэнгеров", "Дуэлянт мнений", "Хранитель уютного уголка", "Рыцарь романтики", "Тень сёнэна", "Адепт исэкая", "Архимаг тайтлов", "Небесный отаку", "Странник по мирам", "Хранитель легенд", "Мастер сюжетных поворотов", "Голос фандома", "Судья сезона", "Хранитель аниме-реликвий", "Пилот звёздного поезда", "Лунный библиотекарь", "Самурай субботы", "Повелитель финальных титров", "Искатель скрытых жемчужин", "Маг рекомендаций", "Страж уютных вечеров", "Рыцарь онгоинга", "Дух обсуждений", "Хранитель мемов", "Мастер аниме-детектива", "Небесный критик", "Повелитель сезонных марафонов", "Хранитель канона", "Ткач фанфиков", "Оракул спойлеров", "Лунный сэнпай", "Самурай рейтингов", "Архивариус легенд", "Маг жанров", "Страж ночных просмотров", "Повелитель опенингов", "Хранитель тропов", "Рыцарь вечернего просмотра", "Дух фестиваля", "Мастер эмоциональных качелей", "Следопыт забытых тайтлов", "Хранитель аниме-хроник", "Небесный администратор", "Самурай финального эпизода", "Оракул сезонов", "Повелитель легендарных арок", "Хранитель аниме-вселенной", "Маг идеального топа", "Дух великого марафона", "Рыцарь вечного онгоинга", "Архимаг фандома", "Страж золотой коллекции", "Легенда аниме-сайта", "Небесный хранитель тайтлов", "Великий отаку-владыка", "Хранитель последнего эпизода", "Мастер пересмотров", "Дух аниме-сообщества", "Верховный хранитель сезонов"];
 
-function getStats() { 
-    let stats = JSON.parse(localStorage.getItem('onika_stats')); 
-    if (!stats) { 
-        stats = { 
-            episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0, 
+function getStats() {
+    let stats = JSON.parse(localStorage.getItem('onika_stats'));
+    if (!stats) {
+        stats = {
+            episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0,
             active_banner: null, active_banner_url: '', active_title: null, active_effect: null, active_badge: null,
             lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [], cachedAnime: {}, totalMinutesOnSite: 0, hasPurchasedBanner: false
-        }; 
-        localStorage.setItem('onika_stats', JSON.stringify(stats)); 
-    } 
-    if (!stats.unlockedAchievements) stats.unlockedAchievements = []; 
-    if (!stats.favedAnime) stats.favedAnime = []; 
-    if (!stats.watchedToday) stats.watchedToday = []; 
-    if (stats.coins === undefined) stats.coins = 0; 
+        };
+        localStorage.setItem('onika_stats', JSON.stringify(stats));
+    }
+    if (!stats.unlockedAchievements) stats.unlockedAchievements = [];
+    if (!stats.favedAnime) stats.favedAnime = [];
+    if (!stats.watchedToday) stats.watchedToday = [];
+    if (stats.coins === undefined) stats.coins = 0;
     if (!stats.cachedAnime) stats.cachedAnime = {};
     if (stats.totalMinutesOnSite === undefined) stats.totalMinutesOnSite = 0;
     if (stats.hasPurchasedBanner === undefined) stats.hasPurchasedBanner = false;
     if (stats.active_title === undefined) stats.active_title = null;
     if (stats.active_effect === undefined) stats.active_effect = null;
     if (stats.active_badge === undefined) stats.active_badge = null;
-    return stats; 
+    return stats;
 }
 function saveStats(stats) { localStorage.setItem('onika_stats', JSON.stringify(stats)); }
 
-function checkAchievements(stats) { 
-    let changed = false; 
-    ACHIEVEMENTS.forEach(ach => { 
-        if (!stats.unlockedAchievements.includes(ach.id)) { 
-            if (ach.check(stats)) { 
-                stats.unlockedAchievements.push(ach.id); 
-                stats.coins += ach.coins; 
-                stats.xp += ach.xp; 
-                changed = true; 
-                showToast(`🏆 ${ach.name}! (+${ach.xp} XP, +${ach.coins} 🪙)`); 
-            } 
-        } 
-    }); 
-    if (changed) saveStats(stats); 
+function checkAchievements(stats) {
+    let changed = false;
+    ACHIEVEMENTS.forEach(ach => {
+        if (!stats.unlockedAchievements.includes(ach.id)) {
+            if (ach.check(stats)) {
+                stats.unlockedAchievements.push(ach.id);
+                stats.coins += ach.coins;
+                stats.xp += ach.xp;
+                changed = true;
+                showToast(`🏆 ${ach.name}! (+${ach.xp} XP, +${ach.coins} 🪙)`);
+            }
+        }
+    });
+    if (changed) saveStats(stats);
 }
 
-function addXP(amount) { 
-    let stats = getStats(); 
-    const oldLevel = Math.floor(stats.xp / 100) + 1; 
-    stats.xp += amount; 
-    const newLevel = Math.floor(stats.xp / 100) + 1; 
-    
-    if (newLevel > oldLevel) { 
-        const rewardCoins = Math.floor(100 + Math.pow(newLevel, 2.5) * 2); 
+function addXP(amount) {
+    let stats = getStats();
+    const oldLevel = Math.floor(stats.xp / 100) + 1;
+    stats.xp += amount;
+    const newLevel = Math.floor(stats.xp / 100) + 1;
+
+    if (newLevel > oldLevel) {
+        const rewardCoins = Math.floor(100 + Math.pow(newLevel, 2.5) * 2);
         stats.coins += rewardCoins;
-        showLevelUpPopup(newLevel, LEVEL_TITLES[Math.min(newLevel - 1, 99)], rewardCoins); 
-        if (tg) tg.HapticFeedback.notificationOccurred('success'); 
-    } else { 
-        showToast(`+${amount} XP`); 
+        showLevelUpPopup(newLevel, LEVEL_TITLES[Math.min(newLevel - 1, 99)], rewardCoins);
+        if (tg) tg.HapticFeedback.notificationOccurred('success');
+    } else {
+        showToast(`+${amount} XP`);
     }
-    saveStats(stats); 
-    checkAchievements(stats); 
+    saveStats(stats);
+    checkAchievements(stats);
 }
 
 function addXPForTime(minutes) {
@@ -1508,68 +1460,68 @@ function addXPForTime(minutes) {
     stats.totalMinutesOnSite = (stats.totalMinutesOnSite || 0) + minutes;
     if (stats.totalMinutesOnSite >= 60) {
         const hours = Math.floor(stats.totalMinutesOnSite / 60);
-        stats.totalMinutesOnSite = stats.totalMinutesOnSite % 60; 
+        stats.totalMinutesOnSite = stats.totalMinutesOnSite % 60;
         saveStats(stats);
-        addXP(hours * 2); 
+        addXP(hours * 2);
         showToast(`⏱️ Вы провели на сайте ${hours} ч. (+${hours * 2} XP)`);
     } else saveStats(stats);
 }
 
-function showLevelUpPopup(level, rank, coins) { 
-    const popup = document.getElementById('levelUpPopup'); 
-    document.getElementById('popup-level').textContent = level; 
-    document.getElementById('popup-rank').textContent = rank; 
+function showLevelUpPopup(level, rank, coins) {
+    const popup = document.getElementById('levelUpPopup');
+    document.getElementById('popup-level').textContent = level;
+    document.getElementById('popup-rank').textContent = rank;
     document.getElementById('popup-coins').textContent = coins;
-    popup.classList.add('show'); 
-    setTimeout(() => popup.classList.remove('show'), 4000); 
+    popup.classList.add('show');
+    setTimeout(() => popup.classList.remove('show'), 4000);
 }
 
 function setElText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
 function setElWidth(id, width) { const el = document.getElementById(id); if (el) el.style.width = width; }
 
-function showToast(msg) { 
-    const toast = document.createElement('div'); toast.textContent = msg; 
-    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#5b5bff;color:#fff;padding:10px 20px;border-radius:20px;font-weight:bold;z-index:99999;box-shadow:0 4px 15px rgba(0,0,0,0.5);animation:fade 0.3s ease;text-align:center;'; 
-    document.body.appendChild(toast); setTimeout(() => toast.remove(), 2500); 
+function showToast(msg) {
+    const toast = document.createElement('div'); toast.textContent = msg;
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#5b5bff;color:#fff;padding:10px 20px;border-radius:20px;font-weight:bold;z-index:99999;box-shadow:0 4px 15px rgba(0,0,0,0.5);animation:fade 0.3s ease;text-align:center;';
+    document.body.appendChild(toast); setTimeout(() => toast.remove(), 2500);
 }
 
-function switchProfileTab(tab) { 
-    const btnProfile = document.getElementById('tab-btn-profile'); 
-    const btnShop = document.getElementById('tab-btn-shop'); 
-    const btnSettings = document.getElementById('tab-btn-settings'); 
-    
-    const contentProfile = document.getElementById('profile-content-tab'); 
-    const contentSettings = document.getElementById('settings-content-tab'); 
+function switchProfileTab(tab) {
+    const btnProfile = document.getElementById('tab-btn-profile');
+    const btnShop = document.getElementById('tab-btn-shop');
+    const btnSettings = document.getElementById('tab-btn-settings');
+
+    const contentProfile = document.getElementById('profile-content-tab');
+    const contentSettings = document.getElementById('settings-content-tab');
     const shopContent = document.getElementById('shop-content-tab');
-    
+
     if (btnProfile) btnProfile.classList.remove('active');
     if (btnShop) btnShop.classList.remove('active');
     if (btnSettings) btnSettings.classList.remove('active');
-    
+
     if (contentProfile) contentProfile.style.display = 'none';
     if (contentSettings) contentSettings.style.display = 'none';
     if (shopContent) shopContent.style.display = 'none';
-    
-    if (tab === 'profile') { 
-        if (btnProfile) btnProfile.classList.add('active'); 
-        if (contentProfile) contentProfile.style.display = 'block'; 
+
+    if (tab === 'profile') {
+        if (btnProfile) btnProfile.classList.add('active');
+        if (contentProfile) contentProfile.style.display = 'block';
     } else if (tab === 'shop') {
         if (btnShop) btnShop.classList.add('active');
         if (shopContent) { shopContent.style.display = 'block'; renderShopTab(currentShopTab); }
-    } else { 
-        if (btnSettings) btnSettings.classList.add('active'); 
-        if (contentSettings) contentSettings.style.display = 'block'; 
-    } 
+    } else {
+        if (btnSettings) btnSettings.classList.add('active');
+        if (contentSettings) contentSettings.style.display = 'block';
+    }
 }
 
 function openLevelModal() { document.getElementById('levelModal').classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 function openAchievementsPage() { switchTab('achievements'); }
 
-function renderAchievementsPage() { 
-    const stats = getStats(); 
-    const container = document.getElementById('achievements-list-container'); 
-    let html = ''; 
+function renderAchievementsPage() {
+    const stats = getStats();
+    const container = document.getElementById('achievements-list-container');
+    let html = '';
     setElText('page-ach-earned', stats.unlockedAchievements.length);
     setElText('page-ach-total', ACHIEVEMENTS.length);
 
@@ -1587,8 +1539,8 @@ function renderAchievementsPage() {
 
         html += `<div class="ach-category-header ${rarity.class}"><span style="color: ${rarity.color};">●</span> ${rarity.name}<span class="count">${completedCount} / ${list.length}</span></div>`;
 
-        list.forEach(ach => { 
-            const isDone = stats.unlockedAchievements.includes(ach.id); 
+        list.forEach(ach => {
+            const isDone = stats.unlockedAchievements.includes(ach.id);
             const rarityStyle = RARITY_STYLES[ach.rarity];
             const progressCurrent = ach.progress(stats);
             const progressPercent = (progressCurrent / ach.max) * 100;
@@ -1604,10 +1556,10 @@ function renderAchievementsPage() {
                     </div>
                     <div class="ach-reward-badge">+${ach.xp} XP, +${ach.coins} <svg style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;"><use href="#oa-coin"></use></svg></div>
                     ${isDone ? '<div class="ach-status-icon" style="color: #ffd700;"><svg style="width:20px;height:20px;"><use href="#oa-check"></use></svg></div>' : ''}
-                </div>`; 
+                </div>`;
         });
     });
-    container.innerHTML = html; 
+    container.innerHTML = html;
 }
 
 // ==========================================
@@ -1628,36 +1580,36 @@ async function loadHomePage() {
     } catch (e) { console.error(e); }
 }
 
-function initHeroSlider() { 
-    const slider = document.getElementById('heroSlider'); const dotsContainer = document.getElementById('heroDots'); 
-    if (!slider || heroData.length === 0) return; let sliderHTML = '', dotsHTML = ''; 
-    const stats = getStats(); const favedList = (stats.favedAnime || []).map(a => a.rawId || a.id.split('_')[1]); 
-    heroData.forEach((anime, index) => { 
+function initHeroSlider() {
+    const slider = document.getElementById('heroSlider'); const dotsContainer = document.getElementById('heroDots');
+    if (!slider || heroData.length === 0) return; let sliderHTML = '', dotsHTML = '';
+    const stats = getStats(); const favedList = (stats.favedAnime || []).map(a => a.rawId || a.id.split('_')[1]);
+    heroData.forEach((anime, index) => {
         const cleanId = anime.rawId || anime.id.split('_')[1];
-        const isFaved = favedList.includes(cleanId); 
-        const heartClass = isFaved ? 'faved' : ''; 
-        const heartIcon = isFaved ? '<svg style="width:24px;height:24px;fill:currentColor;stroke:none;"><use href="#oa-favorite"></use></svg>' : '<svg><use href="#oa-favorite"></use></svg>'; 
-        sliderHTML += `<div class="hero-slide ${index === 0 ? 'active' : ''}"><div class="hero-bg" style="background-image: url('${safeUrl(anime.img)}')"></div><div class="hero-gradient"></div><div class="hero-content"><div class="hero-badges"><span class="badge star">⭐ ${anime.score}</span><span class="badge">${escapeHTML(anime.type)}</span><span class="badge">${escapeHTML(anime.year)}</span></div><h1 class="hero-title">${escapeHTML(anime.title)}</h1><div class="hero-actions"><button class="btn-primary" onclick="openAnimeDetail('${anime.id}', 'home')">▶ Смотреть</button><button class="btn-icon-heart ${heartClass}" onclick="openStatusModal('${anime.id}')">${heartIcon}</button></div></div></div>`; 
-        dotsHTML += `<div class="hero-dot ${index === 0 ? 'active' : ''}" onclick="goToSlide(${index})"></div>`; 
-    }); 
-    slider.innerHTML = sliderHTML; dotsContainer.innerHTML = dotsHTML; startSlideShow(); addSwipeSupport(slider); 
+        const isFaved = favedList.includes(cleanId);
+        const heartClass = isFaved ? 'faved' : '';
+        const heartIcon = isFaved ? '<svg style="width:24px;height:24px;fill:currentColor;stroke:none;"><use href="#oa-favorite"></use></svg>' : '<svg><use href="#oa-favorite"></use></svg>';
+        sliderHTML += `<div class="hero-slide ${index === 0 ? 'active' : ''}"><div class="hero-bg" style="background-image: url('${safeUrl(anime.img)}')"></div><div class="hero-gradient"></div><div class="hero-content"><div class="hero-badges"><span class="badge star">⭐ ${anime.score}</span><span class="badge">${escapeHTML(anime.type)}</span><span class="badge">${escapeHTML(anime.year)}</span></div><h1 class="hero-title">${escapeHTML(anime.title)}</h1><div class="hero-actions"><button class="btn-primary" onclick="openAnimeDetail('${anime.id}', 'home')">▶ Смотреть</button><button class="btn-icon-heart ${heartClass}" onclick="openStatusModal('${anime.id}')">${heartIcon}</button></div></div></div>`;
+        dotsHTML += `<div class="hero-dot ${index === 0 ? 'active' : ''}" onclick="goToSlide(${index})"></div>`;
+    });
+    slider.innerHTML = sliderHTML; dotsContainer.innerHTML = dotsHTML; startSlideShow(); addSwipeSupport(slider);
 }
-function goToSlide(index) { 
-    const slides = document.querySelectorAll('.hero-slide'); const dots = document.querySelectorAll('.hero-dot'); 
-    slides.forEach(s => s.classList.remove('active')); dots.forEach(d => d.classList.remove('active')); 
-    slides[index].classList.add('active'); dots[index].classList.add('active'); currentSlide = index; 
+function goToSlide(index) {
+    const slides = document.querySelectorAll('.hero-slide'); const dots = document.querySelectorAll('.hero-dot');
+    slides.forEach(s => s.classList.remove('active')); dots.forEach(d => d.classList.remove('active'));
+    slides[index].classList.add('active'); dots[index].classList.add('active'); currentSlide = index;
 }
 function nextSlide() { currentSlide = (currentSlide + 1) % heroData.length; goToSlide(currentSlide); }
 function startSlideShow() { clearInterval(slideInterval); slideInterval = setInterval(nextSlide, 5000); }
 function stopSlideShow() { clearInterval(slideInterval); }
-function addSwipeSupport(element) { 
-    let touchStartX = 0; 
-    element.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; stopSlideShow(); }, { passive: true }); 
-    element.addEventListener('touchend', e => { 
-        const diff = touchStartX - e.changedTouches[0].screenX; 
-        if (diff > 50) nextSlide(); else if (diff < -50) { currentSlide = (currentSlide - 1 + heroData.length) % heroData.length; goToSlide(currentSlide); } 
-        startSlideShow(); 
-    }, { passive: true }); 
+function addSwipeSupport(element) {
+    let touchStartX = 0;
+    element.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; stopSlideShow(); }, { passive: true });
+    element.addEventListener('touchend', e => {
+        const diff = touchStartX - e.changedTouches[0].screenX;
+        if (diff > 50) nextSlide(); else if (diff < -50) { currentSlide = (currentSlide - 1 + heroData.length) % heroData.length; goToSlide(currentSlide); }
+        startSlideShow();
+    }, { passive: true });
 }
 
 // ==========================================
