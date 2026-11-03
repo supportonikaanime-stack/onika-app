@@ -160,6 +160,22 @@
         .genre-pill { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc; padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 8px; }
         .genre-pill.active { background: #2a2a3e; color: #fff; border-color: #5b5bff; }
         .genre-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; }
+
+        /* ==========================================
+           ФИКС: плавное скрытие фильтров
+           ========================================== */
+        #filters-wrapper {
+            overflow: hidden;
+            transition: max-height 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease, margin 0.3s ease;
+            max-height: 600px;
+            opacity: 1;
+        }
+        #filters-wrapper.filters-collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin-bottom: 0;
+            pointer-events: none;
+        }
         
         .catalog-card { background: #14141f; border-radius: 12px; overflow: hidden; position: relative; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); animation: cardEnter 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards; transition: transform 0.12s ease; }
         .catalog-card:active { transform: scale(0.94); }
@@ -829,6 +845,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=2113"></script>
+    <script src="app.js?v=2114"></script>
 </body>
 </html>
