@@ -271,12 +271,13 @@ function goBackFromDetail() {
 function toggleFilters() {
     const wrapper = document.getElementById('filters-wrapper');
     const chevron = document.getElementById('filter-chevron');
+    if (!wrapper) return;
     if (wrapper.classList.contains('filters-collapsed')) {
         wrapper.classList.remove('filters-collapsed');
-        chevron.style.transform = 'rotate(180deg)';
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
     } else {
         wrapper.classList.add('filters-collapsed');
-        chevron.style.transform = 'rotate(0deg)';
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
     }
 }
 
@@ -468,6 +469,7 @@ function renderParticles() {
         container.appendChild(span);
     }
 }
+
 // ==========================================
 // ПРЕДПРОСМОТР
 // ==========================================
