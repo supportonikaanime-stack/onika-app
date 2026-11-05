@@ -167,6 +167,7 @@ const CASE_COOLDOWN_MS = 3000;
 let lastCaseOpenTime = 0;
 let currentCaseId = null;
 let isCaseAnimating = false;
+let currentWinResult = null; // Храним результат до переворота карточки
 
 // ==========================================
 // 4. НАВИГАЦИЯ
@@ -411,7 +412,6 @@ function renderCasesGrid() {
     renderCaseHistory();
 }
 
-// Открытие модалки "Подробнее"
 async function openCaseDetails(caseId) {
     const c = CASES.find(x => x.id === caseId);
     if (!c) return;
@@ -432,7 +432,6 @@ async function openCaseDetails(caseId) {
         rollBtn.textContent = 'Мало монет';
     }
 
-    // Рендерим пул наград в зависимости от типа кейса
     const grid = document.getElementById('details-rewards-grid');
     grid.innerHTML = '<div style="color:#888; font-size:12px; padding: 5px;">Загрузка...</div>';
 
@@ -480,7 +479,6 @@ async function openCaseDetails(caseId) {
         grid.innerHTML = '<div style="color:#ff4444; font-size:12px; padding: 5px;">Ошибка загрузки</div>';
     }
 
-    // Запоминаем ID текущего кейса
     currentCaseId = c.id;
     modal.classList.add('active');
 }
@@ -494,39 +492,12 @@ function startCaseRoll() {
     setTimeout(() => { openCase(currentCaseId); }, 300);
 }
 
-// ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ КАРТИНКИ-ЗАГЛУШКИ
 function getCaseImageFallback(caseId) {
     const c = CASES.find(x => x.id === caseId) || CASES[0];
     return c ? c.image : 'case_all.png';
 }
 
-// Загрузка пула предметов
-async function getItemsForReel(caseId) {
-    let items = [];
-    try {
-        if (caseId === 'all') {
-            const [b, t, f, bd, e] = await Promise.all([
-                supabaseClient.from('banners').select('*'),
-                supabaseClient.from('titles').select('*'),
-                supabaseClient.from('frames').select('*'),
-                supabaseClient.from('badges').select('*'),
-                supabaseClient.from('effects').select('*')
-            ]);
-            items = [
-                ...(b.data || []).map(x => ({ ...x, _type: 'banner' })),
-                ...(t.data || []).map(x => ({ ...x, _type: 'title' })),
-                ...(f.data || []).map(x => ({ ...x, _type: 'frame' })),
-                ...(bd.data || []).map(x => ({ ...x, _type: 'badge' })),
-                ...(e.data || []).map(x => ({ ...x, _type: 'effect' }))
-            ];
-        } else {
-            const { data } = await supabaseClient.from(caseId + 's').select('*');
-            items = (data || []).map(x => ({ ...x, _type: caseId }));
-        }
-    } catch (e) { console.error(e); }
-    return items;
-}
-
+// ФУНКЦИЯ ЗАПУСКА РУЛЕТКИ (3 КАРТОЧКИ)
 function openCase(caseId) {
     const c = CASES.find(x => x.id === caseId);
     if (!c) return;
@@ -542,102 +513,87 @@ function openCase(caseId) {
     isCaseAnimating = true;
 
     const modal = document.getElementById('caseModal');
-    document.getElementById('case-modal-title').textContent = c.name;
+    document.getElementById('case-modal-title').textContent = 'Выберите карту';
     document.getElementById('case-result').classList.remove('show');
     document.getElementById('case-reopen-btn').style.display = 'none';
+    
+    // Очищаем прошлые карточки
+    const grid = document.getElementById('cards-choice-grid');
+    grid.innerHTML = '<div class="spinner"></div>';
+
     modal.classList.add('active');
 
-    const reel = document.getElementById('case-reel-track');
-    reel.style.transition = 'none';
-    reel.style.transform = 'translateX(0)';
+    // Отправляем запрос на сервер (или симулируем)
+    runCaseRPC(c.id).then(result => {
+        currentWinResult = result;
+        
+        // Генерируем 3 карточки
+        // Одна из них (случайная) будет содержать выигрыш, две другие - заглушки
+        const winPosition = Math.floor(Math.random() * 3);
+        let cardsHtml = '';
 
-    const totalItems = 40;
-    const winIndex = 35;
-    
-    // Очищаем ленту от прошлых запусков
-    reel.innerHTML = '';
-
-    getItemsForReel(c.id).then(pool => {
-        let reelHtml = '';
-        for (let i = 0; i < totalItems; i++) {
-            const roll = Math.random();
-            let rarity, label;
-            if (roll < 0.40) { rarity = 'common'; label = 'Обычный'; }
-            else if (roll < 0.75) { rarity = 'rare'; label = 'Редкий'; }
-            else if (roll < 0.93) { rarity = 'epic'; label = 'Эпический'; }
-            else { rarity = 'legendary'; label = 'Легендарный'; }
+        for (let i = 0; i < 3; i++) {
+            const isWin = (i === winPosition);
             
-            let itemName = label;
-            let imgUrl = '';
-            if (pool && pool.length > 0) {
-                const randomItem = pool[Math.floor(Math.random() * pool.length)];
-                itemName = randomItem.name || label;
-                imgUrl = randomItem.image_url ? safeUrl(randomItem.image_url) : getCaseImageFallback(c.id);
-            } else {
-                imgUrl = getCaseImageFallback(c.id);
-            }
+            let backClass = 'common';
+            let backContent = '';
             
-            reelHtml += `
-                <div class="reel-item ${rarity}" data-idx="${i}">
-                    <img class="reel-item-img" src="${imgUrl}" onerror="this.src='${getCaseImageFallback(c.id)}'">
-                    <div class="reel-item-name">${escapeHTML(itemName)}</div>
-                </div>`;
-        }
-        reel.innerHTML = reelHtml;
-
-        return runCaseRPC(c.id);
-    }).then(result => {
-        // ИСПРАВЛЕНИЕ: Ставим выигрышный предмет ровно в центр (35).
-        // Чтобы избежать любых несоответствий, мы ставим выигрыш не только в 35, 
-        // но и в 34 и 36, чтобы при прокрутке всегда попадал именно он.
-        const imgUrl = result.image_url ? safeUrl(result.image_url) : getCaseImageFallback(c.id);
-        const winHtml = `<img class="reel-item-img" src="${imgUrl}" onerror="this.src='${getCaseImageFallback(c.id)}'"><div class="reel-item-name">${escapeHTML(result.name || '')}</div>`;
-        const winClass = `reel-item ${result.rarity}`;
-
-        [34, 35, 36].forEach(idx => {
-            const el = reel.querySelector(`.reel-item[data-idx="${idx}"]`);
-            if (el) {
-                el.className = winClass;
-                el.innerHTML = winHtml;
-            }
-        });
-
-        if (result.empty) {
-            [34, 35, 36].forEach(idx => {
-                const el = reel.querySelector(`.reel-item[data-idx="${idx}"]`);
-                if (el) {
-                    el.className = 'reel-item empty';
-                    el.innerHTML = '<div class="reel-item-icon">⚫</div><div class="reel-item-name">Пусто</div>';
+            if (isWin) {
+                if (result.empty) {
+                    backClass = 'empty';
+                    backContent = `<div style="font-size: 30px;">⚫</div><div class="card-name-result" style="color:#888;">Пусто</div>`;
+                } else {
+                    backClass = result.rarity || 'common';
+                    const imgUrl = result.image_url ? safeUrl(result.image_url) : getCaseImageFallback(c.id);
+                    backContent = `<img class="card-img-result" src="${imgUrl}" onerror="this.src='${getCaseImageFallback(c.id)}'"><div class="card-name-result">${escapeHTML(result.name)}</div>`;
                 }
-            });
+            } else {
+                // Карточки-обманки (просто рандомные предметы)
+                backClass = 'common';
+                backContent = `<div style="font-size: 30px; opacity: 0.3;">🎁</div>`;
+            }
+
+            cardsHtml += `
+                <div class="flip-card" onclick="flipChosenCard(this, ${isWin}, ${i}, '${c.id}')">
+                    <div class="flip-card-front"></div>
+                    <div class="flip-card-back ${backClass}">
+                        ${backContent}
+                    </div>
+                </div>
+            `;
         }
 
-        // Анимация прокрутки
-        const itemWidth = 100 + 8; // 100px ширина + 8px отступ
-        const containerWidth = reel.parentElement.offsetWidth;
-        const centerOffset = containerWidth / 2;
-        
-        // Смещение, чтобы центр 35-го элемента встал ровно под указатель
-        const targetX = -(winIndex * itemWidth) + centerOffset - itemWidth / 2;
-        
-        // Добавляем "холостые" круги, чтобы лента покрутилась подольше
-        const extra = (totalItems - winIndex) * itemWidth;
-
-        requestAnimationFrame(() => {
-            reel.style.transition = 'transform 3.5s cubic-bezier(0.15, 0.85, 0.25, 1)';
-            reel.style.transform = `translateX(${targetX - extra}px)`;
-        });
-
-        setTimeout(() => {
-            isCaseAnimating = false;
-            showCaseResult(result, c);
-        }, 3600);
+        grid.innerHTML = cardsHtml;
     }).catch(err => {
         console.error(err);
         isCaseAnimating = false;
         showToast('Ошибка открытия кейса');
         closeCaseModal();
     });
+}
+
+// Логика переворота карточки
+function flipChosenCard(element, isWin, idx, caseId) {
+    if (element.classList.contains('flipped')) return;
+    if (element.parentElement.querySelectorAll('.flipped').length > 0) return; // Уже перевернули одну
+
+    // Переворачиваем
+    element.classList.add('flipped');
+    if (tg) { try { tg.HapticFeedback.impactOccurred('heavy'); } catch(e) {} }
+
+    // Если выбрали не выигрышную карточку - переворачиваем и остальные, чтобы показать, где был приз
+    const allCards = element.parentElement.querySelectorAll('.flip-card');
+    allCards.forEach(card => {
+        if (card !== element) {
+            setTimeout(() => { card.classList.add('flipped'); }, 800); // Перевернуть остальные чуть позже
+        }
+    });
+
+    // Показываем результат внизу
+    setTimeout(() => {
+        isCaseAnimating = false;
+        showCaseResult(currentWinResult, CASES.find(x => x.id === caseId));
+    }, 1000);
 }
 
 async function runCaseRPC(caseId) {
@@ -755,7 +711,7 @@ function showCaseResult(result, caseConfig) {
         const labels = { common: 'Обычный', rare: 'Редкий', epic: 'Эпический', legendary: 'Легендарный' };
         
         const imgUrl = result.image_url ? safeUrl(result.image_url) : getCaseImageFallback(caseConfig.id);
-        const iconHtml = `<img class="case-result-img" src="${imgUrl}" onerror="this.src='${getCaseImageFallback(caseConfig.id)}'" style="width: 120px; height: 120px; object-fit: cover; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">`;
+        const iconHtml = `<img class="case-result-img" src="${imgUrl}" onerror="this.src='${getCaseImageFallback(caseConfig.id)}'">`;
         
         content.innerHTML = `
             ${iconHtml}
@@ -788,6 +744,7 @@ function closeCaseModal() {
     if (modal) modal.classList.remove('active');
     isCaseAnimating = false;
     currentCaseId = null;
+    currentWinResult = null;
     renderCasesGrid();
 }
 
