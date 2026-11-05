@@ -291,7 +291,7 @@
         .settings-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; margin-right: 10px; }
 
         /* ==========================================
-           КЕЙСЫ (НОВЫЙ ДИЗАЙН)
+           КЕЙСЫ
            ========================================== */
         .cases-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 15px; }
         
@@ -314,7 +314,6 @@
         .case-card.premium { border-color: rgba(255,215,0,0.4); background: linear-gradient(135deg, #2a2415 0%, #14141f 100%); }
         .case-card.premium::before { background: radial-gradient(circle, rgba(255,215,0,0.15) 0%, transparent 60%); }
 
-        /* Картинка кейса */
         .case-image-wrap {
             width: 100%;
             aspect-ratio: 1 / 1;
@@ -331,23 +330,28 @@
             object-fit: cover;
             transition: transform 0.4s ease;
         }
-        .case-card:hover .case-image {
-            transform: scale(1.08);
-        }
-        .case-emoji-fallback {
-            font-size: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            height: 100%;
-        }
+        .case-card:hover .case-image { transform: scale(1.08); }
+        .case-emoji-fallback { font-size: 44px; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
 
         .case-name { font-size: 15px; font-weight: 800; color: #fff; margin-bottom: 4px; text-align: center; }
         .case-desc { font-size: 11px; color: #888; text-align: center; margin-bottom: 10px; min-height: 26px; }
         .case-price { display: flex; align-items: center; justify-content: center; gap: 5px; background: rgba(255,215,0,0.12); border: 1px solid rgba(255,215,0,0.3); border-radius: 10px; padding: 8px; font-size: 14px; font-weight: 800; color: #ffd700; margin-bottom: 8px; margin-top: auto; }
         .case-price svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
-        .case-open-btn { width: 100%; background: linear-gradient(90deg, #5b5bff, #7d7dff); background-size: 200% 100%; animation: btnShine 4s linear infinite; border: none; color: #fff; padding: 11px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; transition: 0.2s; }
+        
+        .case-open-btn { 
+            width: 100%; 
+            background: linear-gradient(90deg, #5b5bff, #7d7dff); 
+            background-size: 200% 100%; 
+            animation: btnShine 4s linear infinite; 
+            border: none; 
+            color: #fff; 
+            padding: 11px; 
+            border-radius: 10px; 
+            font-size: 13px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            transition: 0.2s; 
+        }
         .case-open-btn:active { transform: scale(0.95); }
         .case-open-btn:disabled { background: #333; animation: none; color: #666; cursor: not-allowed; }
         
@@ -410,6 +414,28 @@
         .case-history-item.empty .dot { background: #444; }
         .case-history-item-name { flex: 1; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .case-history-item-time { color: #666; font-size: 10px; }
+
+        /* Модалка DETAILS (Подробнее) */
+        .case-details-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 14000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(8px); }
+        .case-details-modal.active { display: flex; animation: overlayFade 0.3s ease; }
+        .case-details-content { width: 100%; max-width: 400px; background: #14141f; border-radius: 24px; padding: 24px 20px; border: 1px solid rgba(255,255,255,0.1); position: relative; text-align: center; animation: modalPop 0.4s cubic-bezier(0.22, 1, 0.36, 1); max-height: 90vh; overflow-y: auto; }
+        
+        .details-image { width: 100%; max-width: 220px; aspect-ratio: 1/1; object-fit: cover; border-radius: 16px; margin: 0 auto 15px auto; display: block; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 2px solid rgba(255,255,255,0.1); }
+        .details-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 5px; }
+        .details-subtitle { font-size: 14px; color: #888; margin-bottom: 20px; }
+        
+        .details-rewards-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 10px; text-align: left; display: flex; align-items: center; gap: 8px; }
+        .details-rewards-grid { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 15px; scrollbar-width: none; }
+        .details-rewards-grid::-webkit-scrollbar { display: none; }
+        .reward-pill { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px 12px; display: flex; align-items: center; gap: 8px; white-space: nowrap; flex-shrink: 0; }
+        .reward-pill-dot { width: 8px; height: 8px; border-radius: 50%; }
+        
+        .details-footer { display: flex; align-items: center; gap: 10px; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
+        .details-price { display: flex; align-items: center; justify-content: center; gap: 5px; background: rgba(255,215,0,0.12); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 14px 20px; font-size: 18px; font-weight: 800; color: #ffd700; }
+        .details-price svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; }
+        .details-btn-roll { flex: 1; background: linear-gradient(90deg, #5b5bff, #7d7dff); background-size: 200% 100%; animation: btnShine 4s linear infinite; border: none; color: #fff; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 800; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
+        .details-btn-roll:active { transform: scale(0.95); }
+        .details-btn-roll:disabled { background: #333; animation: none; color: #666; cursor: not-allowed; }
 
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
         .modal-overlay.active { display: flex; animation: overlayFade 0.25s ease; }
@@ -770,7 +796,30 @@
         </div>
     </div>
 
-    <!-- Модалка открытия кейса -->
+    <!-- МОДАЛКА DETAILS (Подробнее) -->
+    <div class="case-details-modal" id="caseDetailsModal">
+        <div class="case-details-content" id="caseDetailsContent">
+            <button class="modal-close" onclick="closeCaseDetails()"><svg><use href="#oa-close"></use></svg></button>
+            <img id="details-image" class="details-image" src="" alt="Case">
+            <div id="details-title" class="details-title">Название</div>
+            <div id="details-subtitle" class="details-subtitle">Описание</div>
+            
+            <div class="details-rewards-title">
+                <svg style="width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#oa-gift"></use></svg> 
+                Возможные награды:
+            </div>
+            <div id="details-rewards-grid" class="details-rewards-grid"></div>
+            
+            <div class="details-footer">
+                <div class="details-price">
+                    <svg><use href="#oa-coin"></use></svg> <span id="details-price-val">0</span>
+                </div>
+                <button id="details-roll-btn" class="details-btn-roll ripple-btn" onclick="startCaseRoll()">Крутить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА ОТКРЫТИЯ (РУЛЕТКА) -->
     <div class="case-modal" id="caseModal">
         <div class="case-modal-content" id="caseModalContent">
             <button class="modal-close" onclick="closeCaseModal()"><svg><use href="#oa-close"></use></svg></button>
@@ -839,6 +888,6 @@
         <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon"><svg><use href="#oa-profile"></use></svg></span><span class="nav-text">Профиль</span></div>
     </nav>
 
-    <script src="app.js?v=2210"></script>
+    <script src="app.js?v=2300"></script>
 </body>
 </html>
