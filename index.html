@@ -33,20 +33,10 @@
         @keyframes kenBurns { 0% { transform: scale(1) translate(0,0); } 100% { transform: scale(1.15) translate(-1.5%, -1%); } }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes textPulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
-        
-        /* Новые анимации */
-        @keyframes heroProgress {
-            from { width: 0%; }
-            to { width: 100%; }
-        }
-        @keyframes sectionFadeUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes heroProgress { from { width: 0%; } to { width: 100%; } }
+        @keyframes sectionFadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* ==========================================
-           SKELETON LOADERS
-           ========================================== */
+        /* SKELETON LOADERS */
         .skeleton {
             background: linear-gradient(90deg, #1a1a20 0%, #25252e 40%, #2e2e3a 50%, #25252e 60%, #1a1a20 100%);
             background-size: 800px 100%;
@@ -82,6 +72,12 @@
         }
         .horizontal-scroll .skeleton-card { min-width: 130px; width: 130px; height: 195px; flex-shrink: 0; }
 
+        .skeleton-shop-item { background: #1a1a20; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; }
+        .skeleton-shop-item .skeleton-shop-img { width: 100%; height: 100px; border-radius: 0; }
+        .skeleton-shop-item .skeleton-shop-info { padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .skeleton-shop-item .skeleton-shop-info .skeleton-text { width: 70%; height: 10px; margin: 0; }
+        .skeleton-shop-item .skeleton-shop-info .skeleton-text.short { width: 40%; }
+
         .skeleton-friend { display: flex; align-items: center; gap: 15px; background: #14141f; border-radius: 16px; padding: 15px; margin: 0 20px 10px; border: 1px solid rgba(255,255,255,0.05); }
         .skeleton-friend .skeleton-circle { width: 50px; height: 50px; flex-shrink: 0; }
         .skeleton-friend .skeleton-friend-info { flex: 1; }
@@ -89,33 +85,41 @@
         .skeleton-friend .skeleton-text.short { height: 10px; width: 30%; }
 
         .fade-in { animation: skeletonFadeIn 0.4s ease; }
-
         .ripple-btn { position: relative; overflow: hidden; -webkit-tap-highlight-color: transparent; }
         .ripple-btn .ripple { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.35); transform: scale(0); animation: rippleAnim 0.6s ease-out; pointer-events: none; }
-
         .spinner { width: 32px; height: 32px; border: 3px solid rgba(91,91,255,0.2); border-top-color: #5b5bff; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 20px auto; }
         .loading-text { animation: textPulse 1.2s ease-in-out infinite; color: #888; text-align: center; padding: 20px; }
 
-        /* ==========================================
-           ОСНОВНЫЕ СТИЛИ
-           ========================================== */
-        .hero-section { position: relative; height: 62vh; min-height: 380px; max-height: 520px; overflow: hidden; border-radius: 0 0 20px 20px; }
+        /* АВТОРИЗАЦИЯ */
+        .auth-screen { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 100000; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+        .auth-screen.active { display: flex; }
+        .auth-box { width: 100%; max-width: 400px; background: #14141f; border-radius: 24px; padding: 30px 24px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 60px rgba(0,0,0,0.6); animation: modalPop 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+        .auth-logo { text-align: center; font-size: 32px; font-weight: 900; margin-bottom: 24px; background: linear-gradient(90deg, #5b5bff, #b44aff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .auth-tabs { display: flex; background: #0f0f16; border-radius: 12px; padding: 4px; margin-bottom: 20px; }
+        .auth-tab { flex: 1; padding: 12px; text-align: center; border-radius: 9px; font-size: 14px; font-weight: 700; color: #888; cursor: pointer; transition: 0.2s; }
+        .auth-tab.active { background: #5b5bff; color: #fff; }
+        .auth-input { width: 100%; background: #0f0f16; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 16px; color: #fff; font-size: 15px; outline: none; margin-bottom: 12px; transition: border-color 0.2s; }
+        .auth-input:focus { border-color: #5b5bff; }
+        .auth-btn { width: 100%; background: linear-gradient(90deg, #5b5bff, #7d7dff); color: #fff; border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: 0.2s; }
+        .auth-btn:active { transform: scale(0.97); }
+        .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .auth-error { background: rgba(255,45,120,0.15); border: 1px solid rgba(255,45,120,0.4); color: #ff6688; padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 12px; display: none; }
+        .auth-error.active { display: block; }
+        .auth-footer { text-align: center; color: #888; font-size: 13px; margin-top: 20px; line-height: 1.5; }
+        .auth-link { color: #5b5bff; font-weight: 700; cursor: pointer; text-decoration: underline; }
+
+        /* ОСНОВНЫЕ СТИЛИ */
+        .hero-section { position: relative; height: 62vh; min-height: 380px; max-height: 520px; overflow: hidden; border-radius: 0 0 20px 20px; background: #111; }
         .hero-slider { position: relative; width: 100%; height: 100%; }
         .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; visibility: hidden; transition: 0.6s; display: flex; align-items: flex-end; }
         .hero-slide.active { opacity: 1; visibility: visible; z-index: 2; }
-        
-        /* Параллакс для фона */
-        .hero-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center top; z-index: 1; transition: transform 0.1s linear; }
+        .hero-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center top; z-index: 1; transition: transform 0.1s linear, opacity 0.5s; }
         .hero-slide.active .hero-bg { animation: kenBurns 8s ease-out forwards; }
         
-        .hero-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; opacity: 0; transition: opacity 0.5s; }
-        .hero-video.active { opacity: 1; }
-
         .hero-gradient { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(10,10,15,0.8) 0%, transparent 20%, transparent 50%, var(--bg) 95%), radial-gradient(circle at center, transparent 30%, rgba(10,10,15,0.6) 100%); z-index: 2; pointer-events: none; }
         .hero-content { position: relative; z-index: 3; padding: 16px 20px; width: 100%; padding-bottom: 28px; transform: translateY(20px); opacity: 0; transition: 0.6s; }
         .hero-slide.active .hero-content { transform: translateY(0); opacity: 1; transition-delay: 0.2s; }
         
-        /* Прогресс-бар слайдов */
         .hero-progress-bar {
             position: absolute; top: 0; left: 0; width: 100%; height: 3px;
             display: flex; gap: 2px; z-index: 10; padding: 0 4px;
@@ -128,12 +132,9 @@
             position: absolute; top: 0; left: 0; height: 100%;
             background: #5b5bff; width: 0%; border-radius: 2px;
         }
-        .hero-progress-seg.active .fill {
-            animation: heroProgress 5s linear forwards;
-        }
+        .hero-progress-seg.active .fill { animation: heroProgress 5s linear forwards; }
         .hero-progress-seg.done .fill { width: 100%; background: rgba(255,255,255,0.6); }
-
-        .hero-badges { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+                .hero-badges { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
         .badge { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #fff; border: 1px solid rgba(255,255,255,0.1); }
         .badge.star { color: #ffd700; background: rgba(0,0,0,0.4); border-color: rgba(255,215,0,0.2); animation: badgePulse 2.5s infinite; }
         
@@ -145,7 +146,6 @@
         .hero-actions .btn-icon-heart { width: 48px; height: 48px; border-radius: 12px; }
         .hero-actions .btn-icon-heart svg { width: 22px; height: 22px; }
         
-        /* Кнопка "Трейлер" */
         .btn-trailer { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 0 16px; height: 48px; border-radius: 12px; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer; backdrop-filter: blur(10px); }
         
         .btn-icon-heart { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 56px; height: 56px; border-radius: 14px; display: flex; justify-content: center; align-items: center; cursor: pointer; flex-shrink: 0; }
@@ -157,12 +157,8 @@
         .hero-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.3); transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
         .hero-dot.active { width: 18px; border-radius: 4px; background: var(--primary); box-shadow: 0 0 12px rgba(91,91,255,0.9); }
 
-        /* ==========================================
-           СЕКЦИИ С АНИМАЦИЕЙ ПОЯВЛЕНИЯ
-           ========================================== */
         .content-section { padding: 20px 0; opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
         .content-section.fade-in-section { animation: sectionFadeUp 0.6s ease forwards; }
-
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-bottom: 15px; }
         .section-header h2 { font-size: 20px; font-weight: 700; }
         .horizontal-scroll { display: flex; gap: 12px; padding: 0 20px; overflow-x: auto; scrollbar-width: none; }
@@ -182,11 +178,6 @@
         .tg-text h3 { font-size: 16px; font-weight: 700; margin-bottom: 2px; color: white !important; }
         .tg-text p { font-size: 12px; color: rgba(255,255,255,0.6) !important; }
 
-        /* (Остальные стили опущены для краткости, они такие же, как в предыдущем файле) */
-        /* ... */
-        /* ВАЖНО: Сюда вставить остальные стили из предыдущего index.html (фильтры, каталог, профиль, магазин и т.д.) */
-        /* Они не менялись, я их не дублирую, чтобы не раздувать ответ. Просто скопируй их из предыдущего рабочего файла. */
-        
         .filter-btn { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc; padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
         .filter-btn.active { background: rgba(91,91,255,0.15); border-color: #5b5bff; color: #a29bfe; }
         .genre-pill { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc; padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 8px; }
@@ -450,6 +441,30 @@
       <symbol id="oa-trailer" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="3"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></symbol>
     </svg>
 
+    <!-- ЭКРАН АВТОРИЗАЦИИ -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-box">
+            <div class="auth-logo">OnikaAnime</div>
+            <div class="auth-tabs">
+                <div class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Вход</div>
+                <div class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Регистрация</div>
+            </div>
+            <div class="auth-error" id="authError"></div>
+            <div id="form-login">
+                <input type="text" id="login-email" class="auth-input" placeholder="Никнейм" autocomplete="username">
+                <input type="password" id="login-password" class="auth-input" placeholder="Пароль" autocomplete="current-password">
+                <button class="auth-btn" id="login-btn" onclick="handleLogin()">Войти</button>
+                <div class="auth-footer">Нет аккаунта? <span class="auth-link" onclick="switchAuthTab('register')">Зарегистрироваться</span></div>
+            </div>
+            <div id="form-register" style="display:none;">
+                <input type="text" id="reg-nickname" class="auth-input" placeholder="Никнейм (макс. 12 символов)" maxlength="12" autocomplete="off">
+                <input type="password" id="reg-password" class="auth-input" placeholder="Пароль (мин. 6 символов)" autocomplete="new-password">
+                <button class="auth-btn" id="register-btn" onclick="handleRegister()">Создать аккаунт</button>
+                <div class="auth-footer">Уже есть аккаунт? <span class="auth-link" onclick="switchAuthTab('login')">Войти</span></div>
+            </div>
+        </div>
+    </div>
+
     <div class="level-up-popup" id="levelUpPopup">
         <div class="icon"><svg><use href="#oa-level"></use></svg></div>
         <div class="text">
@@ -458,8 +473,7 @@
         </div>
         <div class="coins">+<span id="popup-coins">100</span> <svg><use href="#oa-coin"></use></svg></div>
     </div>
-
-    <!-- ЭКРАНЫ -->
+        <!-- ЭКРАНЫ -->
     <div id="screen-home" class="screen active">
         <section class="hero-section" id="heroSection">
             <div class="hero-progress-bar" id="heroProgressBar"></div>
@@ -489,11 +503,7 @@
         </section>
     </div>
 
-    <!-- ... ОСТАЛЬНЫЕ ЭКРАНЫ (Каталог, Моё, Друзья, Детали и т.д.) ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ ... -->
-    <!-- Скопируй их из предыдущего index.html. Я не дублирую их, чтобы не раздувать ответ. -->
-    
     <div id="screen-catalog" class="screen">
-        <!-- Код каталога из предыдущего файла -->
         <div style="padding: 20px 20px 10px 20px;">
             <div style="display: flex; align-items: center; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 0 15px; margin-bottom: 15px;">
                 <span style="color: #888; display: flex; align-items: center;"><svg style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-search"></use></svg></span>
@@ -535,7 +545,6 @@
     </div>
 
     <div id="screen-my" class="screen">
-        <!-- ... Код "Моё" ... -->
         <header class="profile-header" style="padding-bottom: 10px;"><h1>Моё</h1></header>
         <div class="my-list-tabs" id="my-list-tabs">
             <div class="my-list-tab ripple-btn active" onclick="filterMyList('all', this)">Все</div>
@@ -549,7 +558,6 @@
     </div>
 
     <div id="screen-friends" class="screen">
-        <!-- ... Код "Друзья" ... -->
         <header class="profile-header" style="padding-bottom: 10px;"><h1>Друзья</h1></header>
         <div class="friends-search">
             <input type="number" id="friend-search-input" placeholder="Введите Telegram ID друга...">
@@ -705,6 +713,9 @@
                         <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять значок</span>
                         <span style="color: #888;">›</span>
                     </button>
+                    <button class="settings-btn" onclick="signOut()" style="color: #ff2d78; border-color: rgba(255,45,120,0.3);">
+                        <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Выйти из аккаунта</span>
+                    </button>
                 </div>
             </div>
 
@@ -763,19 +774,16 @@
     <div class="modal-overlay" id="levelModal" onclick="closeModal('levelModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('levelModal')"><svg><use href="#oa-close"></use></svg></button>
-            
             <div class="modal-icon-large">
                 <div class="level-badge modal-level-badge" id="modal-level-badge-container">
                     <img src="level_icon.png" class="level-badge-img" alt="level" onerror="this.style.display='none'">
                     <span id="modal-icon-level" class="level-number">1</span>
                 </div>
             </div>
-            
             <div class="modal-title">Уровень <span id="modal-level-num">1</span></div>
             <div class="modal-subtitle">Звание: <span style="color: #b44aff; font-weight: bold;" id="modal-rank">Первый эпизод</span></div>
             <div class="modal-xp-bar"><div class="modal-xp-fill" id="modal-xp-bar" style="width: 20%;"></div></div>
             <div class="modal-xp-text"><span id="modal-xp-cur">0</span> / <span id="modal-xp-next">100</span> XP</div>
-            
             <div class="modal-desc">
                 <b>Как фармить XP:</b><br>
                 📅 Ежедневный вход: +5 XP<br>
@@ -837,6 +845,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=2800"></script>
+    <script src="app.js?v=3100"></script>
 </body>
 </html>
