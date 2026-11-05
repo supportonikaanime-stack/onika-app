@@ -152,15 +152,15 @@ const STATUSES = [{ id: 'ongoing', name: 'Онгоинг' }, { id: 'released', n
 const SORTS = [{ id: 'popularity', name: 'По популярности' }, { id: 'ranked', name: 'По рейтингу' }, { id: 'aired_on', name: 'Новинки' }];
 
 // ==========================================
-// 3.1 КЕЙСЫ — КОНФИГ
+// 3.1 КЕЙСЫ — КОНФИГ (С КАРТИНКАМИ)
 // ==========================================
 const CASES = [
-    { id: 'all',    name: 'Всё в одном', emoji: '🎁', price: 100, emptyChance: 0.40, desc: 'Любой предмет',        premium: false, top: true },
-    { id: 'banner', name: 'Баннеры',     emoji: '🖼️', price: 150, emptyChance: 0.35, desc: 'Только баннеры',      premium: false },
-    { id: 'title',  name: 'Титулы',      emoji: '🏷️', price: 150, emptyChance: 0.35, desc: 'Только титулы',       premium: false },
-    { id: 'frame',  name: 'Рамки',       emoji: '🖌️', price: 150, emptyChance: 0.35, desc: 'Только рамки',        premium: false },
-    { id: 'badge',  name: 'Значки',      emoji: '🎖️', price: 150, emptyChance: 0.35, desc: 'Только значки',       premium: false },
-    { id: 'effect', name: 'Эффекты',     emoji: '✨', price: 200, emptyChance: 0.30, desc: 'Только эффекты',      premium: false }
+    { id: 'all',    name: 'Всё в одном', image: 'case_all.png',    price: 100, emptyChance: 0.40, desc: 'Любой предмет',    premium: false, top: true },
+    { id: 'banner', name: 'Баннеры',     image: 'case_banner.png', price: 150, emptyChance: 0.35, desc: 'Только баннеры',   premium: false },
+    { id: 'title',  name: 'Титулы',      image: 'case_title.png',  price: 150, emptyChance: 0.35, desc: 'Только титулы',    premium: false },
+    { id: 'frame',  name: 'Рамки',       image: 'case_frame.png',  price: 150, emptyChance: 0.35, desc: 'Только рамки',     premium: false },
+    { id: 'badge',  name: 'Значки',      image: 'case_badge.png',  price: 150, emptyChance: 0.35, desc: 'Только значки',    premium: false },
+    { id: 'effect', name: 'Эффекты',     image: 'case_effect.png', price: 200, emptyChance: 0.30, desc: 'Только эффекты',   premium: false }
 ];
 
 const CASE_COOLDOWN_MS = 3000;
@@ -392,10 +392,13 @@ function renderCasesGrid() {
         const badges = [];
         if (c.top) badges.push('<span class="case-top-badge">🔥 ТОП</span>');
         if (c.premium) badges.push('<span class="case-premium-badge">💎 PREMIUM</span>');
+        
         html += `
             <div class="case-card ${c.premium ? 'premium' : ''}">
                 ${badges.join('')}
-                <span class="case-emoji">${c.emoji}</span>
+                <div class="case-image-wrap">
+                    <img src="${c.image}" class="case-image" alt="${escapeHTML(c.name)}" onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\\'case-emoji-fallback\\'>🎁</span>'">
+                </div>
                 <div class="case-name">${escapeHTML(c.name)}</div>
                 <div class="case-desc">${escapeHTML(c.desc)}</div>
                 <div class="case-price"><svg><use href="#oa-coin"></use></svg> ${c.price}</div>
@@ -452,7 +455,7 @@ function openCase(caseId) {
     isCaseAnimating = true;
 
     const modal = document.getElementById('caseModal');
-    document.getElementById('case-modal-title').textContent = `${c.emoji} ${c.name}`;
+    document.getElementById('case-modal-title').textContent = `${c.name}`;
     document.getElementById('case-result').classList.remove('show');
     document.getElementById('case-reopen-btn').style.display = 'none';
     modal.classList.add('active');
@@ -476,7 +479,6 @@ function openCase(caseId) {
         reelItems.push({ rarity, label, emoji, fake: true });
     }
 
-    // Заменяем центральный на "пусто" или реальный предмет (показываем позже)
     reel.innerHTML = reelItems.map((it, idx) => `
         <div class="reel-item ${it.rarity}" data-idx="${idx}">
             <div class="reel-item-icon">${it.emoji}</div>
@@ -489,7 +491,7 @@ function openCase(caseId) {
         // Обновляем центральный элемент
         const centerEl = reel.querySelector(`.reel-item[data-idx="${winIndex}"]`);
         if (centerEl && result && !result.empty) {
-            const iconHtml = result.image_url ? `<img class="reel-item-img" src="${safeUrl(result.image_url)}">` : `<div class="reel-item-icon">${c.emoji}</div>`;
+            const iconHtml = result.image_url ? `<img class="reel-item-img" src="${safeUrl(result.image_url)}">` : `<img class="reel-item-img" src="${c.image}" style="object-fit:cover;">`;
             centerEl.className = `reel-item ${result.rarity}`;
             centerEl.innerHTML = `${iconHtml}<div class="reel-item-name">${escapeHTML(result.name || '')}</div>`;
         } else if (centerEl) {
@@ -522,7 +524,6 @@ function openCase(caseId) {
 }
 
 async function runCaseRPC(caseId) {
-    // Вызов RPC (безопасно). Если RPC ещё не создан — fallback на клиент (НЕ БЕЗОПАСНО).
     try {
         const { data, error } = await supabaseClient.rpc('open_case', { p_case_id: caseId });
         if (error) throw error;
@@ -534,7 +535,6 @@ async function runCaseRPC(caseId) {
 }
 
 // ⚠️ ЛОКАЛЬНАЯ СИМУЛЯЦИЯ — работает без RPC, но НЕ ЗАЩИЩЕНА от абьюза.
-// Используй ТОЛЬКО для теста. В продакшене — только RPC.
 async function simulateCaseLocally(caseId) {
     const c = CASES.find(x => x.id === caseId);
     const stats = getStats();
@@ -638,7 +638,7 @@ function showCaseResult(result, caseConfig) {
         const rarity = result.rarity || 'common';
         resEl.className = `case-result show ${rarity}`;
         const labels = { common: 'Обычный', rare: 'Редкий', epic: 'Эпический', legendary: 'Легендарный' };
-        const iconHtml = result.image_url ? `<img class="case-result-img" src="${safeUrl(result.image_url)}">` : `<div class="case-result-icon">${caseConfig.emoji}</div>`;
+        const iconHtml = result.image_url ? `<img class="case-result-img" src="${safeUrl(result.image_url)}">` : `<div class="case-result-icon">🎁</div>`;
         content.innerHTML = `
             ${iconHtml}
             <div class="case-result-title">${escapeHTML(result.name || '')}</div>
@@ -688,6 +688,7 @@ function fireConfetti(type) {
         setTimeout(() => el.remove(), 4000);
     }
 }
+
 // ==========================================
 // 6. ДРУЗЬЯ
 // ==========================================
