@@ -497,6 +497,39 @@ function startCaseRoll() {
     }, 300);
 }
 
+// ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ КАРТИНКИ-ЗАГЛУШКИ (КАРТОЧКА КЕЙСА)
+function getCaseImageFallback(caseId) {
+    const c = CASES.find(x => x.id === caseId) || CASES[0];
+    return c ? c.image : 'case_all.png';
+}
+
+// Функция для загрузки реальных предметов в рулетку
+async function getItemsForReel(caseId) {
+    let items = [];
+    try {
+        if (caseId === 'all') {
+            const [b, t, f, bd, e] = await Promise.all([
+                supabaseClient.from('banners').select('*'),
+                supabaseClient.from('titles').select('*'),
+                supabaseClient.from('frames').select('*'),
+                supabaseClient.from('badges').select('*'),
+                supabaseClient.from('effects').select('*')
+            ]);
+            items = [
+                ...(b.data || []).map(x => ({ ...x, _type: 'banner' })),
+                ...(t.data || []).map(x => ({ ...x, _type: 'title' })),
+                ...(f.data || []).map(x => ({ ...x, _type: 'frame' })),
+                ...(bd.data || []).map(x => ({ ...x, _type: 'badge' })),
+                ...(e.data || []).map(x => ({ ...x, _type: 'effect' }))
+            ];
+        } else {
+            const { data } = await supabaseClient.from(caseId + 's').select('*');
+            items = (data || []).map(x => ({ ...x, _type: caseId }));
+        }
+    } catch (e) { console.error(e); }
+    return items;
+}
+
 function openCase(caseId) {
     const c = CASES.find(x => x.id === caseId);
     if (!c) return;
@@ -522,34 +555,47 @@ function openCase(caseId) {
     reel.style.transition = 'none';
     reel.style.transform = 'translateX(0)';
 
-    const reelItems = [];
     const totalItems = 40;
     const winIndex = 35;
+    
+    // Загружаем реальные предметы для ленты
+    getItemsForReel(c.id).then(pool => {
+        let reelHtml = '';
+        for (let i = 0; i < totalItems; i++) {
+            const roll = Math.random();
+            let rarity, label;
+            if (roll < 0.40) { rarity = 'common'; label = 'Обычный'; }
+            else if (roll < 0.75) { rarity = 'rare'; label = 'Редкий'; }
+            else if (roll < 0.93) { rarity = 'epic'; label = 'Эпический'; }
+            else { rarity = 'legendary'; label = 'Легендарный'; }
+            
+            // Берем случайный предмет из пула
+            let itemName = label;
+            let imgUrl = '';
+            if (pool && pool.length > 0) {
+                const randomItem = pool[Math.floor(Math.random() * pool.length)];
+                itemName = randomItem.name || label;
+                imgUrl = randomItem.image_url ? safeUrl(randomItem.image_url) : getCaseImageFallback(c.id);
+            } else {
+                imgUrl = getCaseImageFallback(c.id);
+            }
+            
+            reelHtml += `
+                <div class="reel-item ${rarity}" data-idx="${i}">
+                    <img class="reel-item-img" src="${imgUrl}" onerror="this.src='${getCaseImageFallback(c.id)}'">
+                    <div class="reel-item-name">${escapeHTML(itemName)}</div>
+                </div>`;
+        }
+        reel.innerHTML = reelHtml;
 
-    for (let i = 0; i < totalItems; i++) {
-        const roll = Math.random();
-        let rarity, label, emoji;
-        if (roll < 0.40) { rarity = 'common'; label = 'Обычный'; emoji = '🟢'; }
-        else if (roll < 0.75) { rarity = 'rare'; label = 'Редкий'; emoji = '🔵'; }
-        else if (roll < 0.93) { rarity = 'epic'; label = 'Эпический'; emoji = '🟣'; }
-        else { rarity = 'legendary'; label = 'Легендарный'; emoji = '🟡'; }
-        reelItems.push({ rarity, label, emoji });
-    }
-
-    reel.innerHTML = reelItems.map((it, idx) => `
-        <div class="reel-item ${it.rarity}" data-idx="${idx}">
-            <div class="reel-item-icon">${it.emoji}</div>
-            <div class="reel-item-name">${it.label}</div>
-        </div>
-    `).join('');
-
-    // Запускаем RPC
-    runCaseRPC(c.id).then(result => {
+        // Запускаем RPC
+        return runCaseRPC(c.id);
+    }).then(result => {
         const centerEl = reel.querySelector(`.reel-item[data-idx="${winIndex}"]`);
         if (centerEl && result && !result.empty) {
-            const iconHtml = result.image_url ? `<img class="reel-item-img" src="${safeUrl(result.image_url)}">` : `<img class="reel-item-img" src="${c.image}" style="object-fit:cover;">`;
+            const imgUrl = result.image_url ? safeUrl(result.image_url) : getCaseImageFallback(c.id);
             centerEl.className = `reel-item ${result.rarity}`;
-            centerEl.innerHTML = `${iconHtml}<div class="reel-item-name">${escapeHTML(result.name || '')}</div>`;
+            centerEl.innerHTML = `<img class="reel-item-img" src="${imgUrl}" onerror="this.src='${getCaseImageFallback(c.id)}'"><div class="reel-item-name">${escapeHTML(result.name || '')}</div>`;
         } else if (centerEl) {
             centerEl.className = 'reel-item empty';
             centerEl.innerHTML = '<div class="reel-item-icon">⚫</div><div class="reel-item-name">Пусто</div>';
@@ -692,7 +738,11 @@ function showCaseResult(result, caseConfig) {
         const rarity = result.rarity || 'common';
         resEl.className = `case-result show ${rarity}`;
         const labels = { common: 'Обычный', rare: 'Редкий', epic: 'Эпический', legendary: 'Легендарный' };
-        const iconHtml = result.image_url ? `<img class="case-result-img" src="${safeUrl(result.image_url)}">` : `<div class="case-result-icon">🎁</div>`;
+        
+        // Если нет картинки у предмета, ставим картинку кейса
+        const imgUrl = result.image_url ? safeUrl(result.image_url) : getCaseImageFallback(caseConfig.id);
+        const iconHtml = `<img class="case-result-img" src="${imgUrl}" onerror="this.src='${getCaseImageFallback(caseConfig.id)}'">`;
+        
         content.innerHTML = `
             ${iconHtml}
             <div class="case-result-title">${escapeHTML(result.name || '')}</div>
