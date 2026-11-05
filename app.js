@@ -47,6 +47,10 @@ const Skeletons = {
     friends(count = 3) {
         let h = ''; for (let i = 0; i < count; i++) h += `<div class="skeleton-friend"><div class="skeleton skeleton-circle"></div><div class="skeleton-friend-info"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div></div>`;
         return h;
+    },
+    shopItems(count = 4) {
+        let h = ''; for (let i = 0; i < count; i++) h += `<div class="skeleton-shop-item"><div class="skeleton skeleton-shop-img"></div><div class="skeleton-shop-info"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div></div>`;
+        return h;
     }
 };
 
@@ -98,15 +102,36 @@ const API_Shikimori = {
     },
     async getDetails(id) {
         const cleanId = id.replace('shikimori_', '');
-        const q = `{animes(ids:"${cleanId}",limit:1){id name russian description score episodes status poster{originalUrl} genres{name}}}`;
+        const q = `{animes(ids:"${cleanId}",limit:1){id name russian description score episodes status poster{originalUrl} genres{name} trailer{id}}}`;
         const d = await this.fetch(q);
         return d.animes && d.animes.length > 0 ? this.convert(d.animes[0]) : null;
     },
     async getRandom(limit) {
-        const q = `{animes(order:popularity, limit:20){id name russian score episodes status poster{originalUrl} genres{name}}}`;
+        const q = `{animes(order:popularity, limit:20){id name russian score episodes status poster{originalUrl} genres{name} trailer{id}}}`;
         const d = await this.fetch(q);
         if (!d.animes || d.animes.length === 0) return [{ id: 'shikimori_1', title: 'Магическая битва', score: 8.5, episodes: 24, status: 'Завершено', images: { jpg: { image_url: 'https://shikimori.io/system/animes/original/40748.jpg' } }, genres: ['Экшен'] }].slice(0, limit);
         return d.animes.sort(() => Math.random() - 0.5).slice(0, limit).map(this.convert);
+    },
+    async getSeasonal(limit) {
+        // Получаем текущий сезон (приблизительно)
+        const now = new Date();
+        const month = now.getMonth();
+        let season = '';
+        if (month >= 0 && month < 3) season = 'winter';
+        else if (month >= 3 && month < 6) season = 'spring';
+        else if (month >= 6 && month < 9) season = 'summer';
+        else season = 'fall';
+        
+        const year = now.getFullYear();
+        
+        const q = `{animes(season:"${season}_${year}", order:popularity, limit:${limit}, status:ongoing){id name russian score episodes status poster{originalUrl} genres{name} trailer{id}}}`;
+        try {
+            const d = await this.fetch(q);
+            return d.animes.map(this.convert);
+        } catch(e) {
+            console.warn('Сезонные новинки не найдены, fallback на популярное');
+            return this.getCatalog(1, limit, { sort: 'popularity' });
+        }
     },
     convert(a) {
         return {
@@ -118,7 +143,8 @@ const API_Shikimori = {
             genres: (a.genres || []).map(g => g.name),
             score: a.score || 0,
             status: a.status === 'ongoing' ? 'Онгоинг' : a.status === 'released' ? 'Завершено' : 'Анонс',
-            kind: 'TV'
+            kind: 'TV',
+            trailerId: a.trailer?.id || null
         };
     }
 };
@@ -132,7 +158,8 @@ const API = {
     },
     getCatalog(page, limit, filters) { return this._cachedFetch('getCatalog', page, limit, filters); },
     getDetails(id) { return this._cachedFetch('getDetails', id); },
-    getRandom(limit) { return this._cachedFetch('getRandom', limit); }
+    getRandom(limit) { return this._cachedFetch('getRandom', limit); },
+    getSeasonal(limit) { return this._cachedFetch('getSeasonal', limit); }
 };
 
 // ==========================================
@@ -1534,40 +1561,206 @@ function renderAchievementsPage() {
 // ==========================================
 let heroData = []; let currentSlide = 0; let slideInterval;
 
+// Intersection Observer для появления секций
+const sectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('fade-in-section');
+            sectionObserver.unobserve(entry.target);
+        }
+    });
+}, { threshold: 0.1 });
+
 async function loadHomePage() {
+    const seasonalList = document.getElementById('seasonal-list');
+    const popularList = document.getElementById('popular-list');
+    const recList = document.getElementById('recommended-list');
+    
+    // Скелетоны для полок
+    if (seasonalList) seasonalList.innerHTML = Skeletons.cards(4);
+    if (popularList) popularList.innerHTML = Skeletons.cards(4);
+    if (recList) recList.innerHTML = Skeletons.cards(4);
+
     try {
-        const [heroItems, popularItems, recItems] = await Promise.all([API.getRandom(5), API.getCatalog(1, 6, { sort: 'popularity' }), API.getCatalog(2, 4, { sort: 'popularity' })]);
-        heroData = heroItems.map(a => ({ id: a.id, title: a.title, img: a.images.jpg.image_url, score: a.score ? Number(a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year }));
+        const [heroItems, seasonalItems, popularItems, recItems] = await Promise.all([
+            API.getRandom(5), 
+            API.getSeasonal(6), 
+            API.getCatalog(1, 6, { sort: 'popularity' }), 
+            API.getCatalog(2, 4, { sort: 'popularity' })
+        ]);
+
+        heroData = heroItems.map(a => ({ 
+            id: a.id, title: a.title, img: a.images.jpg.image_url, 
+            score: a.score ? Number(a.score).toFixed(1) : '?', 
+            type: a.kind || 'TV', year: a.year, trailerId: a.trailerId 
+        }));
+        
         initHeroSlider();
 
-        const popularContainer = document.getElementById('popular-list');
-        if (popularContainer && popularItems.length > 0) popularContainer.innerHTML = popularItems.map(anime => `<div class="card" onclick="openAnimeDetail('${anime.id}', 'home')"><img class="card-img" src="${safeUrl(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
-        const recContainer = document.getElementById('recommended-list');
-        if (recContainer && recItems.length > 0) recContainer.innerHTML = recItems.map(anime => `<div class="card" onclick="openAnimeDetail('${anime.id}', 'home')"><img class="card-img" src="${safeUrl(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
-    } catch (e) { console.error(e); }
+        if (seasonalList && seasonalItems.length > 0) {
+            seasonalList.innerHTML = seasonalItems.map(anime => `<div class="card" onclick="openAnimeDetail('${anime.id}', 'home')"><img class="card-img" src="${safeUrl(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
+        } else if (seasonalList) {
+            seasonalList.innerHTML = '<div style="color:#888;padding:20px;">Нет доступных новинок</div>';
+        }
+
+        if (popularList && popularItems.length > 0) {
+            popularList.innerHTML = popularItems.map(anime => `<div class="card" onclick="openAnimeDetail('${anime.id}', 'home')"><img class="card-img" src="${safeUrl(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
+        }
+        
+        if (recList && recItems.length > 0) {
+            recList.innerHTML = recItems.map(anime => `<div class="card" onclick="openAnimeDetail('${anime.id}', 'home')"><img class="card-img" src="${safeUrl(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
+        }
+
+        // Запускаем наблюдение за секциями
+        document.querySelectorAll('.content-section, .tg-banner-section').forEach(sec => sectionObserver.observe(sec));
+
+    } catch (e) { 
+        console.error(e); 
+        if (popularList) popularList.innerHTML = '<div class="loading-text">Ошибка</div>';
+    }
 }
 
 function initHeroSlider() { 
-    const slider = document.getElementById('heroSlider'); const dotsContainer = document.getElementById('heroDots'); 
-    if (!slider || heroData.length === 0) return; let sliderHTML = '', dotsHTML = ''; 
-    const stats = getStats(); const favedList = (stats.favedAnime || []).map(a => a.rawId || a.id.split('_')[1]); 
+    const slider = document.getElementById('heroSlider'); 
+    const dotsContainer = document.getElementById('heroDots'); 
+    const progressBar = document.getElementById('heroProgressBar');
+    
+    if (!slider || heroData.length === 0) return; 
+    
+    let sliderHTML = '', dotsHTML = '', progressHTML = ''; 
+    const stats = getStats(); 
+    const favedList = (stats.favedAnime || []).map(a => a.rawId || a.id.split('_')[1]); 
+
     heroData.forEach((anime, index) => { 
         const cleanId = anime.rawId || anime.id.split('_')[1];
         const isFaved = favedList.includes(cleanId); 
         const heartClass = isFaved ? 'faved' : ''; 
         const heartIcon = isFaved ? '<svg style="width:24px;height:24px;fill:currentColor;stroke:none;"><use href="#oa-favorite"></use></svg>' : '<svg><use href="#oa-favorite"></use></svg>'; 
-        sliderHTML += `<div class="hero-slide ${index === 0 ? 'active' : ''}"><div class="hero-bg" style="background-image: url('${safeUrl(anime.img)}')"></div><div class="hero-gradient"></div><div class="hero-content"><div class="hero-badges"><span class="badge star">⭐ ${anime.score}</span><span class="badge">${escapeHTML(anime.type)}</span><span class="badge">${escapeHTML(anime.year)}</span></div><h1 class="hero-title">${escapeHTML(anime.title)}</h1><div class="hero-actions"><button class="btn-primary" onclick="openAnimeDetail('${anime.id}', 'home')">▶ Смотреть</button><button class="btn-icon-heart ${heartClass}" onclick="openStatusModal('${anime.id}')">${heartIcon}</button></div></div></div>`; 
+        
+        // Кнопка трейлера, если есть trailerId
+        const trailerBtn = anime.trailerId ? `<button class="btn-trailer" onclick="event.stopPropagation(); playTrailer('${anime.trailerId}', ${index})">▶ Трейлер</button>` : '';
+
+        sliderHTML += `
+            <div class="hero-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
+                <video id="hero-video-${index}" class="hero-video" muted loop playsinline></video>
+                <div class="hero-bg" id="hero-bg-${index}" style="background-image: url('${safeUrl(anime.img)}')"></div>
+                <div class="hero-gradient"></div>
+                <div class="hero-content">
+                    <div class="hero-badges">
+                        <span class="badge star">⭐ ${anime.score}</span>
+                        <span class="badge">${escapeHTML(anime.type)}</span>
+                        <span class="badge">${escapeHTML(anime.year)}</span>
+                    </div>
+                    <h1 class="hero-title">${escapeHTML(anime.title)}</h1>
+                    <div class="hero-actions">
+                        <button class="btn-primary" onclick="openAnimeDetail('${anime.id}', 'home')">▶ Смотреть</button>
+                        ${trailerBtn}
+                        <button class="btn-icon-heart ${heartClass}" onclick="openStatusModal('${anime.id}')">${heartIcon}</button>
+                    </div>
+                </div>
+            </div>`; 
         dotsHTML += `<div class="hero-dot ${index === 0 ? 'active' : ''}" onclick="goToSlide(${index})"></div>`; 
+        progressHTML += `<div class="hero-progress-seg ${index === 0 ? 'active' : ''}" id="hero-prog-${index}"><div class="fill"></div></div>`;
     }); 
-    slider.innerHTML = sliderHTML; dotsContainer.innerHTML = dotsHTML; startSlideShow(); addSwipeSupport(slider); 
+    
+    slider.innerHTML = sliderHTML; 
+    dotsContainer.innerHTML = dotsHTML; 
+    if (progressBar) progressBar.innerHTML = progressHTML;
+    
+    startSlideShow(); 
+    addSwipeSupport(slider); 
+    addHeroParallax();
 }
+
+// Параллакс для Hero
+function addHeroParallax() {
+    const hero = document.getElementById('heroSection');
+    if (!hero) return;
+    
+    hero.addEventListener('mousemove', (e) => {
+        const rect = hero.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        
+        const activeBg = document.querySelector('.hero-slide.active .hero-bg');
+        if (activeBg) {
+            activeBg.style.transform = `scale(1.05) translate(${x * 20}px, ${y * 20}px)`;
+        }
+    });
+    
+    hero.addEventListener('mouseleave', () => {
+        const activeBg = document.querySelector('.hero-slide.active .hero-bg');
+        if (activeBg) activeBg.style.transform = 'scale(1)';
+    });
+}
+
+// Запуск трейлера
+function playTrailer(youtubeId, index) {
+    const video = document.getElementById(`hero-video-${index}`);
+    const bg = document.getElementById(`hero-bg-${index}`);
+    if (!video || !youtubeId) return;
+    
+    // YouTube iframe API не нужен, используем прямую ссылку на mp4 через yt-dlp или embed.
+    // В Shikimori трейлеры хранятся как YouTube ID. Проиграть напрямую MP4 нельзя без API.
+    // Поэтому используем iframe, вставленный в hero.
+    
+    // Удаляем старый iframe, если есть
+    const oldIframe = document.getElementById('hero-iframe');
+    if (oldIframe) oldIframe.remove();
+    
+    const iframe = document.createElement('iframe');
+    iframe.id = 'hero-iframe';
+    iframe.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0`;
+    iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none;z-index:0;pointer-events:none;';
+    iframe.allow = 'autoplay; encrypted-media';
+    
+    const slide = video.parentElement;
+    slide.insertBefore(iframe, slide.firstChild);
+    
+    // Скрываем фон
+    if (bg) bg.style.opacity = '0';
+    
+    // Через 10 секунд убираем iframe
+    setTimeout(() => {
+        if (iframe) iframe.remove();
+        if (bg) bg.style.opacity = '1';
+    }, 10000);
+}
+
 function goToSlide(index) { 
-    const slides = document.querySelectorAll('.hero-slide'); const dots = document.querySelectorAll('.hero-dot'); 
-    slides.forEach(s => s.classList.remove('active')); dots.forEach(d => d.classList.remove('active')); 
-    slides[index].classList.add('active'); dots[index].classList.add('active'); currentSlide = index; 
+    const slides = document.querySelectorAll('.hero-slide'); 
+    const dots = document.querySelectorAll('.hero-dot'); 
+    const progs = document.querySelectorAll('.hero-progress-seg');
+    
+    slides.forEach(s => s.classList.remove('active')); 
+    dots.forEach(d => d.classList.remove('active')); 
+    progs.forEach(p => { p.classList.remove('active'); p.classList.remove('done'); });
+    
+    slides[index].classList.add('active'); 
+    dots[index].classList.add('active'); 
+    
+    // Заполняем предыдущие прогресс-бары
+    for (let i = 0; i < index; i++) {
+        if (progs[i]) progs[i].classList.add('done');
+    }
+    if (progs[index]) progs[index].classList.add('active');
+    
+    currentSlide = index; 
 }
+
 function nextSlide() { currentSlide = (currentSlide + 1) % heroData.length; goToSlide(currentSlide); }
-function startSlideShow() { clearInterval(slideInterval); slideInterval = setInterval(nextSlide, 5000); }
+function startSlideShow() { 
+    clearInterval(slideInterval); 
+    slideInterval = setInterval(nextSlide, 5000); 
+    
+    // Перезапускаем анимацию прогресс-бара
+    const activeProg = document.querySelector('.hero-progress-seg.active');
+    if (activeProg) {
+        activeProg.classList.remove('active');
+        void activeProg.offsetWidth; // reflow
+        activeProg.classList.add('active');
+    }
+}
 function stopSlideShow() { clearInterval(slideInterval); }
 function addSwipeSupport(element) { 
     let touchStartX = 0; 
