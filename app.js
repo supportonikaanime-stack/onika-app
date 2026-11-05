@@ -491,19 +491,16 @@ function closeCaseDetails() {
 
 function startCaseRoll() {
     closeCaseDetails();
-    // Небольшая задержка, чтобы одна модалка закрылась перед открытием другой
-    setTimeout(() => {
-        openCase(currentCaseId);
-    }, 300);
+    setTimeout(() => { openCase(currentCaseId); }, 300);
 }
 
-// ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ КАРТИНКИ-ЗАГЛУШКИ (КАРТОЧКА КЕЙСА)
+// ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ КАРТИНКИ-ЗАГЛУШКИ
 function getCaseImageFallback(caseId) {
     const c = CASES.find(x => x.id === caseId) || CASES[0];
     return c ? c.image : 'case_all.png';
 }
 
-// Функция для загрузки реальных предметов в рулетку
+// Загрузка пула предметов
 async function getItemsForReel(caseId) {
     let items = [];
     try {
@@ -550,7 +547,6 @@ function openCase(caseId) {
     document.getElementById('case-reopen-btn').style.display = 'none';
     modal.classList.add('active');
 
-    // Собираем ленту
     const reel = document.getElementById('case-reel-track');
     reel.style.transition = 'none';
     reel.style.transform = 'translateX(0)';
@@ -558,7 +554,9 @@ function openCase(caseId) {
     const totalItems = 40;
     const winIndex = 35;
     
-    // Загружаем реальные предметы для ленты
+    // Очищаем ленту от прошлых запусков
+    reel.innerHTML = '';
+
     getItemsForReel(c.id).then(pool => {
         let reelHtml = '';
         for (let i = 0; i < totalItems; i++) {
@@ -569,7 +567,6 @@ function openCase(caseId) {
             else if (roll < 0.93) { rarity = 'epic'; label = 'Эпический'; }
             else { rarity = 'legendary'; label = 'Легендарный'; }
             
-            // Берем случайный предмет из пула
             let itemName = label;
             let imgUrl = '';
             if (pool && pool.length > 0) {
@@ -588,12 +585,11 @@ function openCase(caseId) {
         }
         reel.innerHTML = reelHtml;
 
-        // Запускаем RPC
         return runCaseRPC(c.id);
     }).then(result => {
-        // ИСПРАВЛЕНИЕ: Чтобы не было несоответствий из-за погрешностей экрана,
-        // мы принудительно ставим выигранный предмет не только в центр (35),
-        // но и на соседние позиции (34, 36), чтобы визуально всегда было верно.
+        // ИСПРАВЛЕНИЕ: Ставим выигрышный предмет ровно в центр (35).
+        // Чтобы избежать любых несоответствий, мы ставим выигрыш не только в 35, 
+        // но и в 34 и 36, чтобы при прокрутке всегда попадал именно он.
         const imgUrl = result.image_url ? safeUrl(result.image_url) : getCaseImageFallback(c.id);
         const winHtml = `<img class="reel-item-img" src="${imgUrl}" onerror="this.src='${getCaseImageFallback(c.id)}'"><div class="reel-item-name">${escapeHTML(result.name || '')}</div>`;
         const winClass = `reel-item ${result.rarity}`;
@@ -617,10 +613,14 @@ function openCase(caseId) {
         }
 
         // Анимация прокрутки
-        const itemWidth = 100 + 8;
+        const itemWidth = 100 + 8; // 100px ширина + 8px отступ
         const containerWidth = reel.parentElement.offsetWidth;
         const centerOffset = containerWidth / 2;
+        
+        // Смещение, чтобы центр 35-го элемента встал ровно под указатель
         const targetX = -(winIndex * itemWidth) + centerOffset - itemWidth / 2;
+        
+        // Добавляем "холостые" круги, чтобы лента покрутилась подольше
         const extra = (totalItems - winIndex) * itemWidth;
 
         requestAnimationFrame(() => {
@@ -646,7 +646,7 @@ async function runCaseRPC(caseId) {
         if (error) throw error;
         return data;
     } catch (e) {
-        console.warn('RPC open_case не найден, fallback на клиент (НЕ БЕЗОПАСНО):', e.message);
+        console.warn('RPC open_case не найден, fallback на клиент:', e.message);
         return await simulateCaseLocally(caseId);
     }
 }
@@ -746,7 +746,7 @@ function showCaseResult(result, caseConfig) {
     if (!result || result.empty) {
         resEl.className = 'case-result show empty';
         content.innerHTML = `
-            <div class="case-result-icon">⚫</div>
+            <div class="case-result-icon" style="font-size: 60px; margin-bottom: 10px;">⚫</div>
             <div class="case-result-title" style="color: #888;">Пусто</div>
             <div class="case-result-sub">В следующий раз повезёт!</div>`;
     } else {
@@ -754,9 +754,7 @@ function showCaseResult(result, caseConfig) {
         resEl.className = `case-result show ${rarity}`;
         const labels = { common: 'Обычный', rare: 'Редкий', epic: 'Эпический', legendary: 'Легендарный' };
         
-        // Если нет картинки у предмета, ставим картинку кейса
         const imgUrl = result.image_url ? safeUrl(result.image_url) : getCaseImageFallback(caseConfig.id);
-        // Делаем картинку побольше и с закруглением
         const iconHtml = `<img class="case-result-img" src="${imgUrl}" onerror="this.src='${getCaseImageFallback(caseConfig.id)}'" style="width: 120px; height: 120px; object-fit: cover; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">`;
         
         content.innerHTML = `
