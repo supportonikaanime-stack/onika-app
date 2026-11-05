@@ -332,7 +332,6 @@ async function loadProfileData() {
     setElText('user-level', currentLevel); setElText('user-level-text', currentLevel); setElText('user-rank', rankTitle);
     setElText('user-xp-current', xpCurrentLevel); setElText('user-xp-next', 100);
     setElWidth('user-xp-bar', xpCurrentLevel + '%'); setElText('user-coins', stats.coins || 0);
-    setElText('cases-coins', stats.coins || 0);
 
     const totalAch = ACHIEVEMENTS.length;
     setElText('ach-points', stats.unlockedAchievements.length * 10);
