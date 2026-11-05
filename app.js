@@ -52,7 +52,7 @@ const Skeletons = {
 
 // Ripple
 document.addEventListener('pointerdown', function (e) {
-    const btn = e.target.closest('.ripple-btn, .btn-primary, .filter-btn, .genre-pill, .my-list-tab, .tab-btn, .case-open-btn');
+    const btn = e.target.closest('.ripple-btn, .btn-primary, .filter-btn, .genre-pill, .my-list-tab, .tab-btn, .case-open-btn, .details-btn-roll');
     if (!btn) return;
     const rect = btn.getBoundingClientRect();
     const size = Math.max(rect.width, rect.height);
@@ -152,7 +152,7 @@ const STATUSES = [{ id: 'ongoing', name: 'Онгоинг' }, { id: 'released', n
 const SORTS = [{ id: 'popularity', name: 'По популярности' }, { id: 'ranked', name: 'По рейтингу' }, { id: 'aired_on', name: 'Новинки' }];
 
 // ==========================================
-// 3.1 КЕЙСЫ — КОНФИГ (С КАРТИНКАМИ)
+// 3.1 КЕЙСЫ — КОНФИГ
 // ==========================================
 const CASES = [
     { id: 'all',    name: 'Всё в одном', image: 'case_all.png',    price: 100, emptyChance: 0.40, desc: 'Любой предмет',    premium: false, top: true },
@@ -380,7 +380,7 @@ function renderParticles() {
 }
 
 // ==========================================
-// 5.1 КЕЙСЫ — РЕНДЕР И ЛОГИКА
+// 5.1 КЕЙСЫ — ЛОГИКА И РЕНДЕР
 // ==========================================
 function renderCasesGrid() {
     const grid = document.getElementById('cases-grid');
@@ -394,7 +394,7 @@ function renderCasesGrid() {
         if (c.premium) badges.push('<span class="case-premium-badge">💎 PREMIUM</span>');
         
         html += `
-            <div class="case-card ${c.premium ? 'premium' : ''}">
+            <div class="case-card ${c.premium ? 'premium' : ''}" onclick="openCaseDetails('${c.id}')">
                 ${badges.join('')}
                 <div class="case-image-wrap">
                     <img src="${c.image}" class="case-image" alt="${escapeHTML(c.name)}" onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\\'case-emoji-fallback\\'>🎁</span>'">
@@ -402,8 +402,8 @@ function renderCasesGrid() {
                 <div class="case-name">${escapeHTML(c.name)}</div>
                 <div class="case-desc">${escapeHTML(c.desc)}</div>
                 <div class="case-price"><svg><use href="#oa-coin"></use></svg> ${c.price}</div>
-                <button class="case-open-btn" onclick="openCase('${c.id}')" ${canAfford ? '' : 'disabled'}>
-                    ${canAfford ? 'Открыть' : 'Мало монет'}
+                <button class="case-open-btn" ${canAfford ? '' : 'disabled'}>
+                    ${canAfford ? 'Подробнее' : 'Мало монет'}
                 </button>
             </div>`;
     });
@@ -411,38 +411,96 @@ function renderCasesGrid() {
     renderCaseHistory();
 }
 
-function renderCaseHistory() {
-    const sec = document.getElementById('case-history-section');
-    const list = document.getElementById('case-history-list');
-    if (!sec || !list) return;
-    let history = JSON.parse(localStorage.getItem('onika_case_history') || '[]');
-    if (history.length === 0) { sec.style.display = 'none'; return; }
-    sec.style.display = 'block';
-    list.innerHTML = history.slice(0, 10).map(h => {
-        const rarity = h.rarity || 'empty';
-        const time = getTimeAgo(h.time);
-        return `<div class="case-history-item ${rarity}"><div class="dot"></div><div class="case-history-item-name">${h.empty ? '⚫ Пусто' : escapeHTML(h.name)}</div><div class="case-history-item-time">${time}</div></div>`;
-    }).join('');
+// Открытие модалки "Подробнее"
+async function openCaseDetails(caseId) {
+    const c = CASES.find(x => x.id === caseId);
+    if (!c) return;
+
+    const modal = document.getElementById('caseDetailsModal');
+    document.getElementById('details-image').src = c.image;
+    document.getElementById('details-title').textContent = c.name;
+    document.getElementById('details-subtitle').textContent = c.desc;
+    document.getElementById('details-price-val').textContent = c.price;
+    
+    const rollBtn = document.getElementById('details-roll-btn');
+    const stats = getStats();
+    if (stats.coins >= c.price) {
+        rollBtn.disabled = false;
+        rollBtn.textContent = 'Крутить';
+    } else {
+        rollBtn.disabled = true;
+        rollBtn.textContent = 'Мало монет';
+    }
+
+    // Рендерим пул наград в зависимости от типа кейса
+    const grid = document.getElementById('details-rewards-grid');
+    grid.innerHTML = '<div style="color:#888; font-size:12px; padding: 5px;">Загрузка...</div>';
+
+    try {
+        let items = [];
+        if (c.id === 'all') {
+            const [b, t, f, bd, e] = await Promise.all([
+                supabaseClient.from('banners').select('name, rarity'),
+                supabaseClient.from('titles').select('name, price'),
+                supabaseClient.from('frames').select('name'),
+                supabaseClient.from('badges').select('name, rarity'),
+                supabaseClient.from('effects').select('name')
+            ]);
+            items = [
+                ...(b.data || []).map(x => ({ name: x.name, rarity: x.rarity || 'common' })),
+                ...(t.data || []).map(x => ({ name: x.name, rarity: x.price >= 1000 ? 'legendary' : x.price >= 400 ? 'epic' : x.price >= 150 ? 'rare' : 'common' })),
+                ...(f.data || []).map(x => ({ name: x.name, rarity: 'rare' })),
+                ...(bd.data || []).map(x => ({ name: x.name, rarity: x.rarity || 'common' })),
+                ...(e.data || []).map(x => ({ name: x.name, rarity: 'epic' }))
+            ];
+        } else {
+            const { data } = await supabaseClient.from(c.id + 's').select('*');
+            items = (data || []).map(x => {
+                let rarity = 'common';
+                if (x.rarity) rarity = x.rarity;
+                else if (x.price) rarity = x.price >= 1000 ? 'legendary' : x.price >= 400 ? 'epic' : x.price >= 150 ? 'rare' : 'common';
+                return { name: x.name, rarity };
+            });
+        }
+
+        if (items.length === 0) {
+            grid.innerHTML = '<div style="color:#888; font-size:12px; padding: 5px;">Пока пусто</div>';
+        } else {
+            grid.innerHTML = items.slice(0, 10).map(item => {
+                const colors = { common: '#ccc', rare: '#00d2ff', epic: '#b44aff', legendary: '#ffd700' };
+                const color = colors[item.rarity] || '#ccc';
+                return `<div class="reward-pill"><div class="reward-pill-dot" style="background:${color}; box-shadow: 0 0 5px ${color};"></div><span style="font-size:12px; color:#fff;">${escapeHTML(item.name)}</span></div>`;
+            }).join('');
+            if (items.length > 10) {
+                grid.innerHTML += `<div class="reward-pill"><span style="font-size:12px; color:#888;">и ещё ${items.length - 10}...</span></div>`;
+            }
+        }
+    } catch(e) {
+        console.error(e);
+        grid.innerHTML = '<div style="color:#ff4444; font-size:12px; padding: 5px;">Ошибка загрузки</div>';
+    }
+
+    // Запоминаем ID текущего кейса
+    currentCaseId = c.id;
+    modal.classList.add('active');
 }
 
-function getTimeAgo(timestamp) {
-    const diff = Math.floor((Date.now() - timestamp) / 1000);
-    if (diff < 60) return 'только что';
-    if (diff < 3600) return `${Math.floor(diff/60)} мин назад`;
-    if (diff < 86400) return `${Math.floor(diff/3600)} ч назад`;
-    return `${Math.floor(diff/86400)} дн назад`;
+function closeCaseDetails() {
+    document.getElementById('caseDetailsModal').classList.remove('active');
 }
 
-function saveCaseHistory(entry) {
-    let history = JSON.parse(localStorage.getItem('onika_case_history') || '[]');
-    history.unshift({ ...entry, time: Date.now() });
-    history = history.slice(0, 20);
-    localStorage.setItem('onika_case_history', JSON.stringify(history));
+function startCaseRoll() {
+    closeCaseDetails();
+    // Небольшая задержка, чтобы одна модалка закрылась перед открытием другой
+    setTimeout(() => {
+        openCase(currentCaseId);
+    }, 300);
 }
 
 function openCase(caseId) {
     const c = CASES.find(x => x.id === caseId);
     if (!c) return;
+
     const stats = getStats();
     if (stats.coins < c.price) { showToast('Недостаточно монет!'); return; }
     if (Date.now() - lastCaseOpenTime < CASE_COOLDOWN_MS) { showToast('Подожди пару секунд...'); return; }
@@ -450,12 +508,11 @@ function openCase(caseId) {
 
     if (tg) { try { tg.HapticFeedback.impactOccurred('medium'); } catch(e) {} }
 
-    currentCaseId = caseId;
     lastCaseOpenTime = Date.now();
     isCaseAnimating = true;
 
     const modal = document.getElementById('caseModal');
-    document.getElementById('case-modal-title').textContent = `${c.name}`;
+    document.getElementById('case-modal-title').textContent = c.name;
     document.getElementById('case-result').classList.remove('show');
     document.getElementById('case-reopen-btn').style.display = 'none';
     modal.classList.add('active');
@@ -471,12 +528,12 @@ function openCase(caseId) {
 
     for (let i = 0; i < totalItems; i++) {
         const roll = Math.random();
-        let rarity, label, emoji, img = '';
+        let rarity, label, emoji;
         if (roll < 0.40) { rarity = 'common'; label = 'Обычный'; emoji = '🟢'; }
         else if (roll < 0.75) { rarity = 'rare'; label = 'Редкий'; emoji = '🔵'; }
         else if (roll < 0.93) { rarity = 'epic'; label = 'Эпический'; emoji = '🟣'; }
         else { rarity = 'legendary'; label = 'Легендарный'; emoji = '🟡'; }
-        reelItems.push({ rarity, label, emoji, fake: true });
+        reelItems.push({ rarity, label, emoji });
     }
 
     reel.innerHTML = reelItems.map((it, idx) => `
@@ -487,8 +544,7 @@ function openCase(caseId) {
     `).join('');
 
     // Запускаем RPC
-    runCaseRPC(caseId).then(result => {
-        // Обновляем центральный элемент
+    runCaseRPC(c.id).then(result => {
         const centerEl = reel.querySelector(`.reel-item[data-idx="${winIndex}"]`);
         if (centerEl && result && !result.empty) {
             const iconHtml = result.image_url ? `<img class="reel-item-img" src="${safeUrl(result.image_url)}">` : `<img class="reel-item-img" src="${c.image}" style="object-fit:cover;">`;
@@ -500,11 +556,11 @@ function openCase(caseId) {
         }
 
         // Анимация прокрутки
-        const itemWidth = 100 + 8; // 100px + 8px gap
+        const itemWidth = 100 + 8;
         const containerWidth = reel.parentElement.offsetWidth;
         const centerOffset = containerWidth / 2;
         const targetX = -(winIndex * itemWidth) + centerOffset - itemWidth / 2;
-        const extra = (totalItems - winIndex) * itemWidth; // докрутить
+        const extra = (totalItems - winIndex) * itemWidth;
 
         requestAnimationFrame(() => {
             reel.style.transition = 'transform 3.5s cubic-bezier(0.15, 0.85, 0.25, 1)';
@@ -534,7 +590,6 @@ async function runCaseRPC(caseId) {
     }
 }
 
-// ⚠️ ЛОКАЛЬНАЯ СИМУЛЯЦИЯ — работает без RPC, но НЕ ЗАЩИЩЕНА от абьюза.
 async function simulateCaseLocally(caseId) {
     const c = CASES.find(x => x.id === caseId);
     const stats = getStats();
@@ -592,7 +647,6 @@ async function simulateCaseLocally(caseId) {
     const item = pool[Math.floor(Math.random() * pool.length)];
     const itemType = item._type || c.id;
 
-    // Проверяем дубликат
     let duplicate = false;
     let refund = 0;
     try {
@@ -653,7 +707,6 @@ function showCaseResult(result, caseConfig) {
     if (canReopen) { reopenBtn.style.display = 'block'; reopenBtn.textContent = `Открыть ещё · ${caseConfig.price} 🪙`; }
     else reopenBtn.style.display = 'none';
 
-    // Обновляем баланс
     setElText('cases-coins', stats.coins);
     setElText('user-coins', stats.coins);
     renderCasesGrid();
@@ -687,6 +740,35 @@ function fireConfetti(type) {
         document.body.appendChild(el);
         setTimeout(() => el.remove(), 4000);
     }
+}
+
+function saveCaseHistory(entry) {
+    let history = JSON.parse(localStorage.getItem('onika_case_history') || '[]');
+    history.unshift({ ...entry, time: Date.now() });
+    history = history.slice(0, 20);
+    localStorage.setItem('onika_case_history', JSON.stringify(history));
+}
+
+function renderCaseHistory() {
+    const sec = document.getElementById('case-history-section');
+    const list = document.getElementById('case-history-list');
+    if (!sec || !list) return;
+    let history = JSON.parse(localStorage.getItem('onika_case_history') || '[]');
+    if (history.length === 0) { sec.style.display = 'none'; return; }
+    sec.style.display = 'block';
+    list.innerHTML = history.slice(0, 10).map(h => {
+        const rarity = h.rarity || 'empty';
+        const time = getTimeAgo(h.time);
+        return `<div class="case-history-item ${rarity}"><div class="dot"></div><div class="case-history-item-name">${h.empty ? '⚫ Пусто' : escapeHTML(h.name)}</div><div class="case-history-item-time">${time}</div></div>`;
+    }).join('');
+}
+
+function getTimeAgo(timestamp) {
+    const diff = Math.floor((Date.now() - timestamp) / 1000);
+    if (diff < 60) return 'только что';
+    if (diff < 3600) return `${Math.floor(diff/60)} мин назад`;
+    if (diff < 86400) return `${Math.floor(diff/3600)} ч назад`;
+    return `${Math.floor(diff/86400)} дн назад`;
 }
 
 // ==========================================
