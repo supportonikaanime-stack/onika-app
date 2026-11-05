@@ -591,14 +591,29 @@ function openCase(caseId) {
         // Запускаем RPC
         return runCaseRPC(c.id);
     }).then(result => {
-        const centerEl = reel.querySelector(`.reel-item[data-idx="${winIndex}"]`);
-        if (centerEl && result && !result.empty) {
-            const imgUrl = result.image_url ? safeUrl(result.image_url) : getCaseImageFallback(c.id);
-            centerEl.className = `reel-item ${result.rarity}`;
-            centerEl.innerHTML = `<img class="reel-item-img" src="${imgUrl}" onerror="this.src='${getCaseImageFallback(c.id)}'"><div class="reel-item-name">${escapeHTML(result.name || '')}</div>`;
-        } else if (centerEl) {
-            centerEl.className = 'reel-item empty';
-            centerEl.innerHTML = '<div class="reel-item-icon">⚫</div><div class="reel-item-name">Пусто</div>';
+        // ИСПРАВЛЕНИЕ: Чтобы не было несоответствий из-за погрешностей экрана,
+        // мы принудительно ставим выигранный предмет не только в центр (35),
+        // но и на соседние позиции (34, 36), чтобы визуально всегда было верно.
+        const imgUrl = result.image_url ? safeUrl(result.image_url) : getCaseImageFallback(c.id);
+        const winHtml = `<img class="reel-item-img" src="${imgUrl}" onerror="this.src='${getCaseImageFallback(c.id)}'"><div class="reel-item-name">${escapeHTML(result.name || '')}</div>`;
+        const winClass = `reel-item ${result.rarity}`;
+
+        [34, 35, 36].forEach(idx => {
+            const el = reel.querySelector(`.reel-item[data-idx="${idx}"]`);
+            if (el) {
+                el.className = winClass;
+                el.innerHTML = winHtml;
+            }
+        });
+
+        if (result.empty) {
+            [34, 35, 36].forEach(idx => {
+                const el = reel.querySelector(`.reel-item[data-idx="${idx}"]`);
+                if (el) {
+                    el.className = 'reel-item empty';
+                    el.innerHTML = '<div class="reel-item-icon">⚫</div><div class="reel-item-name">Пусто</div>';
+                }
+            });
         }
 
         // Анимация прокрутки
@@ -741,11 +756,12 @@ function showCaseResult(result, caseConfig) {
         
         // Если нет картинки у предмета, ставим картинку кейса
         const imgUrl = result.image_url ? safeUrl(result.image_url) : getCaseImageFallback(caseConfig.id);
-        const iconHtml = `<img class="case-result-img" src="${imgUrl}" onerror="this.src='${getCaseImageFallback(caseConfig.id)}'">`;
+        // Делаем картинку побольше и с закруглением
+        const iconHtml = `<img class="case-result-img" src="${imgUrl}" onerror="this.src='${getCaseImageFallback(caseConfig.id)}'" style="width: 120px; height: 120px; object-fit: cover; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">`;
         
         content.innerHTML = `
             ${iconHtml}
-            <div class="case-result-title">${escapeHTML(result.name || '')}</div>
+            <div class="case-result-title" style="margin-top: 10px;">${escapeHTML(result.name || '')}</div>
             <span class="case-result-badge ${rarity}">${labels[rarity] || rarity}</span>
             ${result.duplicate ? `<div class="case-result-sub">Дубликат! +${result.refund} 🪙</div>` : ''}
             ${result.duplicate ? '' : '<div class="case-result-sub">Добавлено в инвентарь</div>'}`;
