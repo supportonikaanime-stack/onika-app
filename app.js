@@ -59,57 +59,80 @@ function showAuthError(msg) {
 }
 
 async function handleLogin() {
-    const nickname = document.getElementById('login-email').value.trim().toLowerCase();
+    const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
-    if (!nickname || !password) { showAuthError('Заполните все поля'); return; }
-    const fakeEmail = `${nickname}@onika.local`;
+    if (!email || !password) { showAuthError('Заполните все поля'); return; }
+    
     const btn = document.getElementById('login-btn');
     btn.disabled = true; btn.textContent = 'Вход...';
     showAuthError('');
+
     try {
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ email: fakeEmail, password });
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        
         MY_TG_ID = data.user.id;
-        MY_NAME = data.user.user_metadata?.nickname || nickname;
+        MY_NAME = data.user.user_metadata?.nickname || 'Игрок';
         hideAuthScreen();
         await loadProfileData();
         loadHomePage();
     } catch (e) {
-        showAuthError('Неверный никнейм или пароль');
+        showAuthError('Неверный email или пароль');
     } finally {
         btn.disabled = false; btn.textContent = 'Войти';
     }
 }
 
 async function handleRegister() {
-    const nickname = document.getElementById('reg-nickname').value.trim().toLowerCase();
+    const email = document.getElementById('reg-email').value.trim();
+    const nickname = document.getElementById('reg-nickname').value.trim();
     const password = document.getElementById('reg-password').value;
-    if (!nickname || !password) { showAuthError('Заполните все поля'); return; }
+    
+    if (!email || !nickname || !password) { showAuthError('Заполните все поля'); return; }
     if (nickname.length < 3) { showAuthError('Никнейм должен быть не менее 3 символов'); return; }
     if (nickname.length > 12) { showAuthError('Никнейм должен быть не более 12 символов'); return; }
     if (!/^[a-zA-Z0-9_]+$/.test(nickname)) { showAuthError('Только латиница, цифры и _'); return; }
     if (password.length < 6) { showAuthError('Пароль должен быть не менее 6 символов'); return; }
+
     const btn = document.getElementById('register-btn');
     btn.disabled = true; btn.textContent = 'Проверка...';
     showAuthError('');
+
     try {
+        // 1. Проверяем, занят ли ник
         const { data: existingUser } = await supabaseClient.from('users').select('tg_id').ilike('name', nickname).limit(1);
         if (existingUser && existingUser.length > 0) {
             showAuthError('Этот никнейм уже занят');
-            btn.disabled = false; btn.textContent = 'Создать аккаунт'; return;
+            btn.disabled = false; btn.textContent = 'Создать аккаунт';
+            return;
         }
+
+        // 2. Создаем пользователя в Supabase Auth
         btn.textContent = 'Регистрация...';
-        const fakeEmail = `${nickname}@onika.local`;
         const { data, error } = await supabaseClient.auth.signUp({
-            email: fakeEmail, password, options: { data: { nickname } }
+            email: email, 
+            password,
+            options: { data: { nickname: nickname } } // Передаем ник в метаданные
         });
         if (error) throw error;
-        MY_TG_ID = data.user.id; MY_NAME = nickname;
+
+        // Если включено подтверждение почты, data.session будет null, и нам нужно попросить пользователя проверить почту
+        if (!data.session) {
+            showAuthError('Аккаунт создан! Проверьте вашу почту для подтверждения.');
+            btn.disabled = false; btn.textContent = 'Создать аккаунт';
+            return;
+        }
+
+        MY_TG_ID = data.user.id;
+        MY_NAME = nickname;
+
+        // 3. Записываем в таблицу users (сработает, если подтверждение почты отключено или мы авторизовались)
         await supabaseClient.from('users').upsert({
             tg_id: data.user.id, name: nickname, avatar_url: '',
             xp: 0, coins: 0, episodes_watched: 0, minutes_watched: 0, days_streak: 1,
             unlocked_achievements: '[]'
         }, { onConflict: 'tg_id' });
+
         hideAuthScreen();
         await loadProfileData();
         loadHomePage();
@@ -132,6 +155,17 @@ async function initAuth() {
             if (session && session.user) {
                 MY_TG_ID = session.user.id;
                 MY_NAME = session.user.user_metadata?.nickname || 'Игрок';
+                
+                // Принудительно проверяем, есть ли пользователь в таблице `users`. Если нет — создаем.
+                const { data: dbUser } = await supabaseClient.from('users').select('tg_id').eq('tg_id', MY_TG_ID).single();
+                if (!dbUser) {
+                    await supabaseClient.from('users').upsert({
+                        tg_id: MY_TG_ID, name: MY_NAME, avatar_url: '',
+                        xp: 0, coins: 0, episodes_watched: 0, minutes_watched: 0, days_streak: 1,
+                        unlocked_achievements: '[]'
+                    }, { onConflict: 'tg_id' });
+                }
+
                 hideAuthScreen();
                 return;
             }
@@ -1593,7 +1627,6 @@ async function loadHomePage() {
     const heroDots = document.getElementById('heroDots');
     const heroProgressBar = document.getElementById('heroProgressBar');
 
-    // Скелетоны
     if (heroSlider) heroSlider.innerHTML = `<div class="hero-slide active"><div class="hero-bg" style="background: linear-gradient(135deg, #1a1a24, #12121a);"></div></div>`;
     if (heroDots) heroDots.innerHTML = '';
     if (heroProgressBar) heroProgressBar.innerHTML = '';
