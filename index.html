@@ -113,7 +113,6 @@
         .hero-slider { position: relative; width: 100%; height: 100%; }
         .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; visibility: hidden; transition: 0.6s; display: flex; align-items: flex-end; }
         .hero-slide.active { opacity: 1; visibility: visible; z-index: 2; }
-        /* FIX #45: убран transform из transition, чтобы не конфликтовать с kenBurns */
         .hero-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center top; z-index: 1; transition: opacity 0.5s; }
         .hero-slide.active .hero-bg { animation: kenBurns 8s ease-out forwards; }
         
@@ -382,7 +381,6 @@
         @keyframes riseUp { 0% { transform: translateY(0) scale(1); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(-300px) scale(0); opacity: 0; } }
         .effect-sakura span { position: absolute; top: -20px; background: #ffb7c5; border-radius: 50% 0 50% 50%; box-shadow: 0 0 5px rgba(255,183,197,0.5); opacity: 0; animation: fallDown linear infinite; }
         @keyframes fallDown { 0% { transform: translateY(0) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(300px) rotate(360deg); opacity: 0; } }
-        /* FIX #42: разделены twinkle и float на два независимых keyframes */
         @keyframes twinkle { 0% { opacity: 0.2; transform: scale(0.5); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.2; transform: scale(0.5); } }
         @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(20px, 0); } }
         .effect-stars span { position: absolute; background: #fff; border-radius: 50%; box-shadow: 0 0 8px #fff, 0 0 15px #00f5ff; opacity: 0; }
@@ -452,14 +450,19 @@
                 <div class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Регистрация</div>
             </div>
             <div class="auth-error" id="authError"></div>
+            
+            <!-- ВХОД -->
             <div id="form-login">
-                <input type="text" id="login-email" class="auth-input" placeholder="Никнейм" autocomplete="username">
+                <input type="email" id="login-email" class="auth-input" placeholder="Почта (Email)" autocomplete="email">
                 <input type="password" id="login-password" class="auth-input" placeholder="Пароль" autocomplete="current-password">
                 <button class="auth-btn" id="login-btn" onclick="handleLogin()">Войти</button>
                 <div class="auth-footer">Нет аккаунта? <span class="auth-link" onclick="switchAuthTab('register')">Зарегистрироваться</span></div>
             </div>
+            
+            <!-- РЕГИСТРАЦИЯ -->
             <div id="form-register" style="display:none;">
-                <input type="text" id="reg-nickname" class="auth-input" placeholder="Никнейм (макс. 12 символов)" maxlength="12" autocomplete="off">
+                <input type="email" id="reg-email" class="auth-input" placeholder="Настоящая почта (Email)" autocomplete="email">
+                <input type="text" id="reg-nickname" class="auth-input" placeholder="Никнейм (макс. 12 символов)" maxlength="12" autocomplete="username">
                 <input type="password" id="reg-password" class="auth-input" placeholder="Пароль (мин. 6 символов)" autocomplete="new-password">
                 <button class="auth-btn" id="register-btn" onclick="handleRegister()">Создать аккаунт</button>
                 <div class="auth-footer">Уже есть аккаунт? <span class="auth-link" onclick="switchAuthTab('login')">Войти</span></div>
@@ -475,7 +478,8 @@
         </div>
         <div class="coins">+<span id="popup-coins">100</span> <svg><use href="#oa-coin"></use></svg></div>
     </div>
-        <!-- ЭКРАНЫ -->
+    
+    <!-- ЭКРАНЫ -->
     <div id="screen-home" class="screen active">
         <section class="hero-section" id="heroSection">
             <div class="hero-progress-bar" id="heroProgressBar"></div>
@@ -847,6 +851,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=3100"></script>
+    <script src="app.js?v=3200"></script>
 </body>
 </html>
