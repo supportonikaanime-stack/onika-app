@@ -213,9 +213,7 @@ const API_Shikimori = {
         return await res.json();
     },
 
-    // ==== КАТАЛОГ ====
     async getCatalog(page, limit, filters) {
-        // 1. GraphQL БЕЗ status
         try {
             let args = [`page:${page}`, `limit:${limit}`, `order:popularity`];
             if (filters.search) args.push(`search:"${filters.search.replace(/"/g, '')}"`);
@@ -233,18 +231,12 @@ const API_Shikimori = {
                 return results;
             }
             if (page > 1) return [];
-            console.warn('[Shikimori] GraphQL вернул пусто для page 1, пробуем REST');
         } catch (e) {
             console.warn('[Shikimori] GraphQL getCatalog упал, пробуем REST:', e.message);
         }
 
-        // 2. REST
         try {
-            const params = new URLSearchParams({
-                page: String(page),
-                limit: String(limit),
-                order: 'popularity'
-            });
+            const params = new URLSearchParams({ page: String(page), limit: String(limit), order: 'popularity' });
             if (filters.search) params.append('search', filters.search);
             if (filters.year) params.append('season', filters.year);
             const url = `${this.REST_URL}?${params.toString()}`;
@@ -262,11 +254,9 @@ const API_Shikimori = {
         } catch (e) {
             console.error('[Shikimori] REST getCatalog упал:', e.message);
         }
-
         return [];
     },
 
-    // ==== ДЕТАЛИ ====
     async getDetails(id) {
         const cleanId = String(id).replace('shikimori_', '');
         try {
@@ -285,7 +275,6 @@ const API_Shikimori = {
         }
     },
 
-    // ==== СЛУЧАЙНОЕ ====
     async getRandom(limit) {
         try {
             const q = `{animes(order:popularity, limit:20){id name russian score episodes status poster{originalUrl} genres{name} trailer{id}}}`;
@@ -302,16 +291,9 @@ const API_Shikimori = {
                 return data.sort(() => Math.random() - 0.5).slice(0, limit).map(item => this.convertREST(item));
             }
         } catch (e) { console.error('[Shikimori] REST getRandom упал:', e.message); }
-        return [{
-            id: 'shikimori_40748',
-            title: 'Магическая битва',
-            score: 8.5, episodes: 24, status: 'Завершено',
-            images: { jpg: { image_url: 'https://shikimori.io/system/animes/original/40748.jpg' } },
-            genres: ['Экшен']
-        }].slice(0, limit);
+        return [];
     },
 
-    // ==== СЕЗОННОЕ ====
     async getSeasonal(limit) {
         const now = new Date(); const month = now.getMonth(); let season = '';
         if (month < 3) season = 'winter'; else if (month < 6) season = 'spring'; else if (month < 9) season = 'summer'; else season = 'fall';
@@ -345,7 +327,6 @@ const API_Shikimori = {
         return [];
     },
 
-    // ==== ПОИСК ПО ЖАНРАМ (для рекомендаций) ====
     async searchByGenres(genreNames, limit = 4, excludeIds = []) {
         if (!genreNames || genreNames.length === 0) return [];
         try {
@@ -364,7 +345,6 @@ const API_Shikimori = {
         }
     },
 
-    // ==== Конвертеры ====
     convert(a) {
         return {
             id: 'shikimori_' + a.id, rawId: a.id,
@@ -410,7 +390,6 @@ const API = {
         try {
             const data = await API_Shikimori[method](...args);
             if (Array.isArray(data) && data.length === 0) {
-                console.warn('[API] Пустой ответ, не кэшируем:', method, args);
                 return data;
             }
             this._cache.set(key, { data, time: Date.now() });
@@ -1614,7 +1593,7 @@ async function loadHomePage() {
     const heroDots = document.getElementById('heroDots');
     const heroProgressBar = document.getElementById('heroProgressBar');
 
-    // Скелетоны — только в контейнерах, не затираем heroSection
+    // Скелетоны
     if (heroSlider) heroSlider.innerHTML = `<div class="hero-slide active"><div class="hero-bg" style="background: linear-gradient(135deg, #1a1a24, #12121a);"></div></div>`;
     if (heroDots) heroDots.innerHTML = '';
     if (heroProgressBar) heroProgressBar.innerHTML = '';
@@ -1657,10 +1636,10 @@ async function loadHomePage() {
         if (seasonalList) seasonalList.innerHTML = '<div class="loading-text">Не удалось загрузить</div>';
     }
 
-    // ==== ПОПУЛЯРНОЕ (по оценкам 4-5 на сайте) ====
+    // ==== ПОПУЛЯРНОЕ ====
     loadPopularByRating(6);
 
-    // ==== РЕКОМЕНДАЦИИ (по жанрам пользователя) ====
+    // ==== РЕКОМЕНДАЦИИ ====
     loadRecommendations(4);
 
     // Наблюдатель
