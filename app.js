@@ -12,6 +12,7 @@ try {
 const tg = window.Telegram?.WebApp;
 let MY_TG_ID = null, MY_NAME = 'Гость', MY_PHOTO_URL = '';
 let ACTIVE_BANNER_URL = '', ACTIVE_TITLE_DATA = null, ACTIVE_EFFECT_CSS = '', ACTIVE_BADGE_URL = '';
+let PENDING_VERIFY_EMAIL = ''; // Для хранения почты во время ожидания кода
 
 if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
     tg.expand();
@@ -48,6 +49,7 @@ function switchAuthTab(mode) {
     document.getElementById('tab-register').classList.toggle('active', mode === 'register');
     document.getElementById('form-login').style.display = mode === 'login' ? 'block' : 'none';
     document.getElementById('form-register').style.display = mode === 'register' ? 'block' : 'none';
+    document.getElementById('form-verify').style.display = 'none'; // Скрываем форму кода при переключении
     showAuthError('');
 }
 
@@ -99,7 +101,7 @@ async function handleRegister() {
     showAuthError('');
 
     try {
-        // 1. Проверяем, занят ли ник
+        // Проверяем, свободен ли никнейм
         const { data: existingUser } = await supabaseClient.from('users').select('tg_id').ilike('name', nickname).limit(1);
         if (existingUser && existingUser.length > 0) {
             showAuthError('Этот никнейм уже занят');
@@ -107,7 +109,6 @@ async function handleRegister() {
             return;
         }
 
-        // 2. Создаем пользователя в Supabase Auth
         btn.textContent = 'Регистрация...';
         const { data, error } = await supabaseClient.auth.signUp({
             email: email, 
@@ -116,31 +117,77 @@ async function handleRegister() {
         });
         if (error) throw error;
 
-        // Если включено подтверждение почты, data.session будет null, и нам нужно попросить пользователя проверить почту
-        if (!data.session) {
-            showAuthError('Аккаунт создан! Проверьте вашу почту для подтверждения.');
-            btn.disabled = false; btn.textContent = 'Создать аккаунт';
+        // Если сессия есть (подтверждение почты ОТКЛЮЧЕНО)
+        if (data.session) {
+            MY_TG_ID = data.user.id;
+            MY_NAME = nickname;
+            await supabaseClient.from('users').upsert({
+                tg_id: data.user.id, name: nickname, avatar_url: '',
+                xp: 0, coins: 0, episodes_watched: 0, minutes_watched: 0, days_streak: 1,
+                unlocked_achievements: '[]'
+            }, { onConflict: 'tg_id' });
+            hideAuthScreen();
+            await loadProfileData();
+            loadHomePage();
+            showToast('✅ Добро пожаловать!');
             return;
         }
 
-        MY_TG_ID = data.user.id;
-        MY_NAME = nickname;
+        // Если сессии нет (подтверждение почты ВКЛЮЧЕНО) — переключаем на ввод кода
+        PENDING_VERIFY_EMAIL = email;
+        document.getElementById('form-register').style.display = 'none';
+        document.getElementById('form-verify').style.display = 'block';
+        document.getElementById('authError').classList.remove('active');
+        showToast('📩 Код отправлен на почту!');
 
-        // 3. Записываем в таблицу users (сработает, если подтверждение почты отключено или мы авторизовались)
-        await supabaseClient.from('users').upsert({
-            tg_id: data.user.id, name: nickname, avatar_url: '',
-            xp: 0, coins: 0, episodes_watched: 0, minutes_watched: 0, days_streak: 1,
-            unlocked_achievements: '[]'
-        }, { onConflict: 'tg_id' });
-
-        hideAuthScreen();
-        await loadProfileData();
-        loadHomePage();
-        showToast('✅ Добро пожаловать!');
     } catch (e) {
         showAuthError(e.message || 'Ошибка регистрации');
     } finally {
         btn.disabled = false; btn.textContent = 'Создать аккаунт';
+    }
+}
+
+async function handleVerifyCode() {
+    const code = document.getElementById('verify-code').value.trim();
+    // Supabase по умолчанию генерирует 8-значный код
+    if (!code || code.length !== 8) {
+        showAuthError('Введите 8-значный код');
+        return;
+    }
+
+    const btn = document.getElementById('verify-btn');
+    btn.disabled = true; btn.textContent = 'Проверка...';
+    showAuthError('');
+
+    try {
+        const { data, error } = await supabaseClient.auth.verifyOtp({
+            email: PENDING_VERIFY_EMAIL,
+            token: code,
+            type: 'email' // Важно: для подтверждения почты используется тип 'email'
+        });
+
+        if (error) throw error;
+
+        if (data.session) {
+            MY_TG_ID = data.user.id;
+            MY_NAME = data.user.user_metadata?.nickname || 'Игрок';
+            
+            // Создаем запись в таблице users после успешного подтверждения
+            await supabaseClient.from('users').upsert({
+                tg_id: MY_TG_ID, name: MY_NAME, avatar_url: '',
+                xp: 0, coins: 0, episodes_watched: 0, minutes_watched: 0, days_streak: 1,
+                unlocked_achievements: '[]'
+            }, { onConflict: 'tg_id' });
+
+            hideAuthScreen();
+            await loadProfileData();
+            loadHomePage();
+            showToast('✅ Почта подтверждена! Добро пожаловать!');
+        }
+    } catch (e) {
+        showAuthError('Неверный или просроченный код');
+    } finally {
+        btn.disabled = false; btn.textContent = 'Подтвердить';
     }
 }
 
@@ -156,7 +203,7 @@ async function initAuth() {
                 MY_TG_ID = session.user.id;
                 MY_NAME = session.user.user_metadata?.nickname || 'Игрок';
                 
-                // Принудительно проверяем, есть ли пользователь в таблице `users`. Если нет — создаем.
+                // На всякий случай проверяем, есть ли пользователь в таблице
                 const { data: dbUser } = await supabaseClient.from('users').select('tg_id').eq('tg_id', MY_TG_ID).single();
                 if (!dbUser) {
                     await supabaseClient.from('users').upsert({
