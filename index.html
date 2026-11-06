@@ -467,6 +467,18 @@
                 <button class="auth-btn" id="register-btn" onclick="handleRegister()">Создать аккаунт</button>
                 <div class="auth-footer">Уже есть аккаунт? <span class="auth-link" onclick="switchAuthTab('login')">Войти</span></div>
             </div>
+
+            <!-- ПОДТВЕРЖДЕНИЕ КОДА -->
+            <div id="form-verify" style="display:none;">
+                <p style="text-align: center; color: #ccc; margin-bottom: 20px; font-size: 14px;">
+                    Мы отправили код на вашу почту. Введите его ниже:
+                </p>
+                <input type="text" id="verify-code" class="auth-input" placeholder="8-значный код" maxlength="8" inputmode="numeric">
+                <button class="auth-btn" id="verify-btn" onclick="handleVerifyCode()">Подтвердить</button>
+                <div class="auth-footer">
+                    <span class="auth-link" onclick="switchAuthTab('login')">Назад ко входу</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -851,6 +863,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=3200"></script>
+    <script src="app.js?v=3300"></script>
 </body>
 </html>
