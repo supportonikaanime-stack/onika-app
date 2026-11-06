@@ -215,47 +215,57 @@ const API_Shikimori = {
 
     // ==== КАТАЛОГ ====
     async getCatalog(page, limit, filters) {
-        // Пробуем GraphQL БЕЗ status (он сейчас ломает запрос на стороне Shikimori)
+        // 1. GraphQL БЕЗ status
         try {
             let args = [`page:${page}`, `limit:${limit}`, `order:popularity`];
             if (filters.search) args.push(`search:"${filters.search.replace(/"/g, '')}"`);
             if (filters.year) args.push(`season:"${filters.year}"`);
             const q = `{animes(${args.join(',')}){id name russian score episodes status poster{originalUrl} genres{name} trailer{id}}}`;
             const d = await this.fetchGraphQL(q);
-            let results = d.animes.map(this.convert);
-            if (filters.genre) results = results.filter(a => a.genres.includes(filters.genre));
-            if (filters.status) {
-                const statusMap = { 'ongoing': 'Онгоинг', 'released': 'Завершено', 'anons': 'Анонс' };
-                const targetStatus = statusMap[filters.status];
-                if (targetStatus) results = results.filter(a => a.status === targetStatus);
+            if (d.animes && d.animes.length > 0) {
+                let results = d.animes.map(this.convert);
+                if (filters.genre) results = results.filter(a => a.genres.includes(filters.genre));
+                if (filters.status) {
+                    const statusMap = { 'ongoing': 'Онгоинг', 'released': 'Завершено', 'anons': 'Анонс' };
+                    const targetStatus = statusMap[filters.status];
+                    if (targetStatus) results = results.filter(a => a.status === targetStatus);
+                }
+                return results;
             }
-            if (results.length > 0) return results;
+            // Пусто для страницы 2+ — это нормально, аниме закончились
+            if (page > 1) return [];
+            // Пусто для страницы 1 — пробуем REST
+            console.warn('[Shikimori] GraphQL вернул пусто для page 1, пробуем REST');
         } catch (e) {
             console.warn('[Shikimori] GraphQL getCatalog упал, пробуем REST:', e.message);
         }
-        // Fallback: REST
-        return await this.getCatalogREST(page, limit, filters);
-    },
 
-    async getCatalogREST(page, limit, filters) {
-        const params = new URLSearchParams({
-            page: String(page),
-            limit: String(limit),
-            order: 'popularity'
-        });
-        if (filters.search) params.append('search', filters.search);
-        if (filters.year) params.append('season', filters.year);
-        // status в REST тоже не передаём — он мог сломать запрос
-        const url = `${this.REST_URL}?${params.toString()}`;
-        const data = await this.fetchREST(url);
-        let results = data.map(item => this.convertREST(item));
-        if (filters.genre) results = results.filter(a => a.genres.includes(filters.genre));
-        if (filters.status) {
-            const statusMap = { 'ongoing': 'Онгоинг', 'released': 'Завершено', 'anons': 'Анонс' };
-            const targetStatus = statusMap[filters.status];
-            if (targetStatus) results = results.filter(a => a.status === targetStatus);
+        // 2. REST
+        try {
+            const params = new URLSearchParams({
+                page: String(page),
+                limit: String(limit),
+                order: 'popularity'
+            });
+            if (filters.search) params.append('search', filters.search);
+            if (filters.year) params.append('season', filters.year);
+            const url = `${this.REST_URL}?${params.toString()}`;
+            const data = await this.fetchREST(url);
+            if (Array.isArray(data) && data.length > 0) {
+                let results = data.map(item => this.convertREST(item));
+                if (filters.genre) results = results.filter(a => a.genres.includes(filters.genre));
+                if (filters.status) {
+                    const statusMap = { 'ongoing': 'Онгоинг', 'released': 'Завершено', 'anons': 'Анонс' };
+                    const targetStatus = statusMap[filters.status];
+                    if (targetStatus) results = results.filter(a => a.status === targetStatus);
+                }
+                return results;
+            }
+        } catch (e) {
+            console.error('[Shikimori] REST getCatalog упал:', e.message);
         }
-        return results;
+
+        return [];
     },
 
     // ==== ДЕТАЛИ ====
@@ -290,14 +300,12 @@ const API_Shikimori = {
         } catch (e) {
             console.warn('[Shikimori] GraphQL getRandom упал, пробуем REST:', e.message);
         }
-        // REST fallback
         try {
             const data = await this.fetchREST(`${this.REST_URL}?limit=20&order=popularity`);
             if (Array.isArray(data) && data.length > 0) {
                 return data.sort(() => Math.random() - 0.5).slice(0, limit).map(item => this.convertREST(item));
             }
         } catch (e) { console.error('[Shikimori] REST getRandom упал:', e.message); }
-        // Последний резерв
         return [{
             id: 'shikimori_40748',
             title: 'Магическая битва',
@@ -308,25 +316,45 @@ const API_Shikimori = {
     },
 
     // ==== СЕЗОННОЕ ====
+    // season в GraphQL ломает запрос → убираем его, пробуем REST с season,
+    // если не вышло — просто популярное (fallback)
     async getSeasonal(limit) {
         const now = new Date(); const month = now.getMonth(); let season = '';
         if (month < 3) season = 'winter'; else if (month < 6) season = 'spring'; else if (month < 9) season = 'summer'; else season = 'fall';
         const year = now.getFullYear();
-        // GraphQL — БЕЗ status (он ломает запрос)
+        const seasonStr = `${season}_${year}`;
+
+        // 1. GraphQL БЕЗ season — просто популярное
         try {
-            const q = `{animes(season:"${season}_${year}", order:popularity, limit:${limit}){id name russian score episodes status poster{originalUrl} genres{name} trailer{id}}}`;
+            const q = `{animes(order:popularity, limit:${limit * 2}){id name russian score episodes status poster{originalUrl} genres{name} trailer{id}}}`;
             const d = await this.fetchGraphQL(q);
-            if (d.animes && d.animes.length > 0) return d.animes.map(this.convert);
+            if (d.animes && d.animes.length > 0) {
+                return d.animes.slice(0, limit).map(this.convert);
+            }
         } catch (e) {
-            console.warn('[Shikimori] GraphQL getSeasonal упал, пробуем REST:', e.message);
+            console.warn('[Shikimori] GraphQL getSeasonal упал:', e.message);
         }
-        // REST
+
+        // 2. REST с season
         try {
-            const data = await this.fetchREST(`${this.REST_URL}?season=${season}_${year}&limit=${limit}&order=popularity`);
+            const url = `${this.REST_URL}?season=${encodeURIComponent(seasonStr)}&limit=${limit}&order=popularity`;
+            const data = await this.fetchREST(url);
+            if (Array.isArray(data) && data.length > 0) {
+                return data.map(item => this.convertREST(item));
+            }
+        } catch (e) {
+            console.warn('[Shikimori] REST getSeasonal с season упал:', e.message);
+        }
+
+        // 3. REST без season — просто популярное
+        try {
+            const data = await this.fetchREST(`${this.REST_URL}?limit=${limit}&order=popularity`);
             if (Array.isArray(data) && data.length > 0) return data.map(item => this.convertREST(item));
-        } catch (e) { console.error('[Shikimori] REST getSeasonal упал:', e.message); }
-        // Fallback
-        try { return await this.getCatalogREST(1, limit, { sort: 'popularity' }); } catch(e) { return []; }
+        } catch (e) {
+            console.error('[Shikimori] REST getSeasonal без season упал:', e.message);
+        }
+
+        return [];
     },
 
     // ==== Конвертеры ====
@@ -364,14 +392,27 @@ const API = {
     _cache: new Map(),
     async _cachedFetch(method, ...args) {
         const key = method + '_' + JSON.stringify(args);
-        if (this._cache.has(key) && Date.now() - this._cache.get(key).time < 5 * 60 * 1000) return this._cache.get(key).data;
+        if (this._cache.has(key) && Date.now() - this._cache.get(key).time < 5 * 60 * 1000) {
+            const cached = this._cache.get(key).data;
+            // Не отдаём пустой кэш — лучше перезапросить
+            if (Array.isArray(cached) && cached.length === 0) {
+                this._cache.delete(key);
+            } else {
+                return cached;
+            }
+        }
         try {
             const data = await API_Shikimori[method](...args);
+            // Не кэшируем пустые массивы
+            if (Array.isArray(data) && data.length === 0) {
+                console.warn('[API] Пустой ответ, не кэшируем:', method, args);
+                return data;
+            }
             this._cache.set(key, { data, time: Date.now() });
             return data;
         } catch(e) {
             console.error('[API]', method, e);
-            return Array.isArray([]) ? [] : null;
+            return null;
         }
     },
     getCatalog(page, limit, filters) { return this._cachedFetch('getCatalog', page, limit, filters); },
@@ -1543,10 +1584,15 @@ async function loadHomePage() {
     if (recList) recList.innerHTML = Skeletons.cards(4);
 
     try {
+        // Параллельно грузим всё
         const [heroItems, seasonalItems, popularItems, recItems] = await Promise.all([
-            API.getRandom(5), API.getSeasonal(6), API.getCatalog(1, 6, { sort: 'popularity' }), API.getCatalog(2, 4, { sort: 'popularity' })
+            API.getRandom(5),
+            API.getSeasonal(6),
+            API.getCatalog(1, 6, { sort: 'popularity' }),
+            API.getCatalog(2, 4, { sort: 'popularity' })
         ]);
 
+        // ==== HERO ====
         if (!heroItems || heroItems.length === 0) {
             heroData = [{ id: 'shikimori_40748', title: 'Магическая битва', img: 'https://shikimori.io/system/animes/original/40748.jpg', score: '8.5', type: 'TV', year: '2020' }];
         } else {
@@ -1554,9 +1600,41 @@ async function loadHomePage() {
         }
         initHeroSlider();
 
-        if (seasonalList && seasonalItems && seasonalItems.length > 0) seasonalList.innerHTML = seasonalItems.map(anime => `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'home')"><img class="card-img" src="${safeUrl(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
-        if (popularList && popularItems && popularItems.length > 0) popularList.innerHTML = popularItems.map(anime => `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'home')"><img class="card-img" src="${safeUrl(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
-        if (recList && recItems && recItems.length > 0) recList.innerHTML = recItems.map(anime => `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'home')"><img class="card-img" src="${safeUrl(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
+        // ==== СЕЗОННОЕ ====
+        if (seasonalList) {
+            if (seasonalItems && seasonalItems.length > 0) {
+                seasonalList.innerHTML = seasonalItems.map(anime => `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'home')"><img class="card-img" src="${safeUrl(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
+            } else {
+                seasonalList.innerHTML = '<div class="loading-text">Не удалось загрузить</div>';
+            }
+        }
+
+        // ==== ПОПУЛЯРНОЕ ====
+        if (popularList) {
+            if (popularItems && popularItems.length > 0) {
+                popularList.innerHTML = popularItems.map(anime => `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'home')"><img class="card-img" src="${safeUrl(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
+            } else {
+                popularList.innerHTML = '<div class="loading-text">Не удалось загрузить</div>';
+            }
+        }
+
+        // ==== РЕКОМЕНДАЦИИ ====
+        if (recList) {
+            if (recItems && recItems.length > 0) {
+                recList.innerHTML = recItems.map(anime => `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'home')"><img class="card-img" src="${safeUrl(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
+            } else {
+                // Если страница 2 пуста — грузим просто популярное, чтобы не было пусто
+                console.warn('[Home] Рекомендации пусты, грузим fallback');
+                try {
+                    const fallback = await API.getCatalog(1, 4, { sort: 'popularity' });
+                    if (fallback && fallback.length > 0) {
+                        recList.innerHTML = fallback.map(anime => `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'home')"><img class="card-img" src="${safeUrl(anime.images.jpg.image_url)}" loading="lazy"><div class="card-title">${escapeHTML(anime.title)}</div></div>`).join('');
+                    } else {
+                        recList.innerHTML = '<div class="loading-text">Не удалось загрузить</div>';
+                    }
+                } catch(e) { recList.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; }
+            }
+        }
 
         const obs = getSectionObserver();
         document.querySelectorAll('.content-section, .tg-banner-section').forEach(sec => {
