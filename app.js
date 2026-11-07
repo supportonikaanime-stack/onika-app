@@ -252,40 +252,53 @@ const API_Shikimori = {
     async getRussianData(searchTitle) {
         if (!searchTitle) return { russian:null, description:null };
         
+        // Очищаем название от скобок, чтобы поиск был точнее
         const clean = searchTitle.replace(/\s*\([^)]*\)/g,'').trim();
         
-        // Делаем до 2-х попыток
-        for (let attempt = 1; attempt <= 2; attempt++) {
+        // Увеличиваем количество попыток и паузу, чтобы Shikimori 100% успевал
+        for (let attempt = 1; attempt <= 3; attempt++) {
             try {
                 const q = `{animes(search:"${clean.replace(/"/g,'')}",limit:1){id name russian description}}`;
                 const d = await this.fetchGraphQL(q);
                 if (d.animes && d.animes.length) {
                     return { russian: d.animes[0].russian || null, description: d.animes[0].description || null };
                 }
-                break; // Если нашли, но russian пустой — прерываем цикл
+                break; // Если нашли (даже если russian пустой), прерываем
             } catch(e) { 
                 console.warn(`[Shikimori] Попытка ${attempt} упала:`, e.message); 
-                if (attempt === 1) await new Promise(r => setTimeout(r, 300));
+                if (attempt < 3) await new Promise(r => setTimeout(r, 500)); // Ждём полсекунды перед повтором
             }
         }
         return { russian:null, description:null };
     }
 };
 
+// Вспомогательная функция для последовательной обработки очереди
+async function processQueue(items, asyncProcessor) {
+    const results = [];
+    for (const item of items) {
+        const result = await asyncProcessor(item);
+        results.push(result);
+        // Задержка 150мс, чтобы прокси не захлебывался
+        await new Promise(r => setTimeout(r, 150)); 
+    }
+    return results;
+}
+
 async function buildAnimeObject(raw) {
     const searchTitle = raw.title?.english || raw.title?.romaji || raw.title?.native || '';
     
-    // 1. AniLibria
+    // 1. Пытаемся найти в AniLibria
     let russianFromAniLibria = null;
     try { russianFromAniLibria = await API_AniLibria.searchRussian(searchTitle); } catch(e) {}
     
-    // 2. Shikimori
+    // 2. Если нет, идём в Shikimori (только если AniLibria не нашла)
     let shikiData = { russian:null, description:null };
     if (!russianFromAniLibria) {
         shikiData = await API_Shikimori.getRussianData(searchTitle);
     }
 
-    // 3. ФИНАЛЬНОЕ НАЗВАНИЕ. Если нет русского - используем английское, чтобы не было заглушки.
+    // 3. Финал: русское -> английское
     const finalRussianTitle = russianFromAniLibria || shikiData.russian || raw.title?.english || raw.title?.romaji || raw.title?.native || 'Без названия';
     
     const score = raw.averageScore ? (raw.averageScore/10).toFixed(1) : 0;
@@ -297,7 +310,7 @@ async function buildAnimeObject(raw) {
         id: 'anilist_' + raw.id,
         rawId: raw.id,
         idMal: raw.idMal,
-        title_ru: finalRussianTitle, // Здесь будет либо RU, либо EN (без заглушек)
+        title_ru: finalRussianTitle, 
         title_raw: searchTitle,
         title: finalRussianTitle,
         year: raw.seasonYear || '--',
@@ -318,12 +331,42 @@ const API = {
         if (this._cache.has(key) && Date.now()-this._cache.get(key).t < 5*60*1000) return this._cache.get(key).d;
         try { const d = await fn(); this._cache.set(key,{d,t:Date.now()}); return d; } catch(e) { return null; }
     },
-    getCatalog(page,limit,filters) { return this._cached(`c_${page}_${limit}_${JSON.stringify(filters||{})}`, async()=>{ const raw=await API_AniList.getCatalog(page,limit,filters); return await Promise.all(raw.map(buildAnimeObject)); }); },
-    getDetails(id) { return this._cached(`d_${id}`, async()=>{ const raw=await API_AniList.getDetails(id); return raw?await buildAnimeObject(raw):null; }); },
-    getRandom(limit) { return this._cached(`r_${limit}`, async()=>{ const raw=await API_AniList.getRandom(limit); return await Promise.all(raw.map(buildAnimeObject)); }); },
-    getSeasonal(limit) { return this._cached(`s_${limit}`, async()=>{ const raw=await API_AniList.getSeasonal(limit); return await Promise.all(raw.map(buildAnimeObject)); }); },
-    searchByGenres(g,l,ex) { return this._cached(`g_${JSON.stringify(g)}_${l}`, async()=>{ const raw=await API_AniList.searchByGenres(g,l,ex); return await Promise.all(raw.map(buildAnimeObject)); }); },
-    getTopRated(limit) { return this._cached(`top_${limit}`, async()=>{ const raw=await API_AniList.getTopRated(limit); return await Promise.all(raw.map(buildAnimeObject)); }); }
+    getCatalog(page,limit,filters) { 
+        return this._cached(`c_${page}_${limit}_${JSON.stringify(filters||{})}`, async()=>{ 
+            const raw=await API_AniList.getCatalog(page,limit,filters); 
+            return await processQueue(raw, buildAnimeObject); 
+        }); 
+    },
+    getDetails(id) { 
+        return this._cached(`d_${id}`, async()=>{ 
+            const raw=await API_AniList.getDetails(id); 
+            return raw?await buildAnimeObject(raw):null; 
+        }); 
+    },
+    getRandom(limit) { 
+        return this._cached(`r_${limit}`, async()=>{ 
+            const raw=await API_AniList.getRandom(limit); 
+            return await processQueue(raw, buildAnimeObject); 
+        }); 
+    },
+    getSeasonal(limit) { 
+        return this._cached(`s_${limit}`, async()=>{ 
+            const raw=await API_AniList.getSeasonal(limit); 
+            return await processQueue(raw, buildAnimeObject); 
+        }); 
+    },
+    searchByGenres(g,l,ex) { 
+        return this._cached(`g_${JSON.stringify(g)}_${l}`, async()=>{ 
+            const raw=await API_AniList.searchByGenres(g,l,ex); 
+            return await processQueue(raw, buildAnimeObject); 
+        }); 
+    },
+    getTopRated(limit) { 
+        return this._cached(`top_${limit}`, async()=>{ 
+            const raw=await API_AniList.getTopRated(limit); 
+            return await processQueue(raw, buildAnimeObject); 
+        }); 
+    }
 };
 
 // ==========================================
@@ -615,7 +658,7 @@ async function renderEffectsInShop(container) {
         (items || []).forEach(e => { 
             const isActive = stats.active_effect === e.id; 
             let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${e.price} 🪙</div>`; 
-            html += `<div class="shop-item" onclick="startPreview('effect', parseJSONAttr('${safeJSONAttr(e)}'))"><div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items:center; justify-content:center;"><div class="avatar" style="width:40px; height:40px; font-size:12px; background:#333; border:1px solid #555;">AA</div></div><div class="shop-info"><div class="shop-name">${escapeHTML(e.name)}</div>${btnHtml}</div></div>`; 
+            html += `<div class="shop-item" onclick="startPreview('effect', parseJSONAttr('${safeJSONAttr(e)}'))"><div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items: center; justify-content: center;"><div class="avatar" style="width:40px; height:40px; font-size:12px; background:#333; border:1px solid #555;">AA</div></div><div class="shop-info"><div class="shop-name">${escapeHTML(e.name)}</div>${btnHtml}</div></div>`; 
         }); 
         container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет эффектов</div>'; 
     } catch(e) { console.error(e); } 
