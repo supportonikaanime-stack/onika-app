@@ -12,7 +12,7 @@ let MY_ID = null, MY_PUBLIC_ID = null, MY_NAME = 'Гость', MY_PHOTO_URL = ''
 let ACTIVE_BANNER_URL = '', ACTIVE_TITLE_DATA = null, ACTIVE_EFFECT_CSS = '', ACTIVE_BADGE_URL = '';
 let PENDING_VERIFY_EMAIL = '';
 
-if (tg?.initDataUnsafe?.user) {
+if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
     tg.expand();
     try { tg.setHeaderColor('#0a0a0f'); tg.setBackgroundColor('#0a0a0f'); } catch(e) {}
     MY_ID = tg.initDataUnsafe.user.id;
@@ -166,7 +166,7 @@ document.addEventListener('pointerdown', function(e) {
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const SHIKIMORI_GRAPHQL = 'https://shikimori.io/api/graphql';
-const ANILIBRIA_RELEASES = 'https://aniliberty.top/api/v1/anime/releases';
+const ANILIBRIA_API = 'https://aniliberty.top/api/v1';
 
 const API_AniList = {
     async fetch(query, variables = {}) {
@@ -224,7 +224,7 @@ const API_AniLibria = {
         if (!searchTitle) return null;
         const cleanSearch = searchTitle.replace(/\s*\([^)]*\)/g,'').trim();
         if (!cleanSearch) return null;
-        const url = `${ANILIBRIA_RELEASES}?f[search]=${encodeURIComponent(cleanSearch)}&limit=1`;
+        const url = `${ANILIBRIA_API}/anime/releases?f[search]=${encodeURIComponent(cleanSearch)}&limit=1`;
         try {
             const res = await fetch(PROXY_URL + encodeURIComponent(url));
             if (!res.ok) return null;
@@ -233,6 +233,37 @@ const API_AniLibria = {
             if (item) return item.name?.main || item.name?.english || null;
         } catch(e) { console.warn('[AniLibria] ошибка', e); }
         return null;
+    },
+    
+    // НОВЫЙ МЕТОД: Получаем популярные релизы из AniLibria
+    async getPopular(limit = 6) {
+        // sort_by=views - сортировка по просмотрам (популярности)
+        const url = `${ANILIBRIA_API}/anime/releases?sort_by=views&limit=${limit}&page=1`;
+        try {
+            const res = await fetch(PROXY_URL + encodeURIComponent(url));
+            if (!res.ok) throw new Error('AniLibria HTTP ' + res.status);
+            const data = await res.json();
+            
+            if (!data?.data || !Array.isArray(data.data)) return [];
+
+            return data.data.map(item => ({
+                id: 'anilibria_' + item.id, // Уникальный префикс
+                rawId: item.id,
+                title: item.name?.main || item.name?.english || 'Без названия',
+                year: item.year || '--',
+                episodes: item.episodes_total || '?',
+                // AniLibria отдаёт постер в item.poster.src
+                images: { jpg: { image_url: item.poster?.src || item.poster?.preview || '' } },
+                description: item.description || 'Описание отсутствует.',
+                genres: (item.genres || []).map(g => g.name),
+                score: item.rating || 0, // Используем рейтинг AniLibria
+                status: item.is_ongoing ? 'Онгоинг' : 'Завершено',
+                kind: item.type?.name || 'TV'
+            }));
+        } catch(e) { 
+            console.warn('[AniLibria] getPopular ошибка', e); 
+            return []; 
+        }
     }
 };
 
@@ -298,7 +329,8 @@ const API = {
     getDetails(id) { return this._cached(`d_${id}`, async()=>{ const raw=await API_AniList.getDetails(id); return raw?await buildAnimeObject(raw):null; }); },
     getRandom(limit) { return this._cached(`r_${limit}`, async()=>{ const raw=await API_AniList.getRandom(limit); return await Promise.all(raw.map(buildAnimeObject)); }); },
     getSeasonal(limit) { return this._cached(`s_${limit}`, async()=>{ const raw=await API_AniList.getSeasonal(limit); return await Promise.all(raw.map(buildAnimeObject)); }); },
-    searchByGenres(g,l,ex) { return this._cached(`g_${JSON.stringify(g)}_${l}`, async()=>{ const raw=await API_AniList.searchByGenres(g,l,ex); return await Promise.all(raw.map(buildAnimeObject)); }); }
+    searchByGenres(g,l,ex) { return this._cached(`g_${JSON.stringify(g)}_${l}`, async()=>{ const raw=await API_AniList.searchByGenres(g,l,ex); return await Promise.all(raw.map(buildAnimeObject)); }); },
+    getPopularAniLibria(limit) { return this._cached(`p_al_${limit}`, async()=>{ return await API_AniLibria.getPopular(limit); }); } // Кэшируем популярные из AniLibria
 };
 
 // ==========================================
@@ -590,7 +622,7 @@ async function renderEffectsInShop(container) {
         (items || []).forEach(e => { 
             const isActive = stats.active_effect === e.id; 
             let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${e.price} 🪙</div>`; 
-            html += `<div class="shop-item" onclick="startPreview('effect', parseJSONAttr('${safeJSONAttr(e)}'))"><div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items:center; justify-content:center;"><div class="avatar" style="width:40px; height:40px; font-size:12px; background:#333; border:1px solid #555;">AA</div></div><div class="shop-info"><div class="shop-name">${escapeHTML(e.name)}</div>${btnHtml}</div></div>`; 
+            html += `<div class="shop-item" onclick="startPreview('effect', parseJSONAttr('${safeJSONAttr(e)}'))"><div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items: center; justify-content: center;"><div class="avatar" style="width:40px; height:40px; font-size:12px; background:#333; border:1px solid #555;">AA</div></div><div class="shop-info"><div class="shop-name">${escapeHTML(e.name)}</div>${btnHtml}</div></div>`; 
         }); 
         container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет эффектов</div>'; 
     } catch(e) { console.error(e); } 
@@ -1045,6 +1077,16 @@ async function loadPopularByRating(limit = 6) {
     const list = document.getElementById('popular-list'); if (!list) return;
     list.innerHTML = Skeletons.cards(4);
     try {
+        // 1. Пробуем взять популярное из AniLibria
+        const items = await API.getPopularAniLibria(limit);
+        if (items && items.length > 0) {
+            renderSectionCards(list, items, 'home');
+            return;
+        }
+    } catch(e) { console.warn('[Popular] AniLibria fallback'); }
+
+    // 2. Если AniLibria не ответила, используем старую логику (AniList)
+    try {
         if (!supabaseClient) { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return; }
         const { data: ratings, error } = await supabaseClient.from('user_lists').select('anime_id, rating').not('rating', 'is', null).gte('rating', 4);
         if (error) throw error;
@@ -1052,12 +1094,15 @@ async function loadPopularByRating(limit = 6) {
         const stats = {}; ratings.forEach(r => { if (!stats[r.anime_id]) stats[r.anime_id] = { sum: 0, count: 0 }; stats[r.anime_id].sum += r.rating; stats[r.anime_id].count += 1; });
         const sorted = Object.entries(stats).map(([id, s]) => ({ id, avg: s.sum / s.count, count: s.count })).filter(x => x.avg >= 4.0).sort((a, b) => b.avg - a.avg || b.count - a.count).slice(0, limit);
         if (sorted.length === 0) { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return; }
-        const items = await Promise.all(sorted.map(x => API.getDetails(x.id)));
-        const valid = items.filter(Boolean);
+        const fallbackItems = await Promise.all(sorted.map(x => API.getDetails(x.id)));
+        const valid = fallbackItems.filter(Boolean);
         if (valid.length === 0) { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return; }
         renderSectionCards(list, valid, 'home');
-    } catch (e) { try { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); } catch(e2) { list.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; } }
+    } catch (e) { 
+        try { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); } catch(e2) { list.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; } 
+    }
 }
+
 async function loadRecommendations(limit = 4) {
     const list = document.getElementById('recommended-list'); if (!list) return;
     list.innerHTML = Skeletons.cards(4);
@@ -1098,7 +1143,6 @@ async function loadHomePage() {
     const heroSlider = document.getElementById('heroSlider');
     const heroProgressBar = document.getElementById('heroProgressBar');
     
-    // Скелетон для баннера (просто темный фон)
     if (heroSlider) heroSlider.innerHTML = `<div class="hero-slide active"><div style="position:absolute; inset:0; background: linear-gradient(135deg, #1a1a24, #12121a);"></div></div>`;
     if (heroProgressBar) heroProgressBar.innerHTML = '';
     if (seasonalList) seasonalList.innerHTML = Skeletons.cards(4);
