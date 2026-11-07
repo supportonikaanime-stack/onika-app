@@ -579,7 +579,7 @@
     <div id="screen-friends" class="screen">
         <header class="profile-header" style="padding-bottom: 10px;"><h1>Друзья</h1></header>
         <div class="friends-search">
-            <input type="number" id="friend-search-input" placeholder="Введите Telegram ID друга...">
+            <input type="number" id="friend-search-input" placeholder="Введите ID друга (6 цифр)...">
             <button onclick="searchFriend()">Найти</button>
         </div>
         <div id="search-result-container" style="padding: 0 20px 20px;"></div>
@@ -641,9 +641,15 @@
                 <div class="user-card-top" id="profile-banner">
                     <div class="effect-container" id="particle-effect-container"></div>
                     <div class="user-card-top-content">
-                        <div class="avatar-container">
+                        <!-- Кнопка смены аватарки -->
+                        <div class="avatar-container" onclick="document.getElementById('avatar-upload').click()" style="cursor: pointer; position: relative;">
                             <div class="avatar" id="tg-avatar"><span id="avatar-letter">?</span></div>
+                            <div style="position: absolute; bottom: 0; right: 0; background: #5b5bff; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #14141f; z-index: 10;">
+                                <svg style="width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 2;"><use href="#oa-edit"></use></svg>
+                            </div>
                         </div>
+                        <input type="file" id="avatar-upload" accept="image/*" style="display: none;" onchange="uploadAvatar(event)">
+
                         <div class="user-details">
                             <div class="user-name-row">
                                 <h2 id="tg-name">Гость</h2>
@@ -730,9 +736,6 @@
                     <button class="settings-btn" onclick="resetBadge()">
                         <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять значок</span>
                         <span style="color: #888;">›</span>
-                    </button>
-                    <button class="settings-btn" onclick="signOut()" style="color: #ff2d78; border-color: rgba(255,45,120,0.3);">
-                        <span style="display:flex; align-items:center;"><svg><use href="#oa-logout"></use></svg> Выйти из аккаунта</span>
                     </button>
                 </div>
             </div>
@@ -863,6 +866,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=3400"></script>
+    <script src="app.js?v=3600"></script>
 </body>
 </html>
