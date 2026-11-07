@@ -43,9 +43,7 @@ function parseJSONAttr(str) { try { return JSON.parse(decodeURIComponent(str)); 
 // ==========================================
 // 1.1 АВТОРИЗАЦИЯ
 // ==========================================
-let authMode = 'login';
 function switchAuthTab(mode) {
-    authMode = mode;
     document.getElementById('tab-login').classList.toggle('active', mode === 'login');
     document.getElementById('tab-register').classList.toggle('active', mode === 'register');
     document.getElementById('form-login').style.display = mode === 'login' ? 'block' : 'none';
@@ -227,10 +225,7 @@ const API_Shikimori = {
     },
     cleanDescription(desc) {
         if (!desc) return 'Описание отсутствует.';
-        return desc.replace(/\[character=[^\]]+\]/g, '')
-                   .replace(/\[anime=[^\]]+\]/g, '')
-                   .replace(/<[^>]*>/g, '')
-                   .trim();
+        return desc.replace(/\[character=[^\]]+\]/g, '').replace(/\[anime=[^\]]+\]/g, '').replace(/<[^>]*>/g, '').trim();
     },
     async getCatalog(page, limit, filters) {
         let args = [`page:${page}`, `limit:${limit}`, `order:popularity`];
@@ -253,8 +248,7 @@ const API_Shikimori = {
             episodes: a.episodes || '?',
             status: a.status === 'ongoing' ? 'Онгоинг' : a.status === 'released' ? 'Завершено' : 'Анонс',
             genres: (a.genres || []).map(g => g.name),
-            images: { jpg: { image_url: '' } },
-            score: 0
+            images: { jpg: { image_url: '' } }, score: 0
         };
     }
 };
@@ -286,69 +280,48 @@ const API_AniList = {
 
 const AnimeAggregator = {
     _cache: new Map(),
-    
     async enrichWithAniList(anime) {
         if (!anime) return anime;
         const cacheKey = 'enrich_' + anime.rawId;
         if (this._cache.has(cacheKey)) return { ...anime, ...this._cache.get(cacheKey) };
 
-        let anilistId = null;
         let anilistData = null;
-
         if (supabaseClient) {
             const { data: mapping } = await supabaseClient.from('anime_mapping').select('anilist_id').eq('shikimori_id', anime.rawId).single();
-            if (mapping && mapping.anilist_id) {
-                anilistId = mapping.anilist_id;
-                anilistData = await API_AniList.getById(anilistId);
-            }
+            if (mapping && mapping.anilist_id) anilistData = await API_AniList.getById(mapping.anilist_id);
         }
 
         if (!anilistData) {
-            console.log(`[AniList] Поиск по названию: ${anime.title}`);
+            console.log(`[AniList] Поиск: ${anime.title}`);
             anilistData = await API_AniList.searchByTitle(anime.title);
-            
             if (anilistData && supabaseClient) {
                 await supabaseClient.from('anime_mapping').upsert({
-                    shikimori_id: anime.rawId,
-                    anilist_id: anilistData.id,
-                    mal_id: anilistData.idMal,
-                    title: anime.title
+                    shikimori_id: anime.rawId, anilist_id: anilistData.id, mal_id: anilistData.idMal, title: anime.title
                 }, { onConflict: 'shikimori_id' });
             }
         }
 
         if (anilistData) {
-            const enriched = {
-                poster: anilistData.coverImage.extraLarge,
-                score: anilistData.averageScore ? anilistData.averageScore / 10 : 0
-            };
+            const enriched = { poster: anilistData.coverImage.extraLarge, score: anilistData.averageScore ? anilistData.averageScore / 10 : 0 };
             this._cache.set(cacheKey, enriched);
-            return { 
-                ...anime, 
-                images: { jpg: { image_url: enriched.poster } },
-                score: enriched.score
-            };
+            return { ...anime, images: { jpg: { image_url: enriched.poster } }, score: enriched.score };
         }
         return anime;
     },
-
     async getCatalog(page, limit, filters) {
         const shikiItems = await API_Shikimori.getCatalog(page, limit, filters);
         return await Promise.all(shikiItems.map(a => this.enrichWithAniList(a)));
     },
-
     async getDetails(id) {
         const shikiItem = await API_Shikimori.getDetails(id);
         if (!shikiItem) return null;
         return await this.enrichWithAniList(shikiItem);
     },
-
     async getRandom(limit) {
         const shikiItems = await API_Shikimori.getCatalog(1, limit, {});
         const enrichedItems = await Promise.all(shikiItems.map(a => this.enrichWithAniList(a)));
         return enrichedItems.sort(() => Math.random() - 0.5);
     },
-
     async getSeasonal(limit) {
         const shikiItems = await API_Shikimori.getCatalog(1, limit, {});
         return await Promise.all(shikiItems.map(a => this.enrichWithAniList(a)));
