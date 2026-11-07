@@ -10,8 +10,8 @@ try {
 } catch(e) { console.error('Ошибка Supabase:', e); }
 
 const tg = window.Telegram?.WebApp;
-let MY_ID = null;         
-let MY_PUBLIC_ID = null;  
+let MY_ID = null;         // UUID из Auth (для базы)
+let MY_PUBLIC_ID = null;  // 6-значный ID (для друзей)
 let MY_NAME = 'Гость', MY_PHOTO_URL = '';
 let ACTIVE_BANNER_URL = '', ACTIVE_TITLE_DATA = null, ACTIVE_EFFECT_CSS = '', ACTIVE_BADGE_URL = '';
 let PENDING_VERIFY_EMAIL = '';
@@ -43,7 +43,9 @@ function parseJSONAttr(str) { try { return JSON.parse(decodeURIComponent(str)); 
 // ==========================================
 // 1.1 АВТОРИЗАЦИЯ
 // ==========================================
+let authMode = 'login';
 function switchAuthTab(mode) {
+    authMode = mode;
     document.getElementById('tab-login').classList.toggle('active', mode === 'login');
     document.getElementById('tab-register').classList.toggle('active', mode === 'register');
     document.getElementById('form-login').style.display = mode === 'login' ? 'block' : 'none';
@@ -206,114 +208,170 @@ async function signOut() {
 }
 
 // ==========================================
-// 2. SHIKIMORI (единственный внешний API, через прокси)
+// 2. SKELETON HELPERS
+// ==========================================
+const Skeletons = {
+    hero() { return `<div class="skeleton-hero"><div class="skeleton-hero-bg"></div><div class="skeleton-hero-content"><div class="skeleton skeleton-text" style="width:60px;height:12px;display:inline-block;margin-right:8px;"></div><div class="skeleton skeleton-text" style="width:40px;height:12px;display:inline-block;margin-right:8px;"></div><div class="skeleton skeleton-text" style="width:50px;height:12px;display:inline-block;"></div><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text short" style="width:80%;"></div><div class="skeleton-hero-actions"><div class="skeleton skeleton-btn"></div><div class="skeleton skeleton-icon-btn"></div></div></div></div>`; },
+    cards(count = 6) { let h = ''; for (let i = 0; i < count; i++) h += `<div class="skeleton-card"><div class="skeleton skeleton-poster"></div><div class="skeleton-card-title"></div></div>`; return h; },
+    friends(count = 3) { let h = ''; for (let i = 0; i < count; i++) h += `<div class="skeleton-friend"><div class="skeleton skeleton-circle"></div><div class="skeleton-friend-info"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div></div>`; return h; },
+    shopItems(count = 4) { let h = ''; for (let i = 0; i < count; i++) h += `<div class="skeleton-shop-item"><div class="skeleton skeleton-shop-img"></div><div class="skeleton-shop-info"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div></div>`; return h; }
+};
+
+document.addEventListener('pointerdown', function (e) {
+    const btn = e.target.closest('.ripple-btn, .btn-primary, .filter-btn, .genre-pill, .my-list-tab, .tab-btn');
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+    ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+    if (!btn.classList.contains('ripple-btn')) btn.classList.add('ripple-btn');
+    btn.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 650);
+}, { passive: true });
+
+// ==========================================
+// 3. API SHIKIMORI
 // ==========================================
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
-const SHIKIMORI_API = 'https://shikimori.io/api/graphql';
-
-async function fetchShikimori(query) {
-    const res = await fetch(PROXY_URL + encodeURIComponent(SHIKIMORI_API), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'User-Agent': 'OnikaAnime/1.0' },
-        body: JSON.stringify({ query })
-    });
-    if (!res.ok) throw new Error('Shikimori HTTP ' + res.status);
-    const d = await res.json();
-    if (d.errors) throw new Error(d.errors[0].message);
-    return d.data;
-}
-
-function mapShikimoriAnime(a) {
-    const statusMap = { ongoing: 'Онгоинг', released: 'Завершено', anons: 'Анонс' };
-    return {
-        id: 'shikimori_' + a.id,
-        rawId: a.id,
-        title: a.russian || a.name,
-        titleRomaji: a.name,
-        episodes: a.episodes || '?',
-        status: statusMap[a.status] || 'Анонс',
-        img: a.poster?.originalUrl || 'https://shikimori.io/assets/globals/missing_original.png',
-        score: a.score ? parseFloat(a.score).toFixed(1) : 0,
-        genres: (a.genres || []).map(g => g.name),
-        description: (a.description || 'Описание отсутствует.')
-            .replace(/\[character=[^\]]+\]/g, '')
-            .replace(/\[anime=[^\]]+\]/g, '')
-            .replace(/<[^>]*>/g, '')
-            .trim()
-    };
-}
-
-const SHIKI_FIELDS = `id name russian description episodes status score poster{originalUrl} genres{name}`;
-
-async function getShikimoriAnime(limit = 10, order = 'popularity', extraParams = '') {
-    const q = `{animes(page:1, limit:${limit}, order:${order}${extraParams ? ',' + extraParams : ''}){${SHIKI_FIELDS}}}`;
-    const d = await fetchShikimori(q);
-    return d.animes.map(mapShikimoriAnime);
-}
-
-async function getAnimeDetails(id) {
-    const cleanId = Number(String(id).replace('shikimori_', ''));
-    if (!cleanId) return null;
-
-    // 1. Пробуем из локального кэша (Supabase)
-    if (supabaseClient) {
+const API_Shikimori = {
+    BASE_URL: 'https://shikimori.io/api/graphql',
+    async fetchGraphQL(query) {
+        const res = await fetch(PROXY_URL + encodeURIComponent(this.BASE_URL), { method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': 'OnikaAnime/1.0' }, body: JSON.stringify({ query }) });
+        if (!res.ok) throw new Error('GraphQL HTTP ' + res.status);
+        const d = await res.json();
+        if (d.errors) throw new Error('GraphQL: ' + d.errors[0].message);
+        return d.data;
+    },
+    async fetchREST(path) {
+        const res = await fetch(PROXY_URL + encodeURIComponent(path), { method: 'GET', headers: { 'User-Agent': 'OnikaAnime/1.0' } });
+        if (!res.ok) throw new Error('REST HTTP ' + res.status);
+        return await res.json();
+    },
+    async getCatalog(page, limit, filters) {
         try {
-            const { data: cached } = await supabaseClient
-                .from('anime_mapping')
-                .select('*')
-                .eq('shikimori_id', cleanId)
-                .maybeSingle();
-            if (cached && cached.updated_at && (Date.now() - new Date(cached.updated_at).getTime()) < 24 * 3600 * 1000) {
-                return {
-                    id: 'shikimori_' + cached.shikimori_id,
-                    rawId: cached.shikimori_id,
-                    title: cached.title_ru || cached.title_romaji,
-                    description: cached.description || '',
-                    episodes: cached.episodes_total || '?',
-                    status: cached.status === 'ongoing' ? 'Онгоинг'
-                          : cached.status === 'released' ? 'Завершено' : 'Анонс',
-                    genres: cached.genres || [],
-                    img: cached.cover_url || 'https://shikimori.io/assets/globals/missing_original.png',
-                    score: cached.score || 0
-                };
+            let args = [`page:${page}`, `limit:${limit}`, `order:popularity`];
+            if (filters.search) args.push(`search:"${filters.search.replace(/"/g, '')}"`);
+            if (filters.year) args.push(`season:"${filters.year}"`);
+            const q = `{animes(${args.join(',')}){id name russian score episodes status poster{originalUrl} genres{name} trailer{id}}}`;
+            const d = await this.fetchGraphQL(q);
+            if (d.animes && d.animes.length > 0) {
+                let results = d.animes.map(this.convert);
+                if (filters.genre) results = results.filter(a => a.genres.includes(filters.genre));
+                if (filters.status) {
+                    const statusMap = { 'ongoing': 'Онгоинг', 'released': 'Завершено', 'anons': 'Анонс' };
+                    const targetStatus = statusMap[filters.status];
+                    if (targetStatus) results = results.filter(a => a.status === targetStatus);
+                }
+                return results;
             }
-        } catch(e) { console.warn('Кэш недоступен', e); }
-    }
-
-    // 2. Запрос в Shikimori
-    const q = `{animes(ids:"${cleanId}",limit:1){${SHIKI_FIELDS}}}`;
-    let shiki;
-    try {
-        const d = await fetchShikimori(q);
-        shiki = d.animes?.[0];
-    } catch(e) { console.error(e); return null; }
-    if (!shiki) return null;
-
-    const anime = mapShikimoriAnime(shiki);
-
-    // 3. Сохраняем в кэш Supabase
-    if (supabaseClient) {
+            if (page > 1) return [];
+        } catch (e) { console.warn('[Shikimori] GraphQL getCatalog упал'); }
         try {
-            await supabaseClient.from('anime_mapping').upsert({
-                shikimori_id: shiki.id,
-                title_ru: anime.title,
-                title_romaji: anime.titleRomaji,
-                description: anime.description,
-                cover_url: anime.img,
-                score: parseFloat(anime.score) || 0,
-                genres: anime.genres,
-                episodes_total: shiki.episodes || null,
-                status: shiki.status,
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'shikimori_id' });
-        } catch(e) { console.warn('Не удалось сохранить кэш', e); }
+            const params = new URLSearchParams({ page: String(page), limit: String(limit), order: 'popularity' });
+            if (filters.search) params.append('search', filters.search);
+            if (filters.year) params.append('season', filters.year);
+            const url = `https://shikimori.io/api/animes?${params.toString()}`;
+            const data = await this.fetchREST(url);
+            if (Array.isArray(data) && data.length > 0) {
+                let results = data.map(item => this.convertREST(item));
+                if (filters.genre) results = results.filter(a => a.genres.includes(filters.genre));
+                if (filters.status) {
+                    const statusMap = { 'ongoing': 'Онгоинг', 'released': 'Завершено', 'anons': 'Анонс' };
+                    const targetStatus = statusMap[filters.status];
+                    if (targetStatus) results = results.filter(a => a.status === targetStatus);
+                }
+                return results;
+            }
+        } catch (e) { console.error('[Shikimori] REST getCatalog упал'); }
+        return [];
+    },
+    async getDetails(id) {
+        const cleanId = String(id).replace('shikimori_', '');
+        try {
+            const q = `{animes(ids:"${cleanId}",limit:1){id name russian description score episodes status poster{originalUrl} genres{name} trailer{id}}}`;
+            const d = await this.fetchGraphQL(q);
+            if (d.animes && d.animes.length > 0) return this.convert(d.animes[0]);
+        } catch (e) {}
+        try {
+            const data = await this.fetchREST(`https://shikimori.io/api/animes/${cleanId}`);
+            return this.convertREST(data);
+        } catch (e) { return null; }
+    },
+    async getRandom(limit) {
+        try {
+            const q = `{animes(order:popularity, limit:20){id name russian score episodes status poster{originalUrl} genres{name} trailer{id}}}`;
+            const d = await this.fetchGraphQL(q);
+            if (d.animes && d.animes.length > 0) return d.animes.sort(() => Math.random() - 0.5).slice(0, limit).map(this.convert);
+        } catch (e) {}
+        try {
+            const data = await this.fetchREST(`https://shikimori.io/api/animes?limit=20&order=popularity`);
+            if (Array.isArray(data) && data.length > 0) return data.sort(() => Math.random() - 0.5).slice(0, limit).map(item => this.convertREST(item));
+        } catch (e) {}
+        return [];
+    },
+    async getSeasonal(limit) {
+        const now = new Date(); const month = now.getMonth(); let season = '';
+        if (month < 3) season = 'winter'; else if (month < 6) season = 'spring'; else if (month < 9) season = 'summer'; else season = 'fall';
+        const year = now.getFullYear();
+        const seasonStr = `${season}_${year}`;
+        try {
+            const q = `{animes(order:popularity, limit:${limit * 2}){id name russian score episodes status poster{originalUrl} genres{name} trailer{id}}}`;
+            const d = await this.fetchGraphQL(q);
+            if (d.animes && d.animes.length > 0) return d.animes.slice(0, limit).map(this.convert);
+        } catch (e) {}
+        try {
+            const url = `https://shikimori.io/api/animes?season=${encodeURIComponent(seasonStr)}&limit=${limit}&order=popularity`;
+            const data = await this.fetchREST(url);
+            if (Array.isArray(data) && data.length > 0) return data.map(item => this.convertREST(item));
+        } catch (e) {}
+        return [];
+    },
+    async searchByGenres(genreNames, limit = 4, excludeIds = []) {
+        if (!genreNames || genreNames.length === 0) return [];
+        try {
+            const q = `{animes(order:popularity, limit:100){id name russian score episodes status poster{originalUrl} genres{name} trailer{id}}}`;
+            const d = await this.fetchGraphQL(q);
+            if (!d.animes || d.animes.length === 0) return [];
+            const exclude = new Set((excludeIds || []).map(x => String(x).replace('shikimori_', '')));
+            let results = d.animes.map(this.convert).filter(a => !exclude.has(String(a.rawId))).filter(a => a.genres.some(g => genreNames.includes(g)));
+            return results.slice(0, limit);
+        } catch (e) { return []; }
+    },
+    convert(a) {
+        return {
+            id: 'shikimori_' + a.id, rawId: a.id, title: a.russian || a.name || 'Без названия', year: '--', episodes: a.episodes || '?',
+            images: { jpg: { image_url: a.poster?.originalUrl || '' } }, description: a.description || 'Описание отсутствует.',
+            genres: (a.genres || []).map(g => g.name || g), score: a.score || 0, status: a.status === 'ongoing' ? 'Онгоинг' : a.status === 'released' ? 'Завершено' : 'Анонс', kind: 'TV', trailerId: a.trailer?.id || null
+        };
+    },
+    convertREST(item) {
+        return {
+            id: 'shikimori_' + item.id, rawId: item.id, title: item.russian || item.name || 'Без названия', year: '--', episodes: item.episodes || '?',
+            images: { jpg: { image_url: item.image?.original || item.image?.preview || '' } }, description: item.description || 'Описание отсутствует.',
+            genres: (item.genres || []).map(g => typeof g === 'string' ? g : (g.name || '')), score: item.score || 0, status: item.status === 'ongoing' ? 'Онгоинг' : item.status === 'released' ? 'Завершено' : 'Анонс', kind: 'TV', trailerId: null
+        };
     }
-
-    return anime;
-}
+};
+const API = {
+    _cache: new Map(),
+    async _cachedFetch(method, ...args) {
+        const key = method + '_' + JSON.stringify(args);
+        if (this._cache.has(key) && Date.now() - this._cache.get(key).time < 5 * 60 * 1000) return this._cache.get(key).data;
+        try { const data = await API_Shikimori[method](...args); this._cache.set(key, { data, time: Date.now() }); return data; }
+        catch(e) { return null; }
+    },
+    getCatalog(page, limit, filters) { return this._cachedFetch('getCatalog', page, limit, filters); },
+    getDetails(id) { return this._cachedFetch('getDetails', id); },
+    getRandom(limit) { return this._cachedFetch('getRandom', limit); },
+    getSeasonal(limit) { return this._cachedFetch('getSeasonal', limit); },
+    searchByGenres(genreNames, limit, excludeIds) { return this._cachedFetch('searchByGenres', genreNames, limit, excludeIds); }
+};
 
 // ==========================================
-// 3. ПЕРЕМЕННЫЕ ИГРЫ
+// 4. ПЕРЕМЕННЫЕ ИГРЫ
 // ==========================================
 let currentAnimeForPlayer = null, selectedVoice = '', selectedPlayer = '';
 const VOICES = [{ id: 'anilibria', name: 'AniLibria', icon: '🎙️' }, { id: 'studioband', name: 'StudioBand', icon: '🎙️' }, { id: 'jamclub', name: 'JAM Club', icon: '🎙️' }, { id: 'original', name: 'Оригинал (Субтитры)', icon: '📝' }];
@@ -330,7 +388,7 @@ const STATUSES = [{ id: 'ongoing', name: 'Онгоинг' }, { id: 'released', n
 const SORTS = [{ id: 'popularity', name: 'По популярности' }, { id: 'ranked', name: 'По рейтингу' }, { id: 'aired_on', name: 'Новинки' }];
 
 // ==========================================
-// 4. НАВИГАЦИЯ И ПРОФИЛЬ
+// 5. НАВИГАЦИЯ И ПРОФИЛЬ
 // ==========================================
 function switchTab(tabName, element) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -516,7 +574,7 @@ async function loadProfileData() {
 async function uploadAvatar(event) {
     const file = event.target.files[0];
     if (!file) return;
-    if (file.size > 20 * 1024 * 1024) { showToast('❌ Файл слишком большой (макс. 20 МБ)'); event.target.value = ''; return; }
+    if (file.size > 5 * 1024 * 1024) { showToast('❌ Файл слишком большой (макс. 5 МБ)'); event.target.value = ''; return; }
     if (!file.type.startsWith('image/')) { showToast('❌ Пожалуйста, выберите изображение'); return; }
 
     showToast('⏳ Загрузка...');
@@ -561,7 +619,7 @@ function renderEffectParticles(container, effectClass) {
 }
 
 // ==========================================
-// 5. ПРЕДПРОСМОТР
+// 6. ПРЕДПРОСМОТР
 // ==========================================
 function startPreview(type, item) {
     if (isPreviewMode || !item) return;
@@ -636,7 +694,7 @@ async function executePreview() {
 }
 
 // ==========================================
-// 6. МАГАЗИН
+// 7. МАГАЗИН
 // ==========================================
 function switchShopTab(tabName, element) {
     currentShopTab = tabName;
@@ -832,7 +890,7 @@ async function resetBanner() {
 }
 
 // ==========================================
-// 7. ДРУЗЬЯ
+// 8. ДРУЗЬЯ
 // ==========================================
 async function loadFriends() {
     const listContainer = document.getElementById('friends-list-container');
@@ -931,8 +989,8 @@ async function openFriendProfile(id, name) {
         const achPoints = friendAchCount * 10;
         let lastWatchedHtml = '';
         if (friend.last_watched) {
-            const animeData = await getAnimeDetails(friend.last_watched);
-            if (animeData) lastWatchedHtml = `<div style="margin-top: 15px; padding: 15px; background: rgba(91,91,255,0.1); border-radius: 12px; border: 1px solid rgba(91,91,255,0.2); cursor: pointer;" onclick="openAnimeDetail('${escapeHTML(animeData.id)}', 'friends')"><div style="font-size: 12px; color: #888; margin-bottom: 8px;">Последнее аниме:</div><div style="display: flex; gap: 10px; align-items: center;"><img src="${safeUrl(animeData.img)}" style="width: 40px; height: 55px; border-radius: 6px; object-fit: cover;"><div style="font-size: 14px; font-weight: bold; color: #fff;">${escapeHTML(animeData.title)}</div></div></div>`;
+            const animeData = await API.getDetails(friend.last_watched);
+            if (animeData) lastWatchedHtml = `<div style="margin-top: 15px; padding: 15px; background: rgba(91,91,255,0.1); border-radius: 12px; border: 1px solid rgba(91,91,255,0.2); cursor: pointer;" onclick="openAnimeDetail('${escapeHTML(animeData.id)}', 'friends')"><div style="font-size: 12px; color: #888; margin-bottom: 8px;">Последнее аниме:</div><div style="display: flex; gap: 10px; align-items: center;"><img src="${safeUrl(animeData.images.jpg.image_url)}" style="width: 40px; height: 55px; border-radius: 6px; object-fit: cover;"><div style="font-size: 14px; font-weight: bold; color: #fff;">${escapeHTML(animeData.title)}</div></div></div>`;
         }
         const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
         const nameChar = friend.name && friend.name[0] ? escapeHTML(friend.name[0].toUpperCase()) : '?';
@@ -984,7 +1042,7 @@ async function openFriendProfile(id, name) {
 }
 
 // ==========================================
-// 8. ПЛЕЕР (внешний поиск, без API)
+// 9. ПЛЕЕР
 // ==========================================
 function startWatching(anime) { currentAnimeForPlayer = anime; switchTab('voice'); }
 function renderVoiceSelection() { const c = document.getElementById('voice-list'); let h = ''; VOICES.forEach(v => { h += `<div class="ripple-btn" onclick="selectVoice('${v.id}', '${escapeHTML(v.name)}')" style="background: #14141f; border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 14px; display: flex; align-items: center; gap: 15px; cursor: pointer;"><div style="font-size: 24px;">${v.icon}</div><div style="font-size: 16px; font-weight: 600; color: #fff;">${escapeHTML(v.name)}</div></div>`; }); if (c) c.innerHTML = h; }
@@ -1001,28 +1059,16 @@ function renderEpisodesSelection() {
     for (let i = 1; i <= total; i++) h += `<div class="ripple-btn" onclick="playEpisode(${i})" style="background: #1a1a20; border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; text-align: center; font-size: 16px; font-weight: bold; color: #fff; cursor: pointer;">${i}</div>`;
     c.innerHTML = h;
 }
-
 function playEpisode(epNum) {
-    const anime = currentAnimeForPlayer;
-    if (!anime) return;
-    // Открываем внешний поиск (без API) — пользователь сам выбирает озвучку/плеер
-    const searchUrl = `https://smotret-anime.org/search?q=${encodeURIComponent(anime.title)}`;
-    if (tg?.openLink) tg.openLink(searchUrl);
-    else window.open(searchUrl, '_blank');
-
     let stats = getStats();
-    stats.episodesWatched += 1;
-    stats.minutesWatched += 24;
-    saveStats(stats);
-    checkAchievements(stats);
-    addXP(5);
-    syncProfileToDB(true);
-    currentAnimeForPlayer = null;
-    switchTab('home');
+    stats.episodesWatched += 1; stats.minutesWatched += 24;
+    saveStats(stats); checkAchievements(stats); addXP(5); syncProfileToDB(true);
+    if (tg) tg.showAlert(`🎬 Просмотр:\n${currentAnimeForPlayer.title}\n${selectedVoice}\n${selectedPlayer}\nСерия: ${epNum}`);
+    currentAnimeForPlayer = null; switchTab('home');
 }
 
 // ==========================================
-// 9. КАТАЛОГ / ДЕТАЛИ / КОММЕНТАРИИ
+// 10. КАТАЛОГ / ДЕТАЛИ / КОММЕНТАРИИ
 // ==========================================
 function initCatalogFilters() {
     const gc = document.getElementById('genre-filters');
@@ -1053,7 +1099,6 @@ function applyFilter(type, value) {
     if (btn) btn.innerHTML = `${name} ⌄`;
     loadCatalog(true);
 }
-
 async function loadCatalog(reset = false) {
     if (isCatalogLoading) return;
     isCatalogLoading = true;
@@ -1062,26 +1107,16 @@ async function loadCatalog(reset = false) {
     if (!grid) { isCatalogLoading = false; return; }
     if (reset) { grid.innerHTML = Skeletons.cards(6); hasMoreCatalog = true; catalogPage = 1; }
     try {
-        const params = [];
-        if (currentFilters.search) params.push(`search:"${currentFilters.search.replace(/"/g, '')}"`);
-        if (currentFilters.genre) {
-            const g = GENRES.find(x => x.name === currentFilters.genre);
-            if (g) params.push(`genre:"${g.id}"`);
-        }
-        if (currentFilters.status) params.push(`status:"${currentFilters.status}"`);
-        const order = currentFilters.sort === 'ranked' ? 'ranked' : currentFilters.sort === 'aired_on' ? 'aired_on' : 'popularity';
-
-        const items = await getShikimoriAnime(30, order, params.join(','));
+        const items = await API.getCatalog(catalogPage, 30, currentFilters);
         if (myVersion !== catalogRequestVersion) return;
-
         if (reset) grid.innerHTML = '';
         if (!items || items.length === 0) {
             if (reset) grid.innerHTML = '<div class="loading-text">Ничего не найдено</div>';
             hasMoreCatalog = false; if (lm) lm.style.display = 'none'; return;
         }
         items.forEach(anime => {
-            const title = escapeHTML(anime.title); const img = safeUrl(anime.img); const score = anime.score;
-            grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;">⭐ ${score || '—'}</div><div class="catalog-card-title">${title}</div></div>`);
+            const title = escapeHTML(anime.title); const img = safeUrl(anime.images.jpg.image_url); const score = anime.score ? Number(anime.score).toFixed(1) : '?';
+            grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`);
         });
         hasMoreCatalog = items.length >= 30;
         if (lm) lm.style.display = hasMoreCatalog ? 'inline-block' : 'none';
@@ -1095,7 +1130,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
     const container = document.getElementById('detail-content');
     container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
     try {
-        const anime = await getAnimeDetails(id);
+        const anime = await API.getDetails(id);
         if (!anime) throw new Error('Not found');
         let userRating = 0;
         let comments = [];
@@ -1107,7 +1142,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 comments = cmts || [];
             } catch(e) { console.error(e); }
         }
-        const title = escapeHTML(anime.title); const desc = escapeHTML(anime.description); const score = anime.score; const poster = safeUrl(anime.img);
+        const title = escapeHTML(anime.title); const desc = escapeHTML(anime.description); const score = anime.score ? Number(anime.score).toFixed(1) : '?'; const poster = safeUrl(anime.images.jpg.image_url);
         let statusColor = '#2ecc71'; if (anime.status === 'Онгоинг') statusColor = '#3498db'; if (anime.status === 'Анонс') statusColor = '#e74c3c';
         const stats = getStats();
         const favEntry = (stats.favedAnime || []).find(a => a.id === anime.id);
@@ -1127,11 +1162,10 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 commentsHtml += `<div style="display: flex; gap: 10px; margin-bottom: 15px;"><div class="friend-avatar" style="width: 36px; height: 36px; flex-shrink: 0; font-size: 14px;">${av}</div><div style="flex: 1; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px;"><div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-size: 13px; font-weight: bold; color: #fff;">${escapeHTML(c.user_name)}</span><span style="font-size: 11px; color: #888;">${date}</span></div><p style="font-size: 13px; color: #ccc;">${escapeHTML(c.text)}</p></div></div>`;
             });
         } else commentsHtml = '<div style="font-size: 13px; color: #888; text-align: center; padding: 10px;">Пока нет комментариев</div>';
-        container.innerHTML = `<div class="fade-in"><div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;"><img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"></div><div style="padding-top: 30px;"><div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;"><img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; border: 2px solid rgba(255,255,255,0.1);"><div style="flex: 1;"><h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff;">${title}</h1><div style="display: flex; flex-wrap: wrap; gap: 6px;"><span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;">⭐ ${score || '—'}</span><span style="background: rgba(255,255,255,0.15); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px;">📺 ${anime.episodes || '?'} эп.</span><span style="background: ${statusColor}; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px;">${escapeHTML(anime.status)}</span></div></div></div><div style="display: flex; gap: 10px; margin-bottom: 20px;"><button class="btn-primary ripple-btn" onclick="startWatching(window._animeCache['${escapeHTML(anime.id)}'])" style="flex: 1; padding: 16px;">▶ Смотреть</button><button onclick="openStatusModal('${escapeHTML(anime.id)}')" class="btn-icon-heart ${isFaved ? 'faved' : ''}" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'};">${heartSvg}</button></div><div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px;">${escapeHTML(g)}</span>`).join('')}</div><div style="margin-bottom: 25px;"><p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc || 'Описание отсутствует.'}</p><button id="desc-btn" onclick="toggleDescription()" style="display: none; background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button></div><div style="background: #14141f; border-radius: 16px; padding: 15px; margin-bottom: 20px; text-align: center;"><h3 style="font-size: 15px; color: #fff; margin-bottom: 10px;">Ваша оценка:</h3><div style="display: flex; justify-content: center; gap: 5px;">${starsHtml}</div></div><div style="margin-bottom: 40px;"><h3 style="font-size: 16px; margin-bottom: 15px; color: #fff;">💬 Комментарии</h3><div style="display: flex; gap: 10px; margin-bottom: 20px;"><input type="text" id="comment-input" placeholder="Написать отзыв..." style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;"><button onclick="sendComment('${escapeHTML(anime.id)}')" class="ripple-btn" style="background: #5b5bff; border: none; border-radius: 12px; padding: 0 15px; color: #fff; font-weight: bold; cursor: pointer;">➤</button></div><div>${commentsHtml}</div></div></div></div>`;
+        container.innerHTML = `<div class="fade-in"><div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;"><img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"></div><div style="padding-top: 30px;"><div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;"><img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; border: 2px solid rgba(255,255,255,0.1);"><div style="flex: 1;"><h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff;">${title}</h1><div style="display: flex; flex-wrap: wrap; gap: 6px;"><span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;">⭐ ${score}</span><span style="background: rgba(255,255,255,0.15); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px;">📺 ${anime.episodes || '?'} эп.</span><span style="background: ${statusColor}; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px;">${escapeHTML(anime.status)}</span></div></div></div><div style="display: flex; gap: 10px; margin-bottom: 20px;"><button class="btn-primary ripple-btn" onclick="startWatching(window._animeCache['${escapeHTML(anime.id)}'])" style="flex: 1; padding: 16px;">▶ Смотреть</button><button onclick="openStatusModal('${escapeHTML(anime.id)}')" class="btn-icon-heart ${isFaved ? 'faved' : ''}" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'};">${heartSvg}</button></div><div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px;">${escapeHTML(g)}</span>`).join('')}</div><div style="margin-bottom: 25px;"><p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p><button id="desc-btn" onclick="toggleDescription()" style="display: none; background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button></div><div style="background: #14141f; border-radius: 16px; padding: 15px; margin-bottom: 20px; text-align: center;"><h3 style="font-size: 15px; color: #fff; margin-bottom: 10px;">Ваша оценка:</h3><div style="display: flex; justify-content: center; gap: 5px;">${starsHtml}</div></div><div style="margin-bottom: 40px;"><h3 style="font-size: 16px; margin-bottom: 15px; color: #fff;">💬 Комментарии</h3><div style="display: flex; gap: 10px; margin-bottom: 20px;"><input type="text" id="comment-input" placeholder="Написать отзыв..." style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;"><button onclick="sendComment('${escapeHTML(anime.id)}')" class="ripple-btn" style="background: #5b5bff; border: none; border-radius: 12px; padding: 0 15px; color: #fff; font-weight: bold; cursor: pointer;">➤</button></div><div>${commentsHtml}</div></div></div></div>`;
         setTimeout(() => { const d = document.getElementById('desc-text'); const b = document.getElementById('desc-btn'); if (d && b && d.scrollHeight > d.clientHeight) b.style.display = 'block'; }, 50);
     } catch (e) { console.error(e); container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>'; }
 }
-
 async function rateAnime(animeId, rating) {
     if (!supabaseClient || !MY_ID) return;
     try {
@@ -1176,10 +1210,10 @@ async function setAnimeStatus(status) {
     } catch(e) { console.error(e); showToast('Ошибка'); }
 }
 function toggleDescription() { const d = document.getElementById('desc-text'); const b = document.getElementById('desc-btn'); if (d.style.webkitLineClamp === '4' || d.style.webkitLineClamp === '') { d.style.webkitLineClamp = 'unset'; b.innerHTML = 'Свернуть ▲'; } else { d.style.webkitLineClamp = '4'; b.innerHTML = 'Читать полностью ▼'; } }
-async function openRandomAnime() { if (tg) tg.HapticFeedback.impactOccurred('medium'); showToast('🎲 Ищем...'); try { const items = await getShikimoriAnime(1, 'random'); if (items && items.length > 0) openAnimeDetail(items[0].id, 'catalog'); } catch (e) {} }
+async function openRandomAnime() { if (tg) tg.HapticFeedback.impactOccurred('medium'); showToast('🎲 Ищем...'); try { const items = await API.getRandom(1); if (items && items.length > 0) openAnimeDetail(items[0].id, 'catalog'); } catch (e) {} }
 
 // ==========================================
-// 10. МОЁ
+// 11. МОЁ
 // ==========================================
 function filterMyList(type, btn) { currentMyListFilter = type; document.querySelectorAll('.my-list-tab').forEach(el => el.classList.remove('active')); if (btn) btn.classList.add('active'); renderMyList(); }
 async function renderMyList() {
@@ -1196,7 +1230,7 @@ async function renderMyList() {
         const items = await Promise.all(list.map(async f => {
             let a = ca[f.anime_id];
             if (a) return a;
-            try { const d = await getAnimeDetails(f.anime_id); if (d) { let s = getStats(); s.cachedAnime = s.cachedAnime || {}; s.cachedAnime[f.anime_id] = d; saveStats(s); return d; } } catch(e) { console.error(e); }
+            try { const d = await API.getDetails(f.anime_id); if (d) { let s = getStats(); s.cachedAnime = s.cachedAnime || {}; s.cachedAnime[f.anime_id] = d; saveStats(s); return d; } } catch(e) { console.error(e); }
             return null;
         }));
         grid.innerHTML = '';
@@ -1205,12 +1239,12 @@ async function renderMyList() {
     } catch (e) { console.error(e); grid.innerHTML = '<div class="loading-text" style="color:#ff4444;">Ошибка</div>'; }
 }
 function renderMyListCard(anime, grid) {
-    const title = escapeHTML(anime.title); const img = safeUrl(anime.img); const score = anime.score;
-    grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'my')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score || '—'}</div><div class="catalog-card-title">${title}</div></div>`);
+    const title = escapeHTML(anime.title); const img = safeUrl(anime.images.jpg.image_url); const score = anime.score ? Number(anime.score).toFixed(1) : '?';
+    grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'my')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`);
 }
 
 // ==========================================
-// 11. УМНЫЕ СЕКЦИИ ГЛАВНОЙ
+// 12. УМНЫЕ СЕКЦИИ ГЛАВНОЙ
 // ==========================================
 async function loadPopularByRating(limit = 6) {
     const list = document.getElementById('popular-list');
@@ -1218,29 +1252,27 @@ async function loadPopularByRating(limit = 6) {
     list.innerHTML = Skeletons.cards(4);
     try {
         if (!supabaseClient) {
-            const fallback = await getShikimoriAnime(limit); renderSectionCards(list, fallback, 'home'); return;
+            const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return;
         }
         const { data: ratings, error } = await supabaseClient.from('user_lists').select('anime_id, rating').not('rating', 'is', null).gte('rating', 4);
         if (error) throw error;
         if (!ratings || ratings.length === 0) {
-            const fallback = await getShikimoriAnime(limit); renderSectionCards(list, fallback, 'home'); return;
+            const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return;
         }
         const stats = {};
         ratings.forEach(r => { if (!stats[r.anime_id]) stats[r.anime_id] = { sum: 0, count: 0 }; stats[r.anime_id].sum += r.rating; stats[r.anime_id].count += 1; });
         const sorted = Object.entries(stats).map(([id, s]) => ({ id, avg: s.sum / s.count, count: s.count })).filter(x => x.avg >= 4.0).sort((a, b) => b.avg - a.avg || b.count - a.count).slice(0, limit);
         if (sorted.length === 0) {
-            const fallback = await getShikimoriAnime(limit); renderSectionCards(list, fallback, 'home'); return;
+            const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return;
         }
-        const items = await Promise.all(sorted.map(async x => {
-            try { return await getAnimeDetails(x.id); } catch(e) { return null; }
-        }));
+        const items = await Promise.all(sorted.map(x => API.getDetails(x.id)));
         const valid = items.filter(Boolean);
         if (valid.length === 0) {
-            const fallback = await getShikimoriAnime(limit); renderSectionCards(list, fallback, 'home'); return;
+            const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return;
         }
         renderSectionCards(list, valid, 'home');
     } catch (e) {
-        try { const fallback = await getShikimoriAnime(limit); renderSectionCards(list, fallback, 'home'); } catch(e2) { list.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; }
+        try { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); } catch(e2) { list.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; }
     }
 }
 
@@ -1249,19 +1281,37 @@ async function loadRecommendations(limit = 4) {
     if (!list) return;
     list.innerHTML = Skeletons.cards(4);
     try {
-        const fallback = await getShikimoriAnime(limit); renderSectionCards(list, fallback, 'home');
+        let userGenres = [];
+        let userAnimeIds = [];
+        if (supabaseClient && MY_ID) {
+            const { data: userList, error } = await supabaseClient.from('user_lists').select('anime_id, status').eq('user_id', MY_ID);
+            if (error) throw error;
+            if (userList && userList.length > 0) {
+                userAnimeIds = userList.map(x => x.anime_id);
+                const details = await Promise.all(userList.slice(0, 20).map(x => API.getDetails(x.anime_id)));
+                const genreCount = {};
+                details.filter(Boolean).forEach(anime => { (anime.genres || []).forEach(g => { genreCount[g] = (genreCount[g] || 0) + 1; }); });
+                userGenres = Object.entries(genreCount).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([g]) => g);
+            }
+        }
+        if (userGenres.length === 0) {
+            const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return;
+        }
+        const recs = await API.searchByGenres(userGenres, limit, userAnimeIds);
+        if (recs && recs.length > 0) { renderSectionCards(list, recs, 'home'); }
+        else { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); }
     } catch (e) {
-        list.innerHTML = '<div class="loading-text">Не удалось загрузить</div>';
+        try { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); } catch(e2) { list.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; }
     }
 }
 function renderSectionCards(container, items, fromScreen = 'home') {
     if (!container) return;
     if (!items || items.length === 0) { container.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; return; }
-    container.innerHTML = items.map(anime => { const title = escapeHTML(anime.title); const img = safeUrl(anime.img); return `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', '${fromScreen}')"><img class="card-img" src="${img}" loading="lazy"><div class="card-title">${title}</div></div>`; }).join('');
+    container.innerHTML = items.map(anime => { const title = escapeHTML(anime.title); const img = safeUrl(anime.images.jpg.image_url); return `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', '${fromScreen}')"><img class="card-img" src="${img}" loading="lazy"><div class="card-title">${title}</div></div>`; }).join('');
 }
 
 // ==========================================
-// 12. ГЛАВНАЯ
+// 13. ГЛАВНАЯ
 // ==========================================
 let heroData = []; let currentSlide = 0; let slideInterval; let sectionObserverInstance = null;
 function getSectionObserver() { if (!sectionObserverInstance) { sectionObserverInstance = new IntersectionObserver((entries) => { entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('fade-in-section'); sectionObserverInstance.unobserve(entry.target); } }); }, { threshold: 0.1 }); } return sectionObserverInstance; }
@@ -1278,15 +1328,15 @@ async function loadHomePage() {
     if (seasonalList) seasonalList.innerHTML = Skeletons.cards(4);
 
     try {
-        const heroItems = await getShikimoriAnime(5);
+        const heroItems = await API.getRandom(5);
         if (heroItems && heroItems.length > 0) {
-            heroData = heroItems.map(a => ({ id: a.id, title: a.title, img: a.img, score: a.score, type: 'TV', year: '2024' }));
+            heroData = heroItems.map(a => ({ id: a.id, title: a.title, img: a.images.jpg.image_url, score: a.score ? Number(a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year, trailerId: a.trailerId }));
         } else { throw new Error('empty hero'); }
     } catch (e) { console.warn('[Home] Hero fallback (empty)'); heroData = []; }
     initHeroSlider();
 
     try {
-        const seasonalItems = await getShikimoriAnime(6, 'aired_on');
+        const seasonalItems = await API.getSeasonal(6);
         if (seasonalItems && seasonalItems.length > 0) { renderSectionCards(seasonalList, seasonalItems, 'home'); }
         else { if (seasonalList) seasonalList.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; }
     } catch(e) { if (seasonalList) seasonalList.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; }
@@ -1312,6 +1362,7 @@ function initHeroSlider() {
         const isFaved = favedList.includes(cleanId);
         const heartClass = isFaved ? 'faved' : '';
         const heartIcon = isFaved ? '<svg style="width:24px;height:24px;fill:currentColor;stroke:none;"><use href="#oa-favorite"></use></svg>' : '<svg><use href="#oa-favorite"></use></svg>';
+        const trailerBtn = anime.trailerId ? `<button class="btn-trailer" onclick="event.stopPropagation(); playTrailer('${escapeHTML(anime.trailerId)}', ${index})">▶ Трейлер</button>` : '';
 
         sliderHTML += `
             <div class="hero-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
@@ -1319,13 +1370,14 @@ function initHeroSlider() {
                 <div class="hero-gradient"></div>
                 <div class="hero-content">
                     <div class="hero-badges">
-                        <span class="badge star">⭐ ${escapeHTML(anime.score || '—')}</span>
+                        <span class="badge star">⭐ ${escapeHTML(anime.score)}</span>
                         <span class="badge">${escapeHTML(anime.type)}</span>
                         <span class="badge">${escapeHTML(anime.year)}</span>
                     </div>
                     <h1 class="hero-title">${escapeHTML(anime.title)}</h1>
                     <div class="hero-actions">
                         <button class="btn-primary" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'home')">▶ Смотреть</button>
+                        ${trailerBtn}
                         <button class="btn-icon-heart ${heartClass}" onclick="openStatusModal('${escapeHTML(anime.id)}')">${heartIcon}</button>
                     </div>
                 </div>
@@ -1357,7 +1409,27 @@ function addHeroParallax() {
     hero.addEventListener('mouseleave', () => { const activeBg = document.querySelector('.hero-slide.active .hero-bg'); if (activeBg) activeBg.style.transform = ''; });
 }
 
+function playTrailer(youtubeId, index) {
+    const bg = document.getElementById(`hero-bg-${index}`);
+    if (!youtubeId) return;
+    const oldIframe = document.getElementById('hero-iframe');
+    if (oldIframe) oldIframe.remove();
+    const iframe = document.createElement('iframe');
+    iframe.id = 'hero-iframe';
+    iframe.src = `https://www.youtube.com/embed/${encodeURIComponent(youtubeId)}?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0`;
+    iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none;z-index:0;pointer-events:none;';
+    iframe.allow = 'autoplay; encrypted-media';
+    const slide = document.querySelector(`.hero-slide[data-index="${index}"]`);
+    if (slide) slide.insertBefore(iframe, slide.firstChild);
+    if (bg) bg.style.opacity = '0';
+    const cleanup = () => { if (iframe.parentNode) iframe.remove(); if (bg) bg.style.opacity = '1'; };
+    setTimeout(cleanup, 10000);
+    iframe._cleanup = cleanup;
+}
+
 function goToSlide(index) {
+    const oldIframe = document.getElementById('hero-iframe');
+    if (oldIframe) { if (oldIframe._cleanup) oldIframe._cleanup(); else oldIframe.remove(); }
     const slides = document.querySelectorAll('.hero-slide'); const dots = document.querySelectorAll('.hero-dot'); const progs = document.querySelectorAll('.hero-progress-seg');
     slides.forEach(s => s.classList.remove('active')); dots.forEach(d => d.classList.remove('active')); progs.forEach(p => { p.classList.remove('active'); p.classList.remove('done'); });
     if (slides[index]) slides[index].classList.add('active');
@@ -1380,7 +1452,7 @@ function addSwipeSupport(element) {
 }
 
 // ==========================================
-// 13. ДОСТИЖЕНИЯ И XP
+// 14. ДОСТИЖЕНИЯ И XP
 // ==========================================
 const RARITY_STYLES = { common: { color: '#ccc', class: 'common' }, rare: { color: '#00d2ff', class: 'rare' }, epic: { color: '#b44aff', class: 'epic' }, legendary: { color: '#ffd700', class: 'legendary' } };
 const ACHIEVEMENTS = [
@@ -1483,7 +1555,7 @@ function renderAchievementsPage() {
 }
 
 // ==========================================
-// 14. ИНИЦИАЛИЗАЦИЯ
+// 15. ИНИЦИАЛИЗАЦИЯ
 // ==========================================
 setInterval(() => { if (document.visibilityState === 'visible') addXPForTime(1); }, 60000);
 document.addEventListener('DOMContentLoaded', async () => {
