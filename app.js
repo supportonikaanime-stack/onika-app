@@ -253,7 +253,6 @@ const API_AniList = {
         return d.data;
     },
 
-    // Запрос списка
     async getCatalog(page, limit, filters) {
         const perPage = Math.min(limit || 30, 50);
         const variables = { page: page || 1, perPage };
@@ -291,7 +290,6 @@ const API_AniList = {
         try {
             const data = await this.fetch(query, variables);
             if (data.Page?.media) {
-                // Возвращаем "сырые" данные AniList, чтобы потом обогатить их
                 return data.Page.media;
             }
             return [];
@@ -301,7 +299,6 @@ const API_AniList = {
         }
     },
 
-    // Запрос деталей (для гибридной сборки)
     async getDetails(id) {
         const cleanId = String(id).replace('anilist_', '');
         const query = `
@@ -443,41 +440,63 @@ const API_Shikimori = {
         return d.data;
     },
     
-    // Ищем русское название и описание по idMal (MyAnimeList ID)
-    async getRussianData(idMal) {
-        if (!idMal) return { russian: null, description: null };
-        try {
-            // Ищем в Shikimori по MyAnimeList ID
-            const q = `{animes(ids:"${idMal}",limit:1){id name russian description}}`;
-            const d = await this.fetchGraphQL(q);
-            if (d.animes && d.animes.length > 0) {
-                return {
-                    russian: d.animes[0].russian || null,
-                    description: d.animes[0].description || null
-                };
-            }
-        } catch(e) { /* ignore */ }
-        return { russian: null, description: null };
+    // Ищем русское название и описание в Shikimori
+    async getRussianData(idMal, englishTitle) {
+        let russian = null;
+        let description = null;
+
+        // 1. Пробуем найти по ID MyAnimeList (если он есть)
+        if (idMal) {
+            try {
+                const q = `{animes(ids:"${idMal}",limit:1){id name russian description}}`;
+                const d = await this.fetchGraphQL(q);
+                if (d.animes && d.animes.length > 0) {
+                    russian = d.animes[0].russian;
+                    description = d.animes[0].description;
+                }
+            } catch(e) {}
+        }
+
+        // 2. Если не нашли по ID, пробуем поиск по английскому названию
+        if (!russian && englishTitle) {
+            try {
+                const safeTitle = englishTitle.replace(/"/g, '');
+                const q = `{animes(search:"${safeTitle}",limit:1){id name russian description}}`;
+                const d = await this.fetchGraphQL(q);
+                if (d.animes && d.animes.length > 0) {
+                    russian = d.animes[0].russian || russian;
+                    description = d.animes[0].description || description;
+                }
+            } catch(e) {}
+        }
+
+        return { russian, description };
     }
 };
 
 // --- Сборщик (Гибрид) ---
 async function buildAnimeObject(rawAniListItem) {
-    // 1. Пытаемся получить русские данные из Shikimori по idMal
+    // 1. Пытаемся получить русские данные из Shikimori
+    // Передаем idMal и английское название для поиска
     let ruData = { russian: null, description: null };
-    if (rawAniListItem.idMal) {
-        ruData = await API_Shikimori.getRussianData(rawAniListItem.idMal);
+    const searchTitle = rawAniListItem.title?.english || rawAniListItem.title?.romaji;
+    if (rawAniListItem.idMal || searchTitle) {
+        ruData = await API_Shikimori.getRussianData(rawAniListItem.idMal, searchTitle);
     }
 
     // 2. Формируем объект
-    const title = ruData.russian || rawAniListItem.title?.romaji || rawAniListItem.title?.english || rawAniListItem.title?.native || 'Без названия';
+    // Если Shikimori вернул русское название - берем его, иначе английское/ромадзи из AniList
+    const title = ruData.russian || rawAniListItem.title?.english || rawAniListItem.title?.romaji || rawAniListItem.title?.native || 'Без названия';
     const score = rawAniListItem.averageScore ? (rawAniListItem.averageScore / 10).toFixed(1) : 0;
     
-    // Чистим описание от HTML-тегов Shikimori
+    // 3. Чистим описание
     let cleanDesc = ruData.description || rawAniListItem.description || 'Описание отсутствует.';
+    // Убираем HTML теги и мусор
     cleanDesc = cleanDesc.replace(/\[character=[^\]]+\]/g, '').replace(/\[\/character\]/g, '');
     cleanDesc = cleanDesc.replace(/\[anime=[^\]]+\]/g, '').replace(/\[\/anime\]/g, '');
-    cleanDesc = cleanDesc.replace(/<[^>]*>?/gm, ''); // Удаляем HTML теги
+    cleanDesc = cleanDesc.replace(/\[Written by MAL Rewrite\]/g, '');
+    cleanDesc = cleanDesc.replace(/<[^>]*>?/gm, ''); 
+    cleanDesc = cleanDesc.trim();
 
     return {
         id: 'anilist_' + rawAniListItem.id,
@@ -507,7 +526,6 @@ const API = {
         const key = `catalog_${page}_${limit}_${JSON.stringify(filters || {})}`;
         return this._cachedFetch(key, async () => {
             const rawList = await API_AniList.getCatalog(page, limit, filters);
-            // Обогащаем каждый элемент
             return await Promise.all(rawList.map(buildAnimeObject));
         });
     },
