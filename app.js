@@ -227,7 +227,6 @@ const API_Shikimori = {
         if (!desc) return 'Описание отсутствует.';
         return desc.replace(/\[character=[^\]]+\]/g, '').replace(/\[anime=[^\]]+\]/g, '').replace(/<[^>]*>/g, '').trim();
     },
-    // УБРАЛИ DESCRIPTION ИЗ ЗАПРОСА КАТАЛОГА
     async getCatalog(page, limit, filters) {
         let args = [`page:${page}`, `limit:${limit}`, `order:popularity`];
         if (filters.search) args.push(`search:"${filters.search.replace(/"/g, '')}"`);
@@ -249,33 +248,42 @@ const API_Shikimori = {
             episodes: a.episodes || '?',
             status: a.status === 'ongoing' ? 'Онгоинг' : a.status === 'released' ? 'Завершено' : 'Анонс',
             genres: (a.genres || []).map(g => g.name),
-            images: { jpg: { image_url: '' } }, score: 0
+            images: { jpg: { image_url: 'https://shikimori.io/assets/globals/missing_original.png' } }, score: 0
         };
     }
 };
 
 const API_AniList = {
     BASE_URL: 'https://graphql.anilist.co',
-    async query(gqlQuery, variables = {}) {
-        const res = await fetch(PROXY_URL + encodeURIComponent(this.BASE_URL), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ query: gqlQuery, variables })
-        });
-        if (!res.ok) throw new Error('AniList HTTP ' + res.status);
-        const d = await res.json();
-        if (d.errors) throw new Error('AniList: ' + d.errors[0].message);
-        return d.data;
+    
+    // ТЕПЕРЬ ИСПОЛЬЗУЕМ ОФИЦИАЛЬНЫЙ ПОДХОД ИЗ ДОКУМЕНТАЦИИ (query + variables)
+    async query(query, variables = {}) {
+        try {
+            const res = await fetch(PROXY_URL + encodeURIComponent(this.BASE_URL), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ query, variables })
+            });
+            if (!res.ok) throw new Error('AniList HTTP ' + res.status);
+            const d = await res.json();
+            if (d.errors) throw new Error('AniList: ' + d.errors[0].message);
+            return d.data;
+        } catch(e) {
+            console.warn('Ошибка AniList:', e.message);
+            return null; // Возвращаем null, чтобы не ронять код
+        }
     },
+
     async searchByTitle(title) {
         const q = `query ($search: String) { Media (search: $search, type: ANIME) { id idMal coverImage { extraLarge } averageScore } }`;
         const d = await this.query(q, { search: title });
-        return d.Media;
+        return d ? d.Media : null;
     },
+
     async getById(id) {
         const q = `query ($id: Int) { Media (id: $id, type: ANIME) { id idMal coverImage { extraLarge } averageScore status nextAiringEpisode { timeUntilAiring } } }`;
         const d = await this.query(q, { id });
-        return d.Media;
+        return d ? d.Media : null;
     }
 };
 
@@ -288,21 +296,25 @@ const AnimeAggregator = {
 
         let anilistData = null;
         if (supabaseClient) {
-            const { data: mapping } = await supabaseClient.from('anime_mapping').select('anilist_id').eq('shikimori_id', anime.rawId).single();
-            if (mapping && mapping.anilist_id) anilistData = await API_AniList.getById(mapping.anilist_id);
+            try {
+                const { data: mapping } = await supabaseClient.from('anime_mapping').select('anilist_id').eq('shikimori_id', anime.rawId).single();
+                if (mapping && mapping.anilist_id) anilistData = await API_AniList.getById(mapping.anilist_id);
+            } catch(e) {}
         }
 
         if (!anilistData) {
             console.log(`[AniList] Поиск: ${anime.title}`);
             anilistData = await API_AniList.searchByTitle(anime.title);
             if (anilistData && supabaseClient) {
-                await supabaseClient.from('anime_mapping').upsert({
-                    shikimori_id: anime.rawId, anilist_id: anilistData.id, mal_id: anilistData.idMal, title: anime.title
-                }, { onConflict: 'shikimori_id' });
+                try {
+                    await supabaseClient.from('anime_mapping').upsert({
+                        shikimori_id: anime.rawId, anilist_id: anilistData.id, mal_id: anilistData.idMal, title: anime.title
+                    }, { onConflict: 'shikimori_id' });
+                } catch(e) {}
             }
         }
 
-        if (anilistData) {
+        if (anilistData && anilistData.coverImage) {
             const enriched = { poster: anilistData.coverImage.extraLarge, score: anilistData.averageScore ? anilistData.averageScore / 10 : 0 };
             this._cache.set(cacheKey, enriched);
             return { ...anime, images: { jpg: { image_url: enriched.poster } }, score: enriched.score };
@@ -533,7 +545,7 @@ async function loadProfileData() {
 async function uploadAvatar(event) {
     const file = event.target.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { showToast('❌ Файл слишком большой (макс. 5 МБ)'); event.target.value = ''; return; }
+    if (file.size > 20 * 1024 * 1024) { showToast('❌ Файл слишком большой (макс. 20 МБ)'); event.target.value = ''; return; }
     if (!file.type.startsWith('image/')) { showToast('❌ Пожалуйста, выберите изображение'); return; }
 
     showToast('⏳ Загрузка...');
