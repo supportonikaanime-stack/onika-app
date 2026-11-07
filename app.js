@@ -217,7 +217,6 @@ const API_AniList = {
         const exclude = new Set((excludeIds||[]).map(x=>String(x).replace('anilist_','')));
         return data.Page.media.filter(a=>!exclude.has(String(a.id))).slice(0, limit);
     },
-    // Новый метод для "Популярное сейчас" — Топ по оценкам
     async getTopRated(limit = 6) {
         const q = `query($page:Int,$perPage:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,sort:SCORE_DESC){${this._mediaFields}}}}`;
         const data = await this.fetch(q, { page: 1, perPage: Math.min(limit, 50) }).catch(()=>null);
@@ -252,35 +251,43 @@ const API_Shikimori = {
     },
     async getRussianData(searchTitle) {
         if (!searchTitle) return { russian:null, description:null };
+        
         const clean = searchTitle.replace(/\s*\([^)]*\)/g,'').trim();
-        try {
-            const q = `{animes(search:"${clean.replace(/"/g,'')}",limit:1){id name russian description}}`;
-            const d = await this.fetchGraphQL(q);
-            if (d.animes && d.animes.length) return { russian: d.animes[0].russian||null, description: d.animes[0].description||null };
-        } catch(e) {}
+        
+        // Делаем до 2-х попыток
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            try {
+                const q = `{animes(search:"${clean.replace(/"/g,'')}",limit:1){id name russian description}}`;
+                const d = await this.fetchGraphQL(q);
+                if (d.animes && d.animes.length) {
+                    return { russian: d.animes[0].russian || null, description: d.animes[0].description || null };
+                }
+                break; // Если нашли, но russian пустой — прерываем цикл
+            } catch(e) { 
+                console.warn(`[Shikimori] Попытка ${attempt} упала:`, e.message); 
+                if (attempt === 1) await new Promise(r => setTimeout(r, 300));
+            }
+        }
         return { russian:null, description:null };
     }
 };
 
 async function buildAnimeObject(raw) {
-    // Ищем по английскому названию
     const searchTitle = raw.title?.english || raw.title?.romaji || raw.title?.native || '';
     
-    // 1. Пытаемся найти русское в AniLibria
-    let russianFromAniLibria = await API_AniLibria.searchRussian(searchTitle);
-    let shikiData = { russian:null, description:null };
+    // 1. AniLibria
+    let russianFromAniLibria = null;
+    try { russianFromAniLibria = await API_AniLibria.searchRussian(searchTitle); } catch(e) {}
     
-    // 2. Если не нашли, идём в Shikimori
+    // 2. Shikimori
+    let shikiData = { russian:null, description:null };
     if (!russianFromAniLibria) {
         shikiData = await API_Shikimori.getRussianData(searchTitle);
     }
 
-    // Формируем ФИНАЛЬНОЕ русское название (без английских вставок)
-    const finalRussianTitle = russianFromAniLibria || shikiData.russian || 'Название на русском отсутствует';
+    // 3. ФИНАЛЬНОЕ НАЗВАНИЕ. Если нет русского - используем английское, чтобы не было заглушки.
+    const finalRussianTitle = russianFromAniLibria || shikiData.russian || raw.title?.english || raw.title?.romaji || raw.title?.native || 'Без названия';
     
-    // Английское оставляем для служебных нужд (навигация, поиск)
-    const fallbackTitle = raw.title?.english || raw.title?.romaji || 'Без названия';
-
     const score = raw.averageScore ? (raw.averageScore/10).toFixed(1) : 0;
     
     let cleanDesc = shikiData.description || raw.description || 'Описание отсутствует.';
@@ -290,9 +297,9 @@ async function buildAnimeObject(raw) {
         id: 'anilist_' + raw.id,
         rawId: raw.id,
         idMal: raw.idMal,
-        title_ru: finalRussianTitle, // Только для UI
-        title_raw: fallbackTitle,    // Для поиска/служебного
-        title: finalRussianTitle,    // Оставляем для совместимости со старым кодом
+        title_ru: finalRussianTitle, // Здесь будет либо RU, либо EN (без заглушек)
+        title_raw: searchTitle,
+        title: finalRussianTitle,
         year: raw.seasonYear || '--',
         episodes: raw.episodes || '?',
         images: { jpg: { image_url: raw.coverImage?.extraLarge || raw.coverImage?.large || '' } },
@@ -928,7 +935,7 @@ async function loadCatalog(reset = false) {
             hasMoreCatalog = false; if (lm) lm.style.display = 'none'; return;
         }
         items.forEach(anime => {
-            const title = escapeHTML(anime.title_ru); // Только русское название
+            const title = escapeHTML(anime.title_ru); 
             const img = safeUrl(anime.images.jpg.image_url); 
             const score = anime.score ? Number(anime.score).toFixed(1) : '?';
             grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`);
@@ -957,7 +964,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 comments = cmts || [];
             } catch(e) { console.error(e); }
         }
-        const title = escapeHTML(anime.title_ru); // Только русское
+        const title = escapeHTML(anime.title_ru); 
         const desc = escapeHTML(anime.description); 
         const score = anime.score ? Number(anime.score).toFixed(1) : '?'; 
         const poster = safeUrl(anime.images.jpg.image_url);
@@ -1057,7 +1064,7 @@ async function renderMyList() {
     } catch (e) { console.error(e); grid.innerHTML = '<div class="loading-text" style="color:#ff4444;">Ошибка</div>'; }
 }
 function renderMyListCard(anime, grid) {
-    const title = escapeHTML(anime.title_ru); // Только русское
+    const title = escapeHTML(anime.title_ru); 
     const img = safeUrl(anime.images.jpg.image_url); 
     const score = anime.score ? Number(anime.score).toFixed(1) : '?';
     grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'my')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`);
@@ -1070,7 +1077,6 @@ async function loadPopularByRating(limit = 6) {
     const list = document.getElementById('popular-list'); if (!list) return;
     list.innerHTML = Skeletons.cards(4);
     try {
-        // Топ по оценкам через AniList (SCORE_DESC)
         const items = await API.getTopRated(limit);
         if (items && items.length > 0) {
             renderSectionCards(list, items, 'home');
@@ -1108,7 +1114,6 @@ async function loadRecommendations(limit = 4) {
 function renderSectionCards(container, items, fromScreen = 'home') {
     if (!container) return;
     if (!items || items.length === 0) { container.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; return; }
-    // Выводим только title_ru
     container.innerHTML = items.map(anime => { const title = escapeHTML(anime.title_ru); const img = safeUrl(anime.images.jpg.image_url); return `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', '${fromScreen}')"><img class="card-img" src="${img}" loading="lazy"><div class="card-title">${title}</div></div>`; }).join('');
 }
 
@@ -1131,7 +1136,6 @@ async function loadHomePage() {
     try {
         const heroItems = await API.getRandom(5);
         if (heroItems && heroItems.length > 0) {
-            // В баннере тоже только русское название
             heroData = heroItems.map(a => ({ id: a.id, title: a.title_ru, poster: a.images.jpg.image_url, score: a.score ? Number(a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year }));
         } else { throw new Error('empty hero'); }
     } catch (e) { console.warn('[Home] Hero fallback (empty)'); heroData = []; }
