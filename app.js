@@ -12,7 +12,7 @@ let MY_ID = null, MY_PUBLIC_ID = null, MY_NAME = 'Гость', MY_PHOTO_URL = ''
 let ACTIVE_BANNER_URL = '', ACTIVE_TITLE_DATA = null, ACTIVE_EFFECT_CSS = '', ACTIVE_BADGE_URL = '';
 let PENDING_VERIFY_EMAIL = '';
 
-if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+if (tg?.initDataUnsafe?.user) {
     tg.expand();
     try { tg.setHeaderColor('#0a0a0f'); tg.setBackgroundColor('#0a0a0f'); } catch(e) {}
     MY_ID = tg.initDataUnsafe.user.id;
@@ -161,12 +161,12 @@ document.addEventListener('pointerdown', function(e) {
 }, { passive: true });
 
 // ==========================================
-// 3. API — AniList + AniLibria + Shikimori
+// 3. API — AniList + AniLibria (RU) + Shikimori (RU)
 // ==========================================
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const SHIKIMORI_GRAPHQL = 'https://shikimori.io/api/graphql';
-const ANILIBRIA_SEARCH = 'https://aniliberty.top/api/v1/anime/releases';
+const ANILIBRIA_RELEASES = 'https://aniliberty.top/api/v1/anime/releases';
 
 const API_AniList = {
     async fetch(query, variables = {}) {
@@ -176,7 +176,7 @@ const API_AniList = {
         if (d.errors) throw new Error('AniList: ' + d.errors[0].message);
         return d.data;
     },
-    _mediaFields: `id idMal title{romaji english native} averageScore episodes status format seasonYear coverImage{extraLarge large medium} bannerImage genres trailer{id}`,
+    _mediaFields: `id idMal title{romaji english native} averageScore episodes status format seasonYear coverImage{extraLarge large medium} genres trailer{id}`,
     async getCatalog(page, limit, filters) {
         const perPage = Math.min(limit || 30, 50);
         const vars = { page: page || 1, perPage };
@@ -224,9 +224,7 @@ const API_AniLibria = {
         if (!searchTitle) return null;
         const cleanSearch = searchTitle.replace(/\s*\([^)]*\)/g,'').trim();
         if (!cleanSearch) return null;
-        
-        const url = `${ANILIBRIA_SEARCH}?f[search]=${encodeURIComponent(cleanSearch)}&limit=1`;
-        
+        const url = `${ANILIBRIA_RELEASES}?f[search]=${encodeURIComponent(cleanSearch)}&limit=1`;
         try {
             const res = await fetch(PROXY_URL + encodeURIComponent(url));
             if (!res.ok) return null;
@@ -281,7 +279,6 @@ async function buildAnimeObject(raw) {
         year: raw.seasonYear || '--',
         episodes: raw.episodes || '?',
         images: { jpg: { image_url: raw.coverImage?.extraLarge || raw.coverImage?.large || '' } },
-        bannerImage: raw.bannerImage || null,
         description: cleanDesc,
         genres: raw.genres || [],
         score,
@@ -1100,14 +1097,16 @@ async function loadHomePage() {
     const seasonalList = document.getElementById('seasonal-list');
     const heroSlider = document.getElementById('heroSlider');
     const heroProgressBar = document.getElementById('heroProgressBar');
-    if (heroSlider) heroSlider.innerHTML = `<div class="hero-slide active"><div class="hero-bg-poster" style="background: linear-gradient(135deg, #1a1a24, #12121a);"></div></div>`;
+    
+    // Скелетон для баннера (просто темный фон)
+    if (heroSlider) heroSlider.innerHTML = `<div class="hero-slide active"><div style="position:absolute; inset:0; background: linear-gradient(135deg, #1a1a24, #12121a);"></div></div>`;
     if (heroProgressBar) heroProgressBar.innerHTML = '';
     if (seasonalList) seasonalList.innerHTML = Skeletons.cards(4);
 
     try {
         const heroItems = await API.getRandom(5);
         if (heroItems && heroItems.length > 0) {
-            heroData = heroItems.map(a => ({ id: a.id, title: a.title, poster: a.images.jpg.image_url, banner: a.bannerImage, score: a.score ? Number(a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year, trailerId: a.trailerId }));
+            heroData = heroItems.map(a => ({ id: a.id, title: a.title, poster: a.images.jpg.image_url, score: a.score ? Number(a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year }));
         } else { throw new Error('empty hero'); }
     } catch (e) { console.warn('[Home] Hero fallback (empty)'); heroData = []; }
     initHeroSlider();
@@ -1132,11 +1131,9 @@ function initHeroSlider() {
     let sliderHTML = '', progressHTML = '';
     
     heroData.forEach((anime, index) => {
-        const trailerBtn = ''; 
         sliderHTML += `
             <div class="hero-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
-                <div class="hero-bg-poster" id="hero-bg-poster-${index}" style="background-image: url('${safeUrl(anime.poster)}')"></div>
-                <div class="hero-bg-banner" id="hero-bg-banner-${index}" style="background-image: url('${safeUrl(anime.banner || anime.poster)}')"></div>
+                <div class="hero-bg-poster" id="hero-bg-poster-${index}" style="background-image: url('${safeUrl(anime.poster)}'); background-position: center top;"></div>
                 <div class="hero-gradient"></div>
                 <div class="hero-content">
                     <div class="hero-badges">
@@ -1170,12 +1167,9 @@ function addHeroParallax() {
         const rect = hero.getBoundingClientRect(); const x = (e.clientX - rect.left) / rect.width - 0.5; const y = (e.clientY - rect.top) / rect.height - 0.5;
         const activeBg = document.querySelector('.hero-slide.active .hero-bg-poster');
         if (activeBg) activeBg.style.transform = `translate(${x * 15}px, ${y * 15}px)`;
-        const activeBanner = document.querySelector('.hero-slide.active .hero-bg-banner');
-        if (activeBanner) activeBanner.style.transform = `translate(${x * 15}px, ${y * 15}px)`;
     });
     hero.addEventListener('mouseleave', () => { 
         const activeBg = document.querySelector('.hero-slide.active .hero-bg-poster'); if (activeBg) activeBg.style.transform = ''; 
-        const activeBanner = document.querySelector('.hero-slide.active .hero-bg-banner'); if (activeBanner) activeBanner.style.transform = '';
     });
 }
 
