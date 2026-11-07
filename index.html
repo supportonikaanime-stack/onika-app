@@ -114,11 +114,9 @@
         .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; visibility: hidden; transition: 0.6s; display: flex; align-items: flex-end; }
         .hero-slide.active { opacity: 1; visibility: visible; z-index: 2; }
         
-        /* Два слоя: постер (bg1) и превью (bg2) */
-        .hero-bg-poster, .hero-bg-banner { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center top; z-index: 1; transition: opacity 0.8s ease; }
-        .hero-bg-banner { opacity: 0; }
+        /* Только постер (без широкого превью) */
+        .hero-bg-poster { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center top; z-index: 1; transition: opacity 0.8s ease; }
         .hero-slide.active .hero-bg-poster { animation: kenBurns 8s ease-out forwards; }
-        .hero-slide.active .hero-bg-banner { opacity: 1; animation: kenBurns 8s ease-out forwards; }
         
         .hero-gradient { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(10,10,15,0.8) 0%, transparent 20%, transparent 50%, var(--bg) 95%), radial-gradient(circle at center, transparent 30%, rgba(10,10,15,0.6) 100%); z-index: 2; pointer-events: none; }
         .hero-content { position: relative; z-index: 3; padding: 16px 20px; width: 100%; padding-bottom: 28px; transform: translateY(20px); opacity: 0; transition: 0.6s; }
@@ -438,7 +436,6 @@
       <symbol id="oa-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v12m-3-9h6m-6 6h6"/></symbol>
       <symbol id="oa-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></symbol>
       <symbol id="oa-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
-      <symbol id="oa-trailer" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="3"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></symbol>
       <symbol id="oa-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
     </svg>
 
@@ -865,6 +862,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=3800"></script>
+    <script src="app.js?v=3900"></script>
 </body>
 </html>
