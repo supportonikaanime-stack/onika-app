@@ -10,8 +10,8 @@ try {
 } catch(e) { console.error('Ошибка Supabase:', e); }
 
 const tg = window.Telegram?.WebApp;
-let MY_ID = null;         // UUID из Auth (для базы)
-let MY_PUBLIC_ID = null;  // 6-значный ID (для друзей)
+let MY_ID = null;         
+let MY_PUBLIC_ID = null;  
 let MY_NAME = 'Гость', MY_PHOTO_URL = '';
 let ACTIVE_BANNER_URL = '', ACTIVE_TITLE_DATA = null, ACTIVE_EFFECT_CSS = '', ACTIVE_BADGE_URL = '';
 let PENDING_VERIFY_EMAIL = '';
@@ -206,7 +206,7 @@ async function signOut() {
 }
 
 // ==========================================
-// 2. АГРЕГАТОР ДАННЫХ
+// 2. УПРОЩЕННЫЙ API (ТОЛЬКО SHIKIMORI)
 // ==========================================
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 
@@ -223,20 +223,16 @@ const API_Shikimori = {
         if (d.errors) throw new Error('Shikimori: ' + d.errors[0].message);
         return d.data;
     },
-    cleanDescription(desc) {
-        if (!desc) return 'Описание отсутствует.';
-        return desc.replace(/\[character=[^\]]+\]/g, '').replace(/\[anime=[^\]]+\]/g, '').replace(/<[^>]*>/g, '').trim();
-    },
     async getCatalog(page, limit, filters) {
         let args = [`page:${page}`, `limit:${limit}`, `order:popularity`];
         if (filters.search) args.push(`search:"${filters.search.replace(/"/g, '')}"`);
-        const q = `{animes(${args.join(',')}){id name russian episodes status genres{name}}}`;
+        const q = `{animes(${args.join(',')}){id name russian episodes status poster{originalUrl}}}`;
         const d = await this.fetchGraphQL(q);
         return d.animes.map(this.convert);
     },
     async getDetails(id) {
         const cleanId = String(id).replace('shikimori_', '');
-        const q = `{animes(ids:"${cleanId}",limit:1){id name russian description episodes status genres{name}}}`;
+        const q = `{animes(ids:"${cleanId}",limit:1){id name russian description episodes status poster{originalUrl}}}`;
         const d = await this.fetchGraphQL(q);
         return d.animes.length > 0 ? this.convert(d.animes[0]) : null;
     },
@@ -244,100 +240,13 @@ const API_Shikimori = {
         return {
             id: 'shikimori_' + a.id, rawId: a.id,
             title: a.russian || a.name || 'Без названия',
-            description: this.cleanDescription(a.description),
+            description: 'Описание отсутствует.',
             episodes: a.episodes || '?',
             status: a.status === 'ongoing' ? 'Онгоинг' : a.status === 'released' ? 'Завершено' : 'Анонс',
-            genres: (a.genres || []).map(g => g.name),
-            images: { jpg: { image_url: 'https://shikimori.io/assets/globals/missing_original.png' } }, score: 0
+            genres: [],
+            images: { jpg: { image_url: a.poster?.originalUrl || 'https://shikimori.io/assets/globals/missing_original.png' } }, 
+            score: 0
         };
-    }
-};
-
-const API_AniList = {
-    BASE_URL: 'https://graphql.anilist.co',
-    
-    // ТЕПЕРЬ ИСПОЛЬЗУЕМ ОФИЦИАЛЬНЫЙ ПОДХОД ИЗ ДОКУМЕНТАЦИИ (query + variables)
-    async query(query, variables = {}) {
-        try {
-            const res = await fetch(PROXY_URL + encodeURIComponent(this.BASE_URL), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({ query, variables })
-            });
-            if (!res.ok) throw new Error('AniList HTTP ' + res.status);
-            const d = await res.json();
-            if (d.errors) throw new Error('AniList: ' + d.errors[0].message);
-            return d.data;
-        } catch(e) {
-            console.warn('Ошибка AniList:', e.message);
-            return null; // Возвращаем null, чтобы не ронять код
-        }
-    },
-
-    async searchByTitle(title) {
-        const q = `query ($search: String) { Media (search: $search, type: ANIME) { id idMal coverImage { extraLarge } averageScore } }`;
-        const d = await this.query(q, { search: title });
-        return d ? d.Media : null;
-    },
-
-    async getById(id) {
-        const q = `query ($id: Int) { Media (id: $id, type: ANIME) { id idMal coverImage { extraLarge } averageScore status nextAiringEpisode { timeUntilAiring } } }`;
-        const d = await this.query(q, { id });
-        return d ? d.Media : null;
-    }
-};
-
-const AnimeAggregator = {
-    _cache: new Map(),
-    async enrichWithAniList(anime) {
-        if (!anime) return anime;
-        const cacheKey = 'enrich_' + anime.rawId;
-        if (this._cache.has(cacheKey)) return { ...anime, ...this._cache.get(cacheKey) };
-
-        let anilistData = null;
-        if (supabaseClient) {
-            try {
-                const { data: mapping } = await supabaseClient.from('anime_mapping').select('anilist_id').eq('shikimori_id', anime.rawId).single();
-                if (mapping && mapping.anilist_id) anilistData = await API_AniList.getById(mapping.anilist_id);
-            } catch(e) {}
-        }
-
-        if (!anilistData) {
-            console.log(`[AniList] Поиск: ${anime.title}`);
-            anilistData = await API_AniList.searchByTitle(anime.title);
-            if (anilistData && supabaseClient) {
-                try {
-                    await supabaseClient.from('anime_mapping').upsert({
-                        shikimori_id: anime.rawId, anilist_id: anilistData.id, mal_id: anilistData.idMal, title: anime.title
-                    }, { onConflict: 'shikimori_id' });
-                } catch(e) {}
-            }
-        }
-
-        if (anilistData && anilistData.coverImage) {
-            const enriched = { poster: anilistData.coverImage.extraLarge, score: anilistData.averageScore ? anilistData.averageScore / 10 : 0 };
-            this._cache.set(cacheKey, enriched);
-            return { ...anime, images: { jpg: { image_url: enriched.poster } }, score: enriched.score };
-        }
-        return anime;
-    },
-    async getCatalog(page, limit, filters) {
-        const shikiItems = await API_Shikimori.getCatalog(page, limit, filters);
-        return await Promise.all(shikiItems.map(a => this.enrichWithAniList(a)));
-    },
-    async getDetails(id) {
-        const shikiItem = await API_Shikimori.getDetails(id);
-        if (!shikiItem) return null;
-        return await this.enrichWithAniList(shikiItem);
-    },
-    async getRandom(limit) {
-        const shikiItems = await API_Shikimori.getCatalog(1, limit, {});
-        const enrichedItems = await Promise.all(shikiItems.map(a => this.enrichWithAniList(a)));
-        return enrichedItems.sort(() => Math.random() - 0.5);
-    },
-    async getSeasonal(limit) {
-        const shikiItems = await API_Shikimori.getCatalog(1, limit, {});
-        return await Promise.all(shikiItems.map(a => this.enrichWithAniList(a)));
     }
 };
 
@@ -960,7 +869,7 @@ async function openFriendProfile(id, name) {
         const achPoints = friendAchCount * 10;
         let lastWatchedHtml = '';
         if (friend.last_watched) {
-            const animeData = await AnimeAggregator.getDetails(friend.last_watched);
+            const animeData = await API.getDetails(friend.last_watched);
             if (animeData) lastWatchedHtml = `<div style="margin-top: 15px; padding: 15px; background: rgba(91,91,255,0.1); border-radius: 12px; border: 1px solid rgba(91,91,255,0.2); cursor: pointer;" onclick="openAnimeDetail('${escapeHTML(animeData.id)}', 'friends')"><div style="font-size: 12px; color: #888; margin-bottom: 8px;">Последнее аниме:</div><div style="display: flex; gap: 10px; align-items: center;"><img src="${safeUrl(animeData.images.jpg.image_url)}" style="width: 40px; height: 55px; border-radius: 6px; object-fit: cover;"><div style="font-size: 14px; font-weight: bold; color: #fff;">${escapeHTML(animeData.title)}</div></div></div>`;
         }
         const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
@@ -1078,7 +987,7 @@ async function loadCatalog(reset = false) {
     if (!grid) { isCatalogLoading = false; return; }
     if (reset) { grid.innerHTML = Skeletons.cards(6); hasMoreCatalog = true; catalogPage = 1; }
     try {
-        const items = await AnimeAggregator.getCatalog(catalogPage, 30, currentFilters);
+        const items = await API_Shikimori.getCatalog(catalogPage, 30, currentFilters);
         if (myVersion !== catalogRequestVersion) return;
         if (reset) grid.innerHTML = '';
         if (!items || items.length === 0) {
@@ -1101,7 +1010,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
     const container = document.getElementById('detail-content');
     container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
     try {
-        const anime = await AnimeAggregator.getDetails(id);
+        const anime = await API_Shikimori.getDetails(id);
         if (!anime) throw new Error('Not found');
         let userRating = 0;
         let comments = [];
@@ -1181,7 +1090,7 @@ async function setAnimeStatus(status) {
     } catch(e) { console.error(e); showToast('Ошибка'); }
 }
 function toggleDescription() { const d = document.getElementById('desc-text'); const b = document.getElementById('desc-btn'); if (d.style.webkitLineClamp === '4' || d.style.webkitLineClamp === '') { d.style.webkitLineClamp = 'unset'; b.innerHTML = 'Свернуть ▲'; } else { d.style.webkitLineClamp = '4'; b.innerHTML = 'Читать полностью ▼'; } }
-async function openRandomAnime() { if (tg) tg.HapticFeedback.impactOccurred('medium'); showToast('🎲 Ищем...'); try { const items = await AnimeAggregator.getRandom(1); if (items && items.length > 0) openAnimeDetail(items[0].id, 'catalog'); } catch (e) {} }
+async function openRandomAnime() { if (tg) tg.HapticFeedback.impactOccurred('medium'); showToast('🎲 Ищем...'); try { const items = await API_Shikimori.getCatalog(1, 1, {}); if (items && items.length > 0) openAnimeDetail(items[0].id, 'catalog'); } catch (e) {} }
 
 // ==========================================
 // 10. МОЁ
@@ -1201,7 +1110,7 @@ async function renderMyList() {
         const items = await Promise.all(list.map(async f => {
             let a = ca[f.anime_id];
             if (a) return a;
-            try { const d = await AnimeAggregator.getDetails(f.anime_id); if (d) { let s = getStats(); s.cachedAnime = s.cachedAnime || {}; s.cachedAnime[f.anime_id] = d; saveStats(s); return d; } } catch(e) { console.error(e); }
+            try { const d = await API_Shikimori.getDetails(f.anime_id); if (d) { let s = getStats(); s.cachedAnime = s.cachedAnime || {}; s.cachedAnime[f.anime_id] = d; saveStats(s); return d; } } catch(e) { console.error(e); }
             return null;
         }));
         grid.innerHTML = '';
@@ -1223,27 +1132,27 @@ async function loadPopularByRating(limit = 6) {
     list.innerHTML = Skeletons.cards(4);
     try {
         if (!supabaseClient) {
-            const fallback = await AnimeAggregator.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return;
+            const fallback = await API_Shikimori.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return;
         }
         const { data: ratings, error } = await supabaseClient.from('user_lists').select('anime_id, rating').not('rating', 'is', null).gte('rating', 4);
         if (error) throw error;
         if (!ratings || ratings.length === 0) {
-            const fallback = await AnimeAggregator.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return;
+            const fallback = await API_Shikimori.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return;
         }
         const stats = {};
         ratings.forEach(r => { if (!stats[r.anime_id]) stats[r.anime_id] = { sum: 0, count: 0 }; stats[r.anime_id].sum += r.rating; stats[r.anime_id].count += 1; });
         const sorted = Object.entries(stats).map(([id, s]) => ({ id, avg: s.sum / s.count, count: s.count })).filter(x => x.avg >= 4.0).sort((a, b) => b.avg - a.avg || b.count - a.count).slice(0, limit);
         if (sorted.length === 0) {
-            const fallback = await AnimeAggregator.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return;
+            const fallback = await API_Shikimori.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return;
         }
-        const items = await Promise.all(sorted.map(x => AnimeAggregator.getDetails(x.id)));
+        const items = await Promise.all(sorted.map(x => API_Shikimori.getDetails(x.id)));
         const valid = items.filter(Boolean);
         if (valid.length === 0) {
-            const fallback = await AnimeAggregator.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return;
+            const fallback = await API_Shikimori.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return;
         }
         renderSectionCards(list, valid, 'home');
     } catch (e) {
-        try { const fallback = await AnimeAggregator.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); } catch(e2) { list.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; }
+        try { const fallback = await API_Shikimori.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); } catch(e2) { list.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; }
     }
 }
 
@@ -1252,27 +1161,9 @@ async function loadRecommendations(limit = 4) {
     if (!list) return;
     list.innerHTML = Skeletons.cards(4);
     try {
-        let userGenres = [];
-        let userAnimeIds = [];
-        if (supabaseClient && MY_ID) {
-            const { data: userList, error } = await supabaseClient.from('user_lists').select('anime_id, status').eq('user_id', MY_ID);
-            if (error) throw error;
-            if (userList && userList.length > 0) {
-                userAnimeIds = userList.map(x => x.anime_id);
-                const details = await Promise.all(userList.slice(0, 20).map(x => AnimeAggregator.getDetails(x.anime_id)));
-                const genreCount = {};
-                details.filter(Boolean).forEach(anime => { (anime.genres || []).forEach(g => { genreCount[g] = (genreCount[g] || 0) + 1; }); });
-                userGenres = Object.entries(genreCount).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([g]) => g);
-            }
-        }
-        if (userGenres.length === 0) {
-            const fallback = await AnimeAggregator.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return;
-        }
-        const recs = await AnimeAggregator.searchByGenres(userGenres, limit, userAnimeIds);
-        if (recs && recs.length > 0) { renderSectionCards(list, recs, 'home'); }
-        else { const fallback = await AnimeAggregator.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); }
+        const fallback = await API_Shikimori.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home');
     } catch (e) {
-        try { const fallback = await AnimeAggregator.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); } catch(e2) { list.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; }
+        list.innerHTML = '<div class="loading-text">Не удалось загрузить</div>';
     }
 }
 function renderSectionCards(container, items, fromScreen = 'home') {
@@ -1299,7 +1190,7 @@ async function loadHomePage() {
     if (seasonalList) seasonalList.innerHTML = Skeletons.cards(4);
 
     try {
-        const heroItems = await AnimeAggregator.getRandom(5);
+        const heroItems = await API_Shikimori.getCatalog(1, 5, {});
         if (heroItems && heroItems.length > 0) {
             heroData = heroItems.map(a => ({ id: a.id, title: a.title, img: a.images.jpg.image_url, score: a.score ? Number(a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year, trailerId: a.trailerId }));
         } else { throw new Error('empty hero'); }
@@ -1307,7 +1198,7 @@ async function loadHomePage() {
     initHeroSlider();
 
     try {
-        const seasonalItems = await AnimeAggregator.getSeasonal(6);
+        const seasonalItems = await API_Shikimori.getCatalog(1, 6, {});
         if (seasonalItems && seasonalItems.length > 0) { renderSectionCards(seasonalList, seasonalItems, 'home'); }
         else { if (seasonalList) seasonalList.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; }
     } catch(e) { if (seasonalList) seasonalList.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; }
