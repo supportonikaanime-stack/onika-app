@@ -206,11 +206,10 @@ async function signOut() {
 }
 
 // ==========================================
-// 2. АГРЕГАТОР ДАННЫХ (Shikimori + AniList)
+// 2. АГРЕГАТОР: SHIKIMORI + JIKAN (+ ANIME365)
 // ==========================================
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 const SHIKIMORI_API = 'https://shikimori.io/api/graphql';
-const ANILIST_API = 'https://graphql.anilist.co';
 
 // --- 2.1 SHIKIMORI ---
 async function fetchShikimori(query) {
@@ -225,8 +224,8 @@ async function fetchShikimori(query) {
     return d.data;
 }
 
-async function getShikimoriAnime(limit = 10) {
-    const q = `{animes(page:1, limit:${limit}, order:popularity){id name russian episodes status poster{originalUrl}}}`;
+async function getShikimoriAnime(limit = 10, order = 'popularity', extraParams = '') {
+    const q = `{animes(page:1, limit:${limit}, order:${order}${extraParams ? ',' + extraParams : ''}){id name russian episodes status poster{originalUrl}}}`;
     const d = await fetchShikimori(q);
     return d.animes.map(a => ({
         id: 'shikimori_' + a.id,
@@ -239,190 +238,190 @@ async function getShikimoriAnime(limit = 10) {
     }));
 }
 
-// --- 2.2 ОГРАНИЧИТЕЛЬ ЗАПРОСОВ (30 в минуту) ---
-const RequestLimiter = {
-    queue: [],
-    isProcessing: false,
-    lastRequestTime: 0,
-    interval: 2000, // 2 секунды между запросами
+// --- 2.2 ANIME365 (плеер) ---
+const ANIME365_API = 'https://api.anime365.com/v1';
 
-    async add(fn) {
-        return new Promise((resolve, reject) => {
-            this.queue.push({ fn, resolve, reject });
-            this.process();
+async function getAnime365Links(anime365Id) {
+    if (!supabaseClient || !anime365Id) return [];
+    const twoHoursAgo = new Date(Date.now() - 2 * 3600 * 1000).toISOString();
+    try {
+        const { data: cached } = await supabaseClient
+            .from('anime365_links')
+            .select('*')
+            .eq('anime365_id', String(anime365Id))
+            .gt('created_at', twoHoursAgo);
+        if (cached && cached.length) return cached;
+    } catch(e) { console.warn('Anime365 cache miss', e); }
+
+    try {
+        const r = await fetch(PROXY_URL + encodeURIComponent(`${ANIME365_API}/series/${anime365Id}/episodes`), {
+            headers: { 'Accept': 'application/json', 'User-Agent': 'OnikaAnime/1.0' }
         });
-    },
-
-    async process() {
-        if (this.isProcessing) return;
-        if (this.queue.length === 0) return;
-
-        this.isProcessing = true;
-
-        while (this.queue.length > 0) {
-            const now = Date.now();
-            const timeSinceLast = now - this.lastRequestTime;
-
-            if (timeSinceLast < this.interval) {
-                await new Promise(r => setTimeout(r, this.interval - timeSinceLast));
-            }
-
-            const { fn, resolve, reject } = this.queue.shift();
-            this.lastRequestTime = Date.now();
-
-            try {
-                const result = await fn();
-                resolve(result);
-            } catch (e) {
-                reject(e);
-            }
+        if (!r.ok) throw new Error('anime365 HTTP ' + r.status);
+        const episodes = await r.json();
+        const rows = [];
+        (episodes || []).forEach(ep => {
+            (ep.voices || []).forEach(v => {
+                rows.push({
+                    anime365_id: String(anime365Id),
+                    voice_name: v.author || 'Неизвестно',
+                    player_name: v.player || 'Anime365',
+                    episode: ep.episode,
+                    url: v.url,
+                    created_at: new Date().toISOString()
+                });
+            });
+        });
+        if (rows.length && supabaseClient) {
+            try { await supabaseClient.from('anime365_links').insert(rows); } catch(e) {}
         }
+        return rows;
+    } catch(e) {
+        console.warn('[Anime365] Ошибка:', e.message);
+        return [];
+    }
+}
 
-        this.isProcessing = false;
+// --- 2.3 JIKAN (трейлеры, по idMal из Shikimori) ---
+const JikanLimiter = {
+    last: 0,
+    async fetch(path) {
+        const wait = Math.max(0, 400 - (Date.now() - this.last));
+        if (wait) await new Promise(r => setTimeout(r, wait));
+        this.last = Date.now();
+        const r = await fetch('https://api.jikan.moe/v4' + path);
+        if (r.status === 429) {
+            await new Promise(r => setTimeout(r, 2000));
+            return this.fetch(path);
+        }
+        if (!r.ok) throw new Error('Jikan HTTP ' + r.status);
+        return r.json();
     }
 };
 
-// --- 2.3 ANILIST ---
-async function fetchAniListLimited(query, variables = {}) {
-    return RequestLimiter.add(async () => {
-        try {
-            const res = await fetch(PROXY_URL + encodeURIComponent(ANILIST_API), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({ query, variables })
-            });
-            if (!res.ok) {
-                console.warn(`[AniList] HTTP ${res.status} (пропускаем)`);
-                return null;
-            }
-            const d = await res.json();
-            if (d.errors) {
-                console.warn(`[AniList] Ошибка: ${d.errors[0].message}`);
-                return null;
-            }
-            return d.data;
-        } catch(e) {
-            console.warn('[AniList] Исключение:', e.message);
-            return null;
-        }
-    });
-}
-
-// --- 2.4 КЭШ ANILIST ---
-const ANILIST_CACHE_KEY = 'anilist_cache_v3';
-const ANILIST_CACHE_TTL = 15 * 60 * 1000; // 15 минут
-
-function getAniListCache() {
+async function getJikanTrailer(malId) {
+    if (!malId) return null;
     try {
-        const raw = localStorage.getItem(ANILIST_CACHE_KEY);
-        if (!raw) return {};
-        const cache = JSON.parse(raw);
-        const now = Date.now();
-        for (const key in cache) {
-            if (now - cache[key].time > ANILIST_CACHE_TTL) delete cache[key];
+        const d = await JikanLimiter.fetch(`/anime/${malId}/full`);
+        return d?.data?.trailer?.youtube_id || null;
+    } catch(e) {
+        console.warn('[Jikan] Трейлер недоступен:', e.message);
+        return null;
+    }
+}
+
+// --- 2.4 КЭШ МЭППИНГА (shikimori_id → mal_id, trailer, cover, score) ---
+const MAPPING_CACHE = new Map();
+const MAPPING_MEMORY_TTL = 10 * 60 * 1000;   // 10 минут в памяти
+const MAPPING_DB_TTL = 24 * 3600 * 1000;     // 24 часа в Supabase
+
+async function getMapping(shikimoriId) {
+    const key = String(shikimoriId);
+    const hit = MAPPING_CACHE.get(key);
+    if (hit && Date.now() - hit.t < MAPPING_MEMORY_TTL) return hit.d;
+
+    // 1. Supabase
+    if (supabaseClient) {
+        try {
+            const { data: local } = await supabaseClient
+                .from('anime_mapping')
+                .select('*')
+                .eq('shikimori_id', Number(shikimoriId))
+                .maybeSingle();
+            if (local && local.updated_at && (Date.now() - new Date(local.updated_at).getTime()) < MAPPING_DB_TTL) {
+                MAPPING_CACHE.set(key, { d: local, t: Date.now() });
+                return local;
+            }
+        } catch(e) { console.warn('Mapping DB miss', e); }
+    }
+
+    // 2. Shikimori — берём всё, что нужно
+    let a = null;
+    try {
+        const shiki = await fetchShikimori(
+            `{animes(ids:"${shikimoriId}",limit:1){id name russian description episodes status genres{name} poster{originalUrl}}}`
+        );
+        a = shiki?.animes?.[0];
+    } catch(e) { console.warn('[Shikimori] getMapping fail:', e.message); }
+    if (!a) return null;
+
+    // 3. Jikan по поиску (Shikimori id ≠ MAL id; но Shikimori name ≈ romaji)
+    let malId = null, trailerId = null;
+    try {
+        const searchResp = await JikanLimiter.fetch(`/anime?q=${encodeURIComponent(a.name)}&limit=1&type=tv`);
+        const first = searchResp?.data?.[0];
+        if (first) {
+            malId = first.mal_id;
+            trailerId = first.trailer?.youtube_id || null;
         }
-        return cache;
-    } catch { return {}; }
-}
+    } catch(e) { console.warn('[Jikan] Search fail:', e.message); }
 
-function saveAniListCache(cache) {
-    localStorage.setItem(ANILIST_CACHE_KEY, JSON.stringify(cache));
-}
+    const row = {
+        shikimori_id: a.id,
+        mal_id: malId,
+        anime365_id: null,
+        title_ru: a.russian || a.name,
+        title_romaji: a.name,
+        cover_url: a.poster?.originalUrl || null,
+        score: 0,
+        next_episode_at: null,
+        trailer_youtube_id: trailerId,
+        genres: (a.genres || []).map(g => g.name),
+        episodes_total: a.episodes || null,
+        status: a.status,
+        updated_at: new Date().toISOString()
+    };
 
-async function getAniListData(title) {
-    const cache = getAniListCache();
-    const key = 'search_' + title.toLowerCase().trim();
-    const now = Date.now();
-
-    if (cache[key] && now - cache[key].time < ANILIST_CACHE_TTL) {
-        return cache[key].data;
+    if (supabaseClient) {
+        try { await supabaseClient.from('anime_mapping').upsert(row, { onConflict: 'shikimori_id' }); } catch(e) { console.warn(e); }
     }
-
-    const q = `query ($search: String) { Media (search: $search, type: ANIME) { id coverImage { extraLarge } averageScore } }`;
-    const d = await fetchAniListLimited(q, { search: title });
-    const result = d ? d.Media : null;
-
-    if (result) {
-        cache[key] = { data: result, time: now };
-        saveAniListCache(cache);
-    }
-    return result;
+    MAPPING_CACHE.set(key, { d: row, t: Date.now() });
+    return row;
 }
 
-// --- 2.5 АГРЕГАТОР ---
+// --- 2.5 АГРЕГАТОР ДЛЯ КАТАЛОГА/ГЛАВНОЙ ---
 async function getEnrichedAnime(limit = 10) {
     const shikiItems = await getShikimoriAnime(limit);
-
-    // 1. Пакетный запрос популярных AniList (1 запрос)
-    let popularAniList = [];
-    try {
-        const q = `query { Page(page: 1, perPage: 30) { media(type: ANIME, sort: POPULARITY_DESC) { id title { romaji english native } coverImage { extraLarge } averageScore } } }`;
-        const d = await fetchAniListLimited(q);
-        if (d && d.Page && d.Page.media) popularAniList = d.Page.media;
-    } catch(e) { console.warn('[AniList] Популярное не загрузилось'); }
-
-    // 2. Обогащаем каждый тайтл
+    // Постеры и score берём из мэппинга (кэш), иначе — из Shikimori
     const enriched = await Promise.all(shikiItems.map(async (anime) => {
-        const found = popularAniList.find(a => {
-            const t = (a.title.romaji || a.title.english || '').toLowerCase();
-            return t === anime.title.toLowerCase();
-        });
-
-        if (found && found.coverImage) {
-            return {
-                ...anime,
-                img: found.coverImage.extraLarge,
-                score: found.averageScore ? (found.averageScore / 10).toFixed(1) : 0
-            };
-        }
-
         try {
-            const anilist = await getAniListData(anime.title);
-            if (anilist && anilist.coverImage) {
+            const m = await getMapping(anime.rawId);
+            if (m) {
                 return {
                     ...anime,
-                    img: anilist.coverImage.extraLarge,
-                    score: anilist.averageScore ? (anilist.averageScore / 10).toFixed(1) : 0
+                    title: m.title_ru || anime.title,
+                    img: m.cover_url || anime.img,
+                    score: m.score || 0
                 };
             }
         } catch(e) {}
-
         return anime;
     }));
-
     return enriched;
 }
 
-// --- 2.6 ПОИСК ДЕТАЛЕЙ (Shikimori + AniList) ---
+// --- 2.6 ПОИСК ДЕТАЛЕЙ ---
 async function getAnimeDetails(id) {
-    const cleanId = String(id).replace('shikimori_', '');
-    const q = `{animes(ids:"${cleanId}",limit:1){id name russian description episodes status genres{name} poster{originalUrl}}}`;
-    const d = await fetchShikimori(q);
-    if (!d.animes || d.animes.length === 0) return null;
-    
-    const a = d.animes[0];
-    const anime = {
-        id: 'shikimori_' + a.id,
-        rawId: a.id,
-        title: a.russian || a.name,
-        description: (a.description || 'Описание отсутствует.').replace(/\[character=[^\]]+\]/g, '').replace(/\[anime=[^\]]+\]/g, '').replace(/<[^>]*>/g, '').trim(),
-        episodes: a.episodes || '?',
-        status: a.status === 'ongoing' ? 'Онгоинг' : a.status === 'released' ? 'Завершено' : 'Анонс',
-        genres: (a.genres || []).map(g => g.name),
-        img: a.poster?.originalUrl || 'https://shikimori.io/assets/globals/missing_original.png',
-        score: 0
+    const cleanId = Number(String(id).replace('shikimori_', ''));
+    const m = await getMapping(cleanId);
+    if (!m) return null;
+
+    return {
+        id: 'shikimori_' + m.shikimori_id,
+        rawId: m.shikimori_id,
+        malId: m.mal_id,
+        anime365Id: m.anime365_id,
+        title: m.title_ru || m.title_romaji,
+        description: '', // при необходимости — отдельный GraphQL-запрос
+        episodes: m.episodes_total || '?',
+        status: m.status === 'ongoing' ? 'Онгоинг'
+              : m.status === 'released' ? 'Завершено' : 'Анонс',
+        genres: m.genres || [],
+        img: m.cover_url || 'https://shikimori.io/assets/globals/missing_original.png',
+        score: m.score || 0,
+        trailerId: m.trailer_youtube_id,
+        nextEpisodeAt: m.next_episode_at
     };
-    
-    // Пытаемся достать постер и рейтинг из AniList
-    try {
-        const anilist = await getAniListData(anime.title);
-        if (anilist && anilist.coverImage) {
-            anime.img = anilist.coverImage.extraLarge;
-            anime.score = anilist.averageScore ? (anilist.averageScore / 10).toFixed(1) : 0;
-        }
-    } catch(e) {}
-    
-    return anime;
 }
 
 // ==========================================
@@ -1097,7 +1096,7 @@ async function openFriendProfile(id, name) {
 }
 
 // ==========================================
-// 8. ПЛЕЕР
+// 8. ПЛЕЕР (через Anime365)
 // ==========================================
 function startWatching(anime) { currentAnimeForPlayer = anime; switchTab('voice'); }
 function renderVoiceSelection() { const c = document.getElementById('voice-list'); let h = ''; VOICES.forEach(v => { h += `<div class="ripple-btn" onclick="selectVoice('${v.id}', '${escapeHTML(v.name)}')" style="background: #14141f; border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 14px; display: flex; align-items: center; gap: 15px; cursor: pointer;"><div style="font-size: 24px;">${v.icon}</div><div style="font-size: 16px; font-weight: 600; color: #fff;">${escapeHTML(v.name)}</div></div>`; }); if (c) c.innerHTML = h; }
@@ -1114,12 +1113,48 @@ function renderEpisodesSelection() {
     for (let i = 1; i <= total; i++) h += `<div class="ripple-btn" onclick="playEpisode(${i})" style="background: #1a1a20; border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; text-align: center; font-size: 16px; font-weight: bold; color: #fff; cursor: pointer;">${i}</div>`;
     c.innerHTML = h;
 }
-function playEpisode(epNum) {
+
+async function playEpisode(epNum) {
+    const anime = currentAnimeForPlayer;
+    if (!anime) return;
+
+    // Пытаемся открыть через Anime365, если есть anime365Id
+    if (anime.anime365Id) {
+        showToast('⏳ Ищем видео...');
+        const links = await getAnime365Links(anime.anime365Id);
+        if (links && links.length > 0) {
+            // Ищем по озвучке и серии, иначе берём любую подходящую
+            let link = links.find(l => l.episode === epNum && l.voice_name === selectedVoice);
+            if (!link) link = links.find(l => l.episode === epNum && l.player_name === selectedPlayer);
+            if (!link) link = links.find(l => l.episode === epNum);
+            if (link && link.url) {
+                if (tg?.openLink) tg.openLink(link.url);
+                else window.open(link.url, '_blank');
+                awardWatchStats(anime);
+                return;
+            }
+        }
+        showToast('⚠️ Видео недоступно, попробуйте другую озвучку');
+        return;
+    }
+
+    // Фолбэк — открываем поиск Anime365
+    const searchUrl = `https://smotret-anime.org/search?q=${encodeURIComponent(anime.title)}`;
+    if (tg?.openLink) tg.openLink(searchUrl);
+    else window.open(searchUrl, '_blank');
+    awardWatchStats(anime);
+}
+
+function awardWatchStats(anime) {
     let stats = getStats();
-    stats.episodesWatched += 1; stats.minutesWatched += 24;
-    saveStats(stats); checkAchievements(stats); addXP(5); syncProfileToDB(true);
-    if (tg) tg.showAlert(`🎬 Просмотр:\n${currentAnimeForPlayer.title}\n${selectedVoice}\n${selectedPlayer}\nСерия: ${epNum}`);
-    currentAnimeForPlayer = null; switchTab('home');
+    stats.episodesWatched += 1;
+    stats.minutesWatched += 24;
+    saveStats(stats);
+    checkAchievements(stats);
+    addXP(5);
+    syncProfileToDB(true);
+    currentAnimeForPlayer = null;
+    switchTab('home');
 }
 
 // ==========================================
@@ -1154,6 +1189,7 @@ function applyFilter(type, value) {
     if (btn) btn.innerHTML = `${name} ⌄`;
     loadCatalog(true);
 }
+
 async function loadCatalog(reset = false) {
     if (isCatalogLoading) return;
     isCatalogLoading = true;
@@ -1162,18 +1198,39 @@ async function loadCatalog(reset = false) {
     if (!grid) { isCatalogLoading = false; return; }
     if (reset) { grid.innerHTML = Skeletons.cards(6); hasMoreCatalog = true; catalogPage = 1; }
     try {
-        const items = await getEnrichedAnime(30);
+        // Формируем параметры GraphQL для Shikimori из фильтров
+        const params = [];
+        if (currentFilters.search) params.push(`search:"${currentFilters.search.replace(/"/g, '')}"`);
+        if (currentFilters.genre) {
+            const g = GENRES.find(x => x.name === currentFilters.genre);
+            if (g) params.push(`genre:"${g.id}"`);
+        }
+        if (currentFilters.status) params.push(`status:"${currentFilters.status}"`);
+        // year → season в Shikimori не совсем год, но порядок по aired_on даёт новинки
+        const order = currentFilters.sort === 'ranked' ? 'ranked' : currentFilters.sort === 'aired_on' ? 'aired_on' : 'popularity';
+
+        const items = await getShikimoriAnime(30, order, params.join(','));
         if (myVersion !== catalogRequestVersion) return;
+
+        // Обогащаем по мэппингу (кэш) — постеры/score
+        const enriched = await Promise.all(items.map(async (anime) => {
+            try {
+                const m = await getMapping(anime.rawId);
+                if (m) return { ...anime, title: m.title_ru || anime.title, img: m.cover_url || anime.img, score: m.score || 0 };
+            } catch(e) {}
+            return anime;
+        }));
+
         if (reset) grid.innerHTML = '';
-        if (!items || items.length === 0) {
+        if (!enriched || enriched.length === 0) {
             if (reset) grid.innerHTML = '<div class="loading-text">Ничего не найдено</div>';
             hasMoreCatalog = false; if (lm) lm.style.display = 'none'; return;
         }
-        items.forEach(anime => {
+        enriched.forEach(anime => {
             const title = escapeHTML(anime.title); const img = safeUrl(anime.img); const score = anime.score;
-            grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`);
+            grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;">⭐ ${score || '—'}</div><div class="catalog-card-title">${title}</div></div>`);
         });
-        hasMoreCatalog = items.length >= 30;
+        hasMoreCatalog = enriched.length >= 30;
         if (lm) lm.style.display = hasMoreCatalog ? 'inline-block' : 'none';
     } catch (e) { console.error(e); if (reset && myVersion === catalogRequestVersion) grid.innerHTML = '<div class="loading-text" style="color:#ff4444;">Ошибка</div>'; if (lm) lm.style.display = 'none'; }
     finally { isCatalogLoading = false; }
@@ -1217,10 +1274,19 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 commentsHtml += `<div style="display: flex; gap: 10px; margin-bottom: 15px;"><div class="friend-avatar" style="width: 36px; height: 36px; flex-shrink: 0; font-size: 14px;">${av}</div><div style="flex: 1; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px;"><div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-size: 13px; font-weight: bold; color: #fff;">${escapeHTML(c.user_name)}</span><span style="font-size: 11px; color: #888;">${date}</span></div><p style="font-size: 13px; color: #ccc;">${escapeHTML(c.text)}</p></div></div>`;
             });
         } else commentsHtml = '<div style="font-size: 13px; color: #888; text-align: center; padding: 10px;">Пока нет комментариев</div>';
-        container.innerHTML = `<div class="fade-in"><div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;"><img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"></div><div style="padding-top: 30px;"><div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;"><img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; border: 2px solid rgba(255,255,255,0.1);"><div style="flex: 1;"><h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff;">${title}</h1><div style="display: flex; flex-wrap: wrap; gap: 6px;"><span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;">⭐ ${score}</span><span style="background: rgba(255,255,255,0.15); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px;">📺 ${anime.episodes || '?'} эп.</span><span style="background: ${statusColor}; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px;">${escapeHTML(anime.status)}</span></div></div></div><div style="display: flex; gap: 10px; margin-bottom: 20px;"><button class="btn-primary ripple-btn" onclick="startWatching(window._animeCache['${escapeHTML(anime.id)}'])" style="flex: 1; padding: 16px;">▶ Смотреть</button><button onclick="openStatusModal('${escapeHTML(anime.id)}')" class="btn-icon-heart ${isFaved ? 'faved' : ''}" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'};">${heartSvg}</button></div><div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px;">${escapeHTML(g)}</span>`).join('')}</div><div style="margin-bottom: 25px;"><p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p><button id="desc-btn" onclick="toggleDescription()" style="display: none; background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button></div><div style="background: #14141f; border-radius: 16px; padding: 15px; margin-bottom: 20px; text-align: center;"><h3 style="font-size: 15px; color: #fff; margin-bottom: 10px;">Ваша оценка:</h3><div style="display: flex; justify-content: center; gap: 5px;">${starsHtml}</div></div><div style="margin-bottom: 40px;"><h3 style="font-size: 16px; margin-bottom: 15px; color: #fff;">💬 Комментарии</h3><div style="display: flex; gap: 10px; margin-bottom: 20px;"><input type="text" id="comment-input" placeholder="Написать отзыв..." style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;"><button onclick="sendComment('${escapeHTML(anime.id)}')" class="ripple-btn" style="background: #5b5bff; border: none; border-radius: 12px; padding: 0 15px; color: #fff; font-weight: bold; cursor: pointer;">➤</button></div><div>${commentsHtml}</div></div></div></div>`;
+        const trailerBtn = anime.trailerId ? `<button onclick="event.stopPropagation(); playTrailerById('${escapeHTML(anime.trailerId)}')" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 0 16px; height: 48px; border-radius: 12px; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer;">▶ Трейлер</button>` : '';
+        container.innerHTML = `<div class="fade-in"><div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;"><img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"></div><div style="padding-top: 30px;"><div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;"><img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; border: 2px solid rgba(255,255,255,0.1);"><div style="flex: 1;"><h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff;">${title}</h1><div style="display: flex; flex-wrap: wrap; gap: 6px;"><span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;">⭐ ${score || '—'}</span><span style="background: rgba(255,255,255,0.15); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px;">📺 ${anime.episodes || '?'} эп.</span><span style="background: ${statusColor}; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px;">${escapeHTML(anime.status)}</span></div></div></div><div style="display: flex; gap: 10px; margin-bottom: 20px;"><button class="btn-primary ripple-btn" onclick="startWatching(window._animeCache['${escapeHTML(anime.id)}'])" style="flex: 1; padding: 16px;">▶ Смотреть</button>${trailerBtn}<button onclick="openStatusModal('${escapeHTML(anime.id)}')" class="btn-icon-heart ${isFaved ? 'faved' : ''}" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'};">${heartSvg}</button></div><div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px;">${escapeHTML(g)}</span>`).join('')}</div><div style="margin-bottom: 25px;"><p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc || 'Описание отсутствует.'}</p><button id="desc-btn" onclick="toggleDescription()" style="display: none; background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button></div><div style="background: #14141f; border-radius: 16px; padding: 15px; margin-bottom: 20px; text-align: center;"><h3 style="font-size: 15px; color: #fff; margin-bottom: 10px;">Ваша оценка:</h3><div style="display: flex; justify-content: center; gap: 5px;">${starsHtml}</div></div><div style="margin-bottom: 40px;"><h3 style="font-size: 16px; margin-bottom: 15px; color: #fff;">💬 Комментарии</h3><div style="display: flex; gap: 10px; margin-bottom: 20px;"><input type="text" id="comment-input" placeholder="Написать отзыв..." style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;"><button onclick="sendComment('${escapeHTML(anime.id)}')" class="ripple-btn" style="background: #5b5bff; border: none; border-radius: 12px; padding: 0 15px; color: #fff; font-weight: bold; cursor: pointer;">➤</button></div><div>${commentsHtml}</div></div></div></div>`;
         setTimeout(() => { const d = document.getElementById('desc-text'); const b = document.getElementById('desc-btn'); if (d && b && d.scrollHeight > d.clientHeight) b.style.display = 'block'; }, 50);
     } catch (e) { console.error(e); container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>'; }
 }
+
+function playTrailerById(youtubeId) {
+    if (!youtubeId) return;
+    const url = `https://www.youtube.com/watch?v=${encodeURIComponent(youtubeId)}`;
+    if (tg?.openLink) tg.openLink(url);
+    else window.open(url, '_blank');
+}
+
 async function rateAnime(animeId, rating) {
     if (!supabaseClient || !MY_ID) return;
     try {
@@ -1295,7 +1361,7 @@ async function renderMyList() {
 }
 function renderMyListCard(anime, grid) {
     const title = escapeHTML(anime.title); const img = safeUrl(anime.img); const score = anime.score;
-    grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'my')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`);
+    grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'my')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score || '—'}</div><div class="catalog-card-title">${title}</div></div>`);
 }
 
 // ==========================================
@@ -1401,7 +1467,7 @@ function initHeroSlider() {
         const isFaved = favedList.includes(cleanId);
         const heartClass = isFaved ? 'faved' : '';
         const heartIcon = isFaved ? '<svg style="width:24px;height:24px;fill:currentColor;stroke:none;"><use href="#oa-favorite"></use></svg>' : '<svg><use href="#oa-favorite"></use></svg>';
-        const trailerBtn = anime.trailerId ? `<button class="btn-trailer" onclick="event.stopPropagation(); playTrailer('${escapeHTML(anime.trailerId)}', ${index})">▶ Трейлер</button>` : '';
+        const trailerBtn = anime.trailerId ? `<button class="btn-trailer" onclick="event.stopPropagation(); playTrailerById('${escapeHTML(anime.trailerId)}')">▶ Трейлер</button>` : '';
 
         sliderHTML += `
             <div class="hero-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
@@ -1409,7 +1475,7 @@ function initHeroSlider() {
                 <div class="hero-gradient"></div>
                 <div class="hero-content">
                     <div class="hero-badges">
-                        <span class="badge star">⭐ ${escapeHTML(anime.score)}</span>
+                        <span class="badge star">⭐ ${escapeHTML(anime.score || '—')}</span>
                         <span class="badge">${escapeHTML(anime.type)}</span>
                         <span class="badge">${escapeHTML(anime.year)}</span>
                     </div>
@@ -1448,27 +1514,7 @@ function addHeroParallax() {
     hero.addEventListener('mouseleave', () => { const activeBg = document.querySelector('.hero-slide.active .hero-bg'); if (activeBg) activeBg.style.transform = ''; });
 }
 
-function playTrailer(youtubeId, index) {
-    const bg = document.getElementById(`hero-bg-${index}`);
-    if (!youtubeId) return;
-    const oldIframe = document.getElementById('hero-iframe');
-    if (oldIframe) oldIframe.remove();
-    const iframe = document.createElement('iframe');
-    iframe.id = 'hero-iframe';
-    iframe.src = `https://www.youtube.com/embed/${encodeURIComponent(youtubeId)}?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0`;
-    iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none;z-index:0;pointer-events:none;';
-    iframe.allow = 'autoplay; encrypted-media';
-    const slide = document.querySelector(`.hero-slide[data-index="${index}"]`);
-    if (slide) slide.insertBefore(iframe, slide.firstChild);
-    if (bg) bg.style.opacity = '0';
-    const cleanup = () => { if (iframe.parentNode) iframe.remove(); if (bg) bg.style.opacity = '1'; };
-    setTimeout(cleanup, 10000);
-    iframe._cleanup = cleanup;
-}
-
 function goToSlide(index) {
-    const oldIframe = document.getElementById('hero-iframe');
-    if (oldIframe) { if (oldIframe._cleanup) oldIframe._cleanup(); else oldIframe.remove(); }
     const slides = document.querySelectorAll('.hero-slide'); const dots = document.querySelectorAll('.hero-dot'); const progs = document.querySelectorAll('.hero-progress-seg');
     slides.forEach(s => s.classList.remove('active')); dots.forEach(d => d.classList.remove('active')); progs.forEach(p => { p.classList.remove('active'); p.classList.remove('done'); });
     if (slides[index]) slides[index].classList.add('active');
