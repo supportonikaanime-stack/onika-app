@@ -212,9 +212,9 @@ async function signOut() {
 // ==========================================
 const Skeletons = {
     hero() { return `<div class="skeleton-hero"><div class="skeleton-hero-bg"></div><div class="skeleton-hero-content"><div class="skeleton skeleton-text" style="width:60px;height:12px;display:inline-block;margin-right:8px;"></div><div class="skeleton skeleton-text" style="width:40px;height:12px;display:inline-block;margin-right:8px;"></div><div class="skeleton skeleton-text" style="width:50px;height:12px;display:inline-block;"></div><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text short" style="width:80%;"></div><div class="skeleton-hero-actions"><div class="skeleton skeleton-btn"></div><div class="skeleton skeleton-icon-btn"></div></div></div></div>`; },
-    cards(count = 6) { let h = ''; for (let i = 0; i < count; i++) h += `<div class="skeleton-card"><div class="skeleton skeleton-poster"></div><div class="skeleton-card-title"></div></div>`; return h; },
-    friends(count = 3) { let h = ''; for (let i = 0; i < count; i++) h += `<div class="skeleton-friend"><div class="skeleton skeleton-circle"></div><div class="skeleton-friend-info"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div></div>`; return h; },
-    shopItems(count = 4) { let h = ''; for (let i = 0; i < count; i++) h += `<div class="skeleton-shop-item"><div class="skeleton skeleton-shop-img"></div><div class="skeleton shop-info"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div></div>`; return h; }
+    cards(count = 6) { let h = ''; for (let i = 0; i < count; i++) h += `<div class="skeleton-card"><div class="skeleton skeleton-poster"></div><div class="skeleton skeleton-card-title"></div></div>`; return h; },
+    friends(count = 3) { let h = ''; for (let i = 0; i < count; i++) h += `<div class="skeleton-friend"><div class="skeleton skeleton-circle"></div><div class="skeleton skeleton-friend-info"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div></div>`; return h; },
+    shopItems(count = 4) { let h = ''; for (let i = 0; i < count; i++) h += `<div class="skeleton-shop-item"><div class="skeleton skeleton-shop-img"></div><div class="skeleton skeleton-shop-info"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div></div>`; return h; }
 };
 
 document.addEventListener('pointerdown', function (e) {
@@ -441,25 +441,26 @@ const API_Shikimori = {
         return d.data;
     },
 
-    // Ищем по английскому названию
+    // Ищем по названию. В приоритете английское, потом романдзи
     async getRussianData(searchTitle) {
         if (!searchTitle) return { russian: null, description: null };
         
-        // Очищаем запрос от лишнего: убираем сезоны "(2011)", оставляем только текст
-        let cleanSearch = searchTitle.replace(/\s*\(\d{4}\)/, '').trim(); 
-        // В Shikimori GraphQL поиск чувствителен к кавычкам, оборачиваем в кавычки
+        // Очищаем от лишнего: убираем сезоны "(2011)", "(TV)" и лишние пробелы
+        let cleanSearch = searchTitle.replace(/\s*\([^)]*\)/g, '').trim(); 
+        // В Shikimori GraphQL поиск ожидает строку в кавычках
         const searchQuery = `"${cleanSearch.replace(/"/g, '')}"`;
 
         try {
             const q = `{animes(search: ${searchQuery}, limit: 1){id name russian description}}`;
             const d = await this.fetchGraphQL(q);
             if (d.animes && d.animes.length > 0) {
+                // Если русское название пустое - возвращаем null (сработает fallback)
                 return {
                     russian: d.animes[0].russian || null,
                     description: d.animes[0].description || null
                 };
             }
-        } catch(e) { console.warn('[Shikimori] поиск упал:', e.message); }
+        } catch(e) { console.warn('[Shikimori] поиск упал для:', searchTitle); }
         return { russian: null, description: null };
     }
 };
@@ -468,17 +469,16 @@ const API_Shikimori = {
 async function buildAnimeObject(rawAniListItem) {
     let ruData = { russian: null, description: null };
     
-    // В Shikimori ищем по названию. Приоритет: английское -> романдзи -> нативное.
+    // Ищем по названию (английское приоритетнее для Shikimori)
     const searchTitle = rawAniListItem.title?.english || rawAniListItem.title?.romaji || rawAniListItem.title?.native;
     if (searchTitle) {
         ruData = await API_Shikimori.getRussianData(searchTitle);
     }
 
-    // Формируем финальное название
     const title = ruData.russian || rawAniListItem.title?.english || rawAniListItem.title?.romaji || rawAniListItem.title?.native || 'Без названия';
     const score = rawAniListItem.averageScore ? (rawAniListItem.averageScore / 10).toFixed(1) : 0;
     
-    // Очистка описания
+    // Очистка описания от BB-кодов
     let cleanDesc = ruData.description || rawAniListItem.description || 'Описание отсутствует.';
     cleanDesc = cleanDesc.replace(/\[character=[^\]]+\]/g, '').replace(/\[\/character\]/g, '');
     cleanDesc = cleanDesc.replace(/\[anime=[^\]]+\]/g, '').replace(/\[\/anime\]/g, '');
