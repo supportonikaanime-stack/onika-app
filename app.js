@@ -206,7 +206,7 @@ async function signOut() {
 }
 
 // ==========================================
-// 2. АГРЕГАТОР ДАННЫХ (Shikimori + AniList)
+// 2. АГРЕГАТОР ДАННЫХ (ПРАВИЛЬНЫЙ ANILIST)
 // ==========================================
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 
@@ -256,7 +256,7 @@ const API_Shikimori = {
 const API_AniList = {
     BASE_URL: 'https://graphql.anilist.co',
     
-    // ТЕПЕРЬ ИСПОЛЬЗУЕМ ОФИЦИАЛЬНЫЙ ПОДХОД ИЗ ДОКУМЕНТАЦИИ (query + variables)
+    // ОФИЦИАЛЬНЫЙ ЗАПРОС С query и variables
     async query(query, variables = {}) {
         try {
             const res = await fetch(PROXY_URL + encodeURIComponent(this.BASE_URL), {
