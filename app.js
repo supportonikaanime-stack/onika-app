@@ -206,7 +206,7 @@ async function signOut() {
 }
 
 // ==========================================
-// 2. АГРЕГАТОР ДАННЫХ (Shikimori + AniList)
+// 2. АГРЕГАТОР ДАННЫХ
 // ==========================================
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 
@@ -227,10 +227,11 @@ const API_Shikimori = {
         if (!desc) return 'Описание отсутствует.';
         return desc.replace(/\[character=[^\]]+\]/g, '').replace(/\[anime=[^\]]+\]/g, '').replace(/<[^>]*>/g, '').trim();
     },
+    // УБРАЛИ DESCRIPTION ИЗ ЗАПРОСА КАТАЛОГА
     async getCatalog(page, limit, filters) {
         let args = [`page:${page}`, `limit:${limit}`, `order:popularity`];
         if (filters.search) args.push(`search:"${filters.search.replace(/"/g, '')}"`);
-        const q = `{animes(${args.join(',')}){id name russian description episodes status genres{name}}}`;
+        const q = `{animes(${args.join(',')}){id name russian episodes status genres{name}}}`;
         const d = await this.fetchGraphQL(q);
         return d.animes.map(this.convert);
     },
