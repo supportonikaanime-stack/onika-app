@@ -30,7 +30,7 @@
         @keyframes toastIn { 0% { opacity: 0; transform: translate(-50%, 30px) scale(0.9); } 60% { opacity: 1; transform: translate(-50%, -4px) scale(1.02); } 100% { opacity: 1; transform: translate(-50%, 0) scale(1); } }
         @keyframes toastOut { to { opacity: 0; transform: translate(-50%, 20px) scale(0.95); } }
         @keyframes xpPulse { 0%,100% { box-shadow: 0 0 8px rgba(0,245,255,0.5); } 50% { box-shadow: 0 0 16px rgba(0,245,255,0.9); } }
-        @keyframes kenBurns { 0% { transform: scale(1) translate(0,0); } 100% { transform: scale(1.15) translate(-1.5%, -1%); } }
+        @keyframes kenBurns { 0% { transform: scale(1) translate(0,0); } 100% { transform: scale(1.1) translate(-1%, -0.5%); } }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes textPulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
         @keyframes heroProgress { from { width: 0%; } to { width: 100%; } }
@@ -113,13 +113,18 @@
         .hero-slider { position: relative; width: 100%; height: 100%; }
         .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; visibility: hidden; transition: 0.6s; display: flex; align-items: flex-end; }
         .hero-slide.active { opacity: 1; visibility: visible; z-index: 2; }
-        .hero-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center top; z-index: 1; transition: opacity 0.5s; }
-        .hero-slide.active .hero-bg { animation: kenBurns 8s ease-out forwards; }
+        
+        /* Два слоя: постер (bg1) и превью (bg2) */
+        .hero-bg-poster, .hero-bg-banner { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center top; z-index: 1; transition: opacity 0.8s ease; }
+        .hero-bg-banner { opacity: 0; }
+        .hero-slide.active .hero-bg-poster { animation: kenBurns 8s ease-out forwards; }
+        .hero-slide.active .hero-bg-banner { opacity: 1; animation: kenBurns 8s ease-out forwards; }
         
         .hero-gradient { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(10,10,15,0.8) 0%, transparent 20%, transparent 50%, var(--bg) 95%), radial-gradient(circle at center, transparent 30%, rgba(10,10,15,0.6) 100%); z-index: 2; pointer-events: none; }
         .hero-content { position: relative; z-index: 3; padding: 16px 20px; width: 100%; padding-bottom: 28px; transform: translateY(20px); opacity: 0; transition: 0.6s; }
         .hero-slide.active .hero-content { transform: translateY(0); opacity: 1; transition-delay: 0.2s; }
         
+        /* Оставили только прогресс-бар сверху */
         .hero-progress-bar {
             position: absolute; top: 0; left: 0; width: 100%; height: 3px;
             display: flex; gap: 2px; z-index: 10; padding: 0 4px;
@@ -134,7 +139,8 @@
         }
         .hero-progress-seg.active .fill { animation: heroProgress 5s linear forwards; }
         .hero-progress-seg.done .fill { width: 100%; background: rgba(255,255,255,0.6); }
-                .hero-badges { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        
+        .hero-badges { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
         .badge { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #fff; border: 1px solid rgba(255,255,255,0.1); }
         .badge.star { color: #ffd700; background: rgba(0,0,0,0.4); border-color: rgba(255,215,0,0.2); animation: badgePulse 2.5s infinite; }
         
@@ -146,17 +152,11 @@
         .hero-actions .btn-icon-heart { width: 48px; height: 48px; border-radius: 12px; }
         .hero-actions .btn-icon-heart svg { width: 22px; height: 22px; }
         
-        .btn-trailer { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 0 16px; height: 48px; border-radius: 12px; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer; backdrop-filter: blur(10px); }
-        
         .btn-icon-heart { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 56px; height: 56px; border-radius: 14px; display: flex; justify-content: center; align-items: center; cursor: pointer; flex-shrink: 0; }
         .btn-icon-heart svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         .btn-icon-heart.faved { background: rgba(255,45,120,0.2); border-color: rgba(255,45,120,0.5); color: #ff2d78; }
         .btn-icon-heart.faved svg { fill: #ff2d78; stroke: #ff2d78; animation: heartBeat 0.6s ease; }
         
-        .hero-dots { position: absolute; bottom: 14px; right: 16px; display: flex; gap: 6px; z-index: 10; background: rgba(0,0,0,0.3); padding: 5px 9px; border-radius: 20px; backdrop-filter: blur(5px); }
-        .hero-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.3); transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
-        .hero-dot.active { width: 18px; border-radius: 4px; background: var(--primary); box-shadow: 0 0 12px rgba(91,91,255,0.9); }
-
         .content-section { padding: 20px 0; opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
         .content-section.fade-in-section { animation: sectionFadeUp 0.6s ease forwards; }
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-bottom: 15px; }
@@ -497,7 +497,6 @@
         <section class="hero-section" id="heroSection">
             <div class="hero-progress-bar" id="heroProgressBar"></div>
             <div class="hero-slider" id="heroSlider"></div>
-            <div class="hero-dots" id="heroDots"></div>
         </section>
         <section class="content-section" id="section-seasonal">
             <div class="section-header"><h2>📅 Новинки сезона</h2></div>
@@ -866,6 +865,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=3601"></script>
+    <script src="app.js?v=3800"></script>
 </body>
 </html>
