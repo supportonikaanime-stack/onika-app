@@ -214,7 +214,7 @@ const Skeletons = {
     hero() { return `<div class="skeleton-hero"><div class="skeleton-hero-bg"></div><div class="skeleton-hero-content"><div class="skeleton skeleton-text" style="width:60px;height:12px;display:inline-block;margin-right:8px;"></div><div class="skeleton skeleton-text" style="width:40px;height:12px;display:inline-block;margin-right:8px;"></div><div class="skeleton skeleton-text" style="width:50px;height:12px;display:inline-block;"></div><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text short" style="width:80%;"></div><div class="skeleton-hero-actions"><div class="skeleton skeleton-btn"></div><div class="skeleton skeleton-icon-btn"></div></div></div></div>`; },
     cards(count = 6) { let h = ''; for (let i = 0; i < count; i++) h += `<div class="skeleton-card"><div class="skeleton skeleton-poster"></div><div class="skeleton-card-title"></div></div>`; return h; },
     friends(count = 3) { let h = ''; for (let i = 0; i < count; i++) h += `<div class="skeleton-friend"><div class="skeleton skeleton-circle"></div><div class="skeleton-friend-info"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div></div>`; return h; },
-    shopItems(count = 4) { let h = ''; for (let i = 0; i < count; i++) h += `<div class="skeleton-shop-item"><div class="skeleton skeleton-shop-img"></div><div class="skeleton-shop-info"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div></div>`; return h; }
+    shopItems(count = 4) { let h = ''; for (let i = 0; i < count; i++) h += `<div class="skeleton-shop-item"><div class="skeleton skeleton-shop-img"></div><div class="skeleton shop-info"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div></div>`; return h; }
 };
 
 document.addEventListener('pointerdown', function (e) {
@@ -233,7 +233,7 @@ document.addEventListener('pointerdown', function (e) {
 }, { passive: true });
 
 // ==========================================
-// 3. API — ANILIST (постеры/рейтинг) + SHIKIMORI (название/описание)
+// 3. API — ANILIST (постеры/рейтинг) + SHIKIMORI (русский текст)
 // ==========================================
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 const ANILIST_URL = 'https://graphql.anilist.co';
@@ -257,7 +257,6 @@ const API_AniList = {
         const perPage = Math.min(limit || 30, 50);
         const variables = { page: page || 1, perPage };
         let mediaArgs = ['type: ANIME', 'sort: POPULARITY_DESC'];
-        
         if (filters?.search) { variables.search = filters.search; mediaArgs.push('search: $search'); }
         if (filters?.year) { variables.seasonYear = parseInt(filters.year); mediaArgs.push('seasonYear: $seasonYear'); }
         if (filters?.genre) { variables.genre = filters.genre; mediaArgs.push('genre: $genre'); }
@@ -289,9 +288,7 @@ const API_AniList = {
         }`;
         try {
             const data = await this.fetch(query, variables);
-            if (data.Page?.media) {
-                return data.Page.media;
-            }
+            if (data.Page?.media) return data.Page.media;
             return [];
         } catch (e) {
             console.warn('[AniList] getCatalog упал:', e.message);
@@ -430,73 +427,63 @@ const API_AniList = {
     }
 };
 
-// --- Shikimori (для русских данных) ---
+// --- Shikimori (русские данные) ---
 const API_Shikimori = {
     async fetchGraphQL(query) {
-        const res = await fetch(PROXY_URL + encodeURIComponent(SHIKIMORI_GRAPHQL), { method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': 'OnikaAnime/1.0' }, body: JSON.stringify({ query }) });
-        if (!res.ok) throw new Error('GraphQL HTTP ' + res.status);
+        const res = await fetch(PROXY_URL + encodeURIComponent(SHIKIMORI_GRAPHQL), { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json', 'User-Agent': 'OnikaAnime/1.0' }, 
+            body: JSON.stringify({ query }) 
+        });
+        if (!res.ok) throw new Error('Shikimori HTTP ' + res.status);
         const d = await res.json();
-        if (d.errors) throw new Error('GraphQL: ' + d.errors[0].message);
+        if (d.errors) throw new Error('Shikimori: ' + d.errors[0].message);
         return d.data;
     },
-    
-    // Ищем русское название и описание в Shikimori
-    async getRussianData(idMal, englishTitle) {
-        let russian = null;
-        let description = null;
 
-        // 1. Пробуем найти по ID MyAnimeList (если он есть)
-        if (idMal) {
-            try {
-                const q = `{animes(ids:"${idMal}",limit:1){id name russian description}}`;
-                const d = await this.fetchGraphQL(q);
-                if (d.animes && d.animes.length > 0) {
-                    russian = d.animes[0].russian;
-                    description = d.animes[0].description;
-                }
-            } catch(e) {}
-        }
+    // Ищем по английскому названию
+    async getRussianData(searchTitle) {
+        if (!searchTitle) return { russian: null, description: null };
+        
+        // Очищаем запрос от лишнего: убираем сезоны "(2011)", оставляем только текст
+        let cleanSearch = searchTitle.replace(/\s*\(\d{4}\)/, '').trim(); 
+        // В Shikimori GraphQL поиск чувствителен к кавычкам, оборачиваем в кавычки
+        const searchQuery = `"${cleanSearch.replace(/"/g, '')}"`;
 
-        // 2. Если не нашли по ID, пробуем поиск по английскому названию
-        if (!russian && englishTitle) {
-            try {
-                const safeTitle = englishTitle.replace(/"/g, '');
-                const q = `{animes(search:"${safeTitle}",limit:1){id name russian description}}`;
-                const d = await this.fetchGraphQL(q);
-                if (d.animes && d.animes.length > 0) {
-                    russian = d.animes[0].russian || russian;
-                    description = d.animes[0].description || description;
-                }
-            } catch(e) {}
-        }
-
-        return { russian, description };
+        try {
+            const q = `{animes(search: ${searchQuery}, limit: 1){id name russian description}}`;
+            const d = await this.fetchGraphQL(q);
+            if (d.animes && d.animes.length > 0) {
+                return {
+                    russian: d.animes[0].russian || null,
+                    description: d.animes[0].description || null
+                };
+            }
+        } catch(e) { console.warn('[Shikimori] поиск упал:', e.message); }
+        return { russian: null, description: null };
     }
 };
 
 // --- Сборщик (Гибрид) ---
 async function buildAnimeObject(rawAniListItem) {
-    // 1. Пытаемся получить русские данные из Shikimori
-    // Передаем idMal и английское название для поиска
     let ruData = { russian: null, description: null };
-    const searchTitle = rawAniListItem.title?.english || rawAniListItem.title?.romaji;
-    if (rawAniListItem.idMal || searchTitle) {
-        ruData = await API_Shikimori.getRussianData(rawAniListItem.idMal, searchTitle);
+    
+    // В Shikimori ищем по названию. Приоритет: английское -> романдзи -> нативное.
+    const searchTitle = rawAniListItem.title?.english || rawAniListItem.title?.romaji || rawAniListItem.title?.native;
+    if (searchTitle) {
+        ruData = await API_Shikimori.getRussianData(searchTitle);
     }
 
-    // 2. Формируем объект
-    // Если Shikimori вернул русское название - берем его, иначе английское/ромадзи из AniList
+    // Формируем финальное название
     const title = ruData.russian || rawAniListItem.title?.english || rawAniListItem.title?.romaji || rawAniListItem.title?.native || 'Без названия';
     const score = rawAniListItem.averageScore ? (rawAniListItem.averageScore / 10).toFixed(1) : 0;
     
-    // 3. Чистим описание
+    // Очистка описания
     let cleanDesc = ruData.description || rawAniListItem.description || 'Описание отсутствует.';
-    // Убираем HTML теги и мусор
     cleanDesc = cleanDesc.replace(/\[character=[^\]]+\]/g, '').replace(/\[\/character\]/g, '');
     cleanDesc = cleanDesc.replace(/\[anime=[^\]]+\]/g, '').replace(/\[\/anime\]/g, '');
-    cleanDesc = cleanDesc.replace(/\[Written by MAL Rewrite\]/g, '');
+    cleanDesc = cleanDesc.replace(/\[[^\]]*\]/g, ''); 
     cleanDesc = cleanDesc.replace(/<[^>]*>?/gm, ''); 
-    cleanDesc = cleanDesc.trim();
 
     return {
         id: 'anilist_' + rawAniListItem.id,
