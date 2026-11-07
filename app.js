@@ -35,69 +35,189 @@ async function getShikimoriAnime(limit = 10) {
 }
 
 // ==========================================
-// 3. ANILIST (БЕЗОПАСНЫЙ)
+// 3. ОГРАНИЧИТЕЛЬ ЗАПРОСОВ (30 в минуту)
 // ==========================================
-async function fetchAniList(query, variables = {}) {
-    try {
-        const res = await fetch(PROXY_URL + encodeURIComponent(ANILIST_API), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ query, variables })
+const RequestLimiter = {
+    queue: [],
+    isProcessing: false,
+    lastRequestTime: 0,
+    interval: 2000, // 2 секунды между запросами = 30 в минуту
+
+    async add(fn) {
+        return new Promise((resolve, reject) => {
+            this.queue.push({ fn, resolve, reject });
+            this.process();
         });
-        if (!res.ok) throw new Error('AniList HTTP ' + res.status);
-        const d = await res.json();
-        if (d.errors) throw new Error(d.errors[0].message);
-        return d.data;
-    } catch (e) {
-        console.warn('AniList недоступен:', e.message);
-        return null;
+    },
+
+    async process() {
+        if (this.isProcessing) return;
+        if (this.queue.length === 0) return;
+
+        this.isProcessing = true;
+
+        while (this.queue.length > 0) {
+            const now = Date.now();
+            const timeSinceLast = now - this.lastRequestTime;
+
+            if (timeSinceLast < this.interval) {
+                await new Promise(r => setTimeout(r, this.interval - timeSinceLast));
+            }
+
+            const { fn, resolve, reject } = this.queue.shift();
+            this.lastRequestTime = Date.now();
+
+            try {
+                const result = await fn();
+                resolve(result);
+            } catch (e) {
+                reject(e);
+            }
+        }
+
+        this.isProcessing = false;
     }
+};
+
+// ==========================================
+// 4. ANILIST (ЧЕРЕЗ ОГРАНИЧИТЕЛЬ)
+// ==========================================
+async function fetchAniListLimited(query, variables = {}) {
+    return RequestLimiter.add(async () => {
+        try {
+            const res = await fetch(PROXY_URL + encodeURIComponent(ANILIST_API), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ query, variables })
+            });
+            if (!res.ok) {
+                console.warn(`[AniList] HTTP ${res.status} (пропускаем)`);
+                return null;
+            }
+            const d = await res.json();
+            if (d.errors) {
+                console.warn(`[AniList] Ошибка: ${d.errors[0].message}`);
+                return null;
+            }
+            return d.data;
+        } catch(e) {
+            console.warn('[AniList] Исключение:', e.message);
+            return null;
+        }
+    });
 }
 
 async function searchAniList(title) {
     const q = `query ($search: String) { Media (search: $search, type: ANIME) { id coverImage { extraLarge } averageScore } }`;
-    const d = await fetchAniList(q, { search: title });
+    const d = await fetchAniListLimited(q, { search: title });
     return d ? d.Media : null;
 }
 
 // ==========================================
-// 4. АГРЕГАТОР
+// 5. КЭШИРОВАНИЕ ANILIST (localStorage)
+// ==========================================
+const CACHE_KEY = 'anilist_cache_v2';
+const CACHE_TTL = 15 * 60 * 1000; // 15 минут
+
+function getCache() {
+    try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (!raw) return {};
+        const cache = JSON.parse(raw);
+        const now = Date.now();
+        for (const key in cache) {
+            if (now - cache[key].time > CACHE_TTL) delete cache[key];
+        }
+        return cache;
+    } catch { return {}; }
+}
+
+function saveCache(cache) {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+}
+
+async function getAniListWithCache(title) {
+    const cache = getCache();
+    const key = 'search_' + title.toLowerCase().trim();
+    const now = Date.now();
+
+    if (cache[key] && now - cache[key].time < CACHE_TTL) {
+        return cache[key].data;
+    }
+
+    const result = await searchAniList(title);
+
+    if (result) {
+        cache[key] = { data: result, time: now };
+        saveCache(cache);
+    }
+    return result;
+}
+
+// ==========================================
+// 6. АГРЕГАТОР
 // ==========================================
 async function getEnrichedAnime(limit = 10) {
     const shikiItems = await getShikimoriAnime(limit);
-    
-    // Пытаемся обогатить каждый тайтл из AniList
+
+    // Сначала пробуем загрузить популярные пачкой (1 запрос)
+    let popularAniList = [];
+    try {
+        const q = `query { Page(page: 1, perPage: 30) { media(type: ANIME, sort: POPULARITY_DESC) { id title { romaji english native } coverImage { extraLarge } averageScore } } }`;
+        const d = await fetchAniListLimited(q);
+        if (d && d.Page && d.Page.media) popularAniList = d.Page.media;
+    } catch(e) { console.warn('[AniList] Популярное не загрузилось'); }
+
+    // Обогащаем каждый тайтл
     const enriched = await Promise.all(shikiItems.map(async (anime) => {
-        const anilist = await searchAniList(anime.title);
-        if (anilist && anilist.coverImage) {
+        // 1. Ищем в уже загруженных популярных (без запроса)
+        const found = popularAniList.find(a => {
+            const t = (a.title.romaji || a.title.english || '').toLowerCase();
+            return t === anime.title.toLowerCase();
+        });
+
+        if (found && found.coverImage) {
             return {
                 ...anime,
-                img: anilist.coverImage.extraLarge,
-                score: anilist.averageScore ? (anilist.averageScore / 10).toFixed(1) : 0
+                img: found.coverImage.extraLarge,
+                score: found.averageScore ? (found.averageScore / 10).toFixed(1) : 0
             };
         }
+
+        // 2. Если нет — точечный запрос (с кэшем и лимитом)
+        try {
+            const anilist = await getAniListWithCache(anime.title);
+            if (anilist && anilist.coverImage) {
+                return {
+                    ...anime,
+                    img: anilist.coverImage.extraLarge,
+                    score: anilist.averageScore ? (anilist.averageScore / 10).toFixed(1) : 0
+                };
+            }
+        } catch(e) {}
+
         return anime;
     }));
-    
+
     return enriched;
 }
 
 // ==========================================
-// 5. ОТРИСОВКА
+// 7. ОТРИСОВКА
 // ==========================================
 async function loadCatalogTest() {
     const grid = document.getElementById('catalog-grid');
     if (!grid) return;
     grid.innerHTML = '<div class="spinner"></div>';
-    
+
     try {
         const items = await getEnrichedAnime(20);
-        
+
         if (!items || items.length === 0) {
-            grid.innerHTML = '<div style="color: #ff4444; text-align: center; padding: 20px;">Не удалось загрузить аниме</div>';
+            grid.innerHTML = '<div style="color: #ff4444; text-align: center; padding: 20px;">Не удалось загрузить</div>';
             return;
         }
-        
+
         grid.innerHTML = '';
         items.forEach(anime => {
             grid.insertAdjacentHTML('beforeend', `
@@ -118,20 +238,19 @@ async function loadHomeTest() {
     const slider = document.getElementById('heroSlider');
     const seasonalList = document.getElementById('seasonal-list');
     const popularList = document.getElementById('popular-list');
-    
+
     if (slider) slider.innerHTML = '<div class="spinner"></div>';
     if (seasonalList) seasonalList.innerHTML = '<div class="spinner"></div>';
     if (popularList) popularList.innerHTML = '<div class="spinner"></div>';
-    
+
     try {
         const items = await getEnrichedAnime(10);
-        
+
         if (!items || items.length === 0) {
             if (slider) slider.innerHTML = '<div style="color: #ff4444; text-align: center; padding: 20px;">Не удалось загрузить</div>';
             return;
         }
-        
-        // Баннер
+
         const anime = items[0];
         if (slider) {
             slider.innerHTML = `
@@ -151,18 +270,16 @@ async function loadHomeTest() {
                 </div>
             `;
         }
-        
-        // Секции
+
         const renderCards = (list) => list.map(a => `
             <div class="card">
                 <img class="card-img" src="${a.img}" loading="lazy">
                 <div class="card-title">${a.title}</div>
             </div>
         `).join('');
-        
+
         if (seasonalList) seasonalList.innerHTML = renderCards(items.slice(0, 5));
         if (popularList) popularList.innerHTML = renderCards(items.slice(5, 10));
-        
     } catch (e) {
         console.error(e);
         if (slider) slider.innerHTML = `<div style="color: #ff4444; text-align: center; padding: 20px;">Ошибка: ${e.message}</div>`;
@@ -170,7 +287,7 @@ async function loadHomeTest() {
 }
 
 // ==========================================
-// 6. ЗАПУСК
+// 8. ЗАПУСК
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     loadHomeTest();
