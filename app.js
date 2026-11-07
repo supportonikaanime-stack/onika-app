@@ -10,7 +10,9 @@ try {
 } catch(e) { console.error('Ошибка Supabase:', e); }
 
 const tg = window.Telegram?.WebApp;
-let MY_ID = null, MY_NAME = 'Гость', MY_PHOTO_URL = '';
+let MY_ID = null;         // UUID из Auth (для базы)
+let MY_PUBLIC_ID = null;  // 6-значный ID (для друзей)
+let MY_NAME = 'Гость', MY_PHOTO_URL = '';
 let ACTIVE_BANNER_URL = '', ACTIVE_TITLE_DATA = null, ACTIVE_EFFECT_CSS = '', ACTIVE_BADGE_URL = '';
 let PENDING_VERIFY_EMAIL = '';
 
@@ -41,7 +43,9 @@ function parseJSONAttr(str) { try { return JSON.parse(decodeURIComponent(str)); 
 // ==========================================
 // 1.1 АВТОРИЗАЦИЯ
 // ==========================================
+let authMode = 'login';
 function switchAuthTab(mode) {
+    authMode = mode;
     document.getElementById('tab-login').classList.toggle('active', mode === 'login');
     document.getElementById('tab-register').classList.toggle('active', mode === 'register');
     document.getElementById('form-login').style.display = mode === 'login' ? 'block' : 'none';
@@ -49,7 +53,6 @@ function switchAuthTab(mode) {
     document.getElementById('form-verify').style.display = 'none';
     showAuthError('');
 }
-
 function showAuthError(msg) {
     const el = document.getElementById('authError');
     if (!el) return;
@@ -143,34 +146,22 @@ async function handleRegister() {
 
 async function handleVerifyCode() {
     const code = document.getElementById('verify-code').value.trim();
-    if (!code || code.length !== 8) {
-        showAuthError('Введите 8-значный код');
-        return;
-    }
-
+    if (!code || code.length !== 8) { showAuthError('Введите 8-значный код'); return; }
     const btn = document.getElementById('verify-btn');
     btn.disabled = true; btn.textContent = 'Проверка...';
     showAuthError('');
 
     try {
-        const { data, error } = await supabaseClient.auth.verifyOtp({
-            email: PENDING_VERIFY_EMAIL,
-            token: code,
-            type: 'email'
-        });
-
+        const { data, error } = await supabaseClient.auth.verifyOtp({ email: PENDING_VERIFY_EMAIL, token: code, type: 'email' });
         if (error) throw error;
-
         if (data.session) {
             MY_ID = data.user.id;
             MY_NAME = data.user.user_metadata?.nickname || 'Игрок';
-            
             await supabaseClient.from('users').upsert({
                 id: MY_ID, name: MY_NAME, avatar_url: '',
                 xp: 0, coins: 0, episodes_watched: 0, minutes_watched: 0, days_streak: 1,
                 unlocked_achievements: []
             }, { onConflict: 'id' });
-
             hideAuthScreen();
             await loadProfileData();
             loadHomePage();
@@ -194,7 +185,6 @@ async function initAuth() {
             if (session && session.user) {
                 MY_ID = session.user.id;
                 MY_NAME = session.user.user_metadata?.nickname || 'Игрок';
-                
                 const { data: dbUser } = await supabaseClient.from('users').select('id').eq('id', MY_ID).single();
                 if (!dbUser) {
                     await supabaseClient.from('users').upsert({
@@ -203,15 +193,12 @@ async function initAuth() {
                         unlocked_achievements: []
                     }, { onConflict: 'id' });
                 }
-
                 hideAuthScreen();
                 return;
             }
         } catch(e) { console.error(e); }
         showAuthScreen();
-    } else {
-        showAuthScreen();
-    }
+    } else { showAuthScreen(); }
 }
 
 async function signOut() {
@@ -221,7 +208,7 @@ async function signOut() {
 }
 
 // ==========================================
-// 1.2 SKELETON HELPERS
+// 2. SKELETON HELPERS
 // ==========================================
 const Skeletons = {
     hero() { return `<div class="skeleton-hero"><div class="skeleton-hero-bg"></div><div class="skeleton-hero-content"><div class="skeleton skeleton-text" style="width:60px;height:12px;display:inline-block;margin-right:8px;"></div><div class="skeleton skeleton-text" style="width:40px;height:12px;display:inline-block;margin-right:8px;"></div><div class="skeleton skeleton-text" style="width:50px;height:12px;display:inline-block;"></div><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text short" style="width:80%;"></div><div class="skeleton-hero-actions"><div class="skeleton skeleton-btn"></div><div class="skeleton skeleton-icon-btn"></div></div></div></div>`; },
@@ -246,15 +233,13 @@ document.addEventListener('pointerdown', function (e) {
 }, { passive: true });
 
 // ==========================================
-// 2. API (Shikimori)
+// 3. API SHIKIMORI
 // ==========================================
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 const API_Shikimori = {
     BASE_URL: 'https://shikimori.io/api/graphql',
     async fetchGraphQL(query) {
-        const res = await fetch(PROXY_URL + encodeURIComponent(this.BASE_URL), {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': 'OnikaAnime/1.0' }, body: JSON.stringify({ query })
-        });
+        const res = await fetch(PROXY_URL + encodeURIComponent(this.BASE_URL), { method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': 'OnikaAnime/1.0' }, body: JSON.stringify({ query }) });
         if (!res.ok) throw new Error('GraphQL HTTP ' + res.status);
         const d = await res.json();
         if (d.errors) throw new Error('GraphQL: ' + d.errors[0].message);
@@ -370,7 +355,6 @@ const API_Shikimori = {
         };
     }
 };
-
 const API = {
     _cache: new Map(),
     async _cachedFetch(method, ...args) {
@@ -387,12 +371,11 @@ const API = {
 };
 
 // ==========================================
-// 3. ПЕРЕМЕННЫЕ
+// 4. ПЕРЕМЕННЫЕ ИГРЫ
 // ==========================================
 let currentAnimeForPlayer = null, selectedVoice = '', selectedPlayer = '';
 const VOICES = [{ id: 'anilibria', name: 'AniLibria', icon: '🎙️' }, { id: 'studioband', name: 'StudioBand', icon: '🎙️' }, { id: 'jamclub', name: 'JAM Club', icon: '🎙️' }, { id: 'original', name: 'Оригинал (Субтитры)', icon: '📝' }];
 const PLAYERS = [{ id: 'kodik', name: 'Kodik', icon: '▶️' }, { id: 'sibnet', name: 'Sibnet', icon: '🎬' }, { id: 'veoveo', name: 'Veoveo', icon: '🎥' }];
-
 let catalogPage = 1, isCatalogLoading = false, hasMoreCatalog = true, catalogRequestVersion = 0;
 let currentFilters = { search: '', genre: '', year: '', status: '', sort: 'popularity' };
 let currentMyListFilter = 'all', previousScreen = 'catalog', searchDebounceTimer;
@@ -405,7 +388,7 @@ const STATUSES = [{ id: 'ongoing', name: 'Онгоинг' }, { id: 'released', n
 const SORTS = [{ id: 'popularity', name: 'По популярности' }, { id: 'ranked', name: 'По рейтингу' }, { id: 'aired_on', name: 'Новинки' }];
 
 // ==========================================
-// 4. НАВИГАЦИЯ
+// 5. НАВИГАЦИЯ И ПРОФИЛЬ
 // ==========================================
 function switchTab(tabName, element) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -431,7 +414,6 @@ function switchTab(tabName, element) {
     if (tabName === 'friends') loadFriends();
     if (tabName === 'achievements') renderAchievementsPage();
 }
-
 function goBackFromDetail() {
     if (previousScreen === 'my') switchTab('my');
     else if (previousScreen === 'home') switchTab('home');
@@ -474,15 +456,12 @@ function applyTitleToElement(titleEl, titleData) {
     }
 }
 
-// ==========================================
-// 5. ПРОФИЛЬ
-// ==========================================
 async function syncProfileToDB(forceLocal = false) {
     if (!MY_ID || !supabaseClient) return;
     let stats = getStats();
     try {
         const payload = {
-            id: MY_ID, name: MY_NAME, avatar_url: MY_PHOTO_URL,
+            id: MY_ID, name: MY_NAME, avatar_url: stats.avatar_url || MY_PHOTO_URL || '',
             episodes_watched: stats.episodesWatched, minutes_watched: stats.minutesWatched, days_streak: stats.daysStreak,
             active_banner: stats.active_banner, active_title: stats.active_title,
             active_effect: stats.active_effect, active_badge: stats.active_badge,
@@ -501,8 +480,8 @@ async function syncProfileToDB(forceLocal = false) {
 }
 
 function copyMyId() {
-    if (!MY_ID) return;
-    navigator.clipboard.writeText(MY_ID).then(() => { showToast('📋 ID скопирован!'); }).catch(() => {});
+    if (!MY_PUBLIC_ID) return;
+    navigator.clipboard.writeText(MY_PUBLIC_ID.toString()).then(() => { showToast('📋 ID скопирован!'); }).catch(() => {});
 }
 
 async function loadProfileData() {
@@ -513,8 +492,20 @@ async function loadProfileData() {
         try {
             const { data: dbUser } = await supabaseClient.from('users').select('*').eq('id', MY_ID).single();
             if (dbUser) {
+                MY_PUBLIC_ID = dbUser.public_id;
                 stats.coins = Math.max(stats.coins || 0, dbUser.coins || 0);
                 stats.xp = Math.max(stats.xp || 0, dbUser.xp || 0);
+                
+                setElText('my-tg-id', MY_PUBLIC_ID || '...');
+                setElText('tg-name', dbUser.name || MY_NAME);
+                
+                const avatarEl = document.getElementById('tg-avatar');
+                if (avatarEl) {
+                    const imgUrl = dbUser.avatar_url || MY_PHOTO_URL;
+                    if (imgUrl) avatarEl.innerHTML = `<img src="${safeUrl(imgUrl)}" style="width:100%; height:100%; object-fit:cover;">`;
+                    else avatarEl.innerHTML = `<span>${escapeHTML((dbUser.name || '?')[0].toUpperCase())}</span>`;
+                }
+
                 if (dbUser.active_banner) {
                     stats.active_banner = dbUser.active_banner;
                     const { data: banner } = await supabaseClient.from('banners').select('image_url').eq('id', dbUser.active_banner).single();
@@ -534,7 +525,7 @@ async function loadProfileData() {
                 } else { ACTIVE_BADGE_URL = ''; stats.active_badge = null; }
                 saveStats(stats);
             }
-        } catch(e) { console.log('Ошибка синхронизации', e); }
+        } catch(e) { console.log('Ошибка загрузки профиля', e); }
     }
 
     const today = new Date().toDateString();
@@ -542,46 +533,15 @@ async function loadProfileData() {
         stats.daysStreak += 1; stats.lastVisit = today; stats.xp += 5; stats.coins += 10;
         stats.watchedToday = []; saveStats(stats); showToast('📅 Ежедневный вход! +5 XP');
     }
-
     checkAchievements(stats);
     saveStats(stats);
-
-    const avatarEl = document.getElementById('tg-avatar');
-    if (avatarEl && MY_ID) {
-        if (MY_PHOTO_URL) avatarEl.innerHTML = `<img src="${safeUrl(MY_PHOTO_URL)}" style="width:100%; height:100%; object-fit:cover;">`;
-        else avatarEl.innerHTML = `<span>${escapeHTML((MY_NAME || '?')[0].toUpperCase())}</span>`;
-    }
-
-    const bannerEl = document.getElementById('profile-banner');
-    if (bannerEl) bannerEl.style.backgroundImage = ACTIVE_BANNER_URL ? `url('${ACTIVE_BANNER_URL}')` : 'none';
-
-    renderEffectParticles(document.getElementById('particle-effect-container'), ACTIVE_EFFECT_CSS);
-
-    const badgeEl = document.getElementById('user-badge-img');
-    if (badgeEl) {
-        if (ACTIVE_BADGE_URL) { badgeEl.src = ACTIVE_BADGE_URL; badgeEl.style.display = 'block'; }
-        else { badgeEl.style.display = 'none'; }
-    }
-
-    setElText('my-tg-id', MY_ID || 'Нет ID');
-    setElText('tg-name', MY_NAME);
-
-    const titleContainer = document.getElementById('user-title-container');
-    const titleEl = document.getElementById('user-active-title');
-    if (ACTIVE_TITLE_DATA) {
-        titleContainer.style.display = 'block';
-        applyTitleToElement(titleEl, ACTIVE_TITLE_DATA);
-    } else {
-        titleContainer.style.display = 'none';
-    }
-
+    
     const currentLevel = Math.floor(stats.xp / 100) + 1;
-    const xpCurrentLevel = stats.xp % 100;
     const rankTitle = LEVEL_TITLES[Math.min(currentLevel - 1, LEVEL_TITLES.length - 1)] || 'Легенда';
-
+    
     setElText('user-level', currentLevel); setElText('user-level-text', currentLevel); setElText('user-rank', rankTitle);
-    setElText('user-xp-current', xpCurrentLevel); setElText('user-xp-next', 100);
-    setElWidth('user-xp-bar', xpCurrentLevel + '%'); setElText('user-coins', stats.coins || 0);
+    setElText('user-xp-current', stats.xp % 100); setElText('user-xp-next', 100);
+    setElWidth('user-xp-bar', (stats.xp % 100) + '%'); setElText('user-coins', stats.coins || 0);
 
     const totalAch = ACHIEVEMENTS.length;
     setElText('ach-points', stats.unlockedAchievements.length * 10);
@@ -589,17 +549,56 @@ async function loadProfileData() {
     setElText('ach-total-count', totalAch);
     setElWidth('ach-bar', (stats.unlockedAchievements.length / totalAch) * 100 + '%');
 
-    setElText('modal-level-num', currentLevel); setElText('modal-rank', rankTitle);
-    setElText('modal-xp-cur', xpCurrentLevel); setElText('modal-xp-next', 100);
-    setElWidth('modal-xp-bar', xpCurrentLevel + '%');
-    const modalLevelNum = document.getElementById('modal-icon-level');
-    if (modalLevelNum) modalLevelNum.textContent = currentLevel;
-
     const nextAch = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id));
     if (nextAch) { setElText('next-ach-name', nextAch.name); setElText('next-ach-reward', nextAch.coins); }
     else { setElText('next-ach-name', 'Все выполнено!'); setElText('next-ach-reward', '0'); }
 
+    const bannerEl = document.getElementById('profile-banner');
+    if (bannerEl) bannerEl.style.backgroundImage = ACTIVE_BANNER_URL ? `url('${ACTIVE_BANNER_URL}')` : 'none';
+    renderEffectParticles(document.getElementById('particle-effect-container'), ACTIVE_EFFECT_CSS);
+    
+    const badgeEl = document.getElementById('user-badge-img');
+    if (badgeEl) {
+        if (ACTIVE_BADGE_URL) { badgeEl.src = ACTIVE_BADGE_URL; badgeEl.style.display = 'block'; }
+        else { badgeEl.style.display = 'none'; }
+    }
+    
+    const titleContainer = document.getElementById('user-title-container');
+    const titleEl = document.getElementById('user-active-title');
+    if (ACTIVE_TITLE_DATA) { titleContainer.style.display = 'block'; applyTitleToElement(titleEl, ACTIVE_TITLE_DATA); }
+    else { titleContainer.style.display = 'none'; }
+
     await syncProfileToDB();
+}
+
+async function uploadAvatar(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { showToast('❌ Файл слишком большой (макс. 5 МБ)'); event.target.value = ''; return; }
+    if (!file.type.startsWith('image/')) { showToast('❌ Пожалуйста, выберите изображение'); return; }
+
+    showToast('⏳ Загрузка...');
+    try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${MY_ID}_${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabaseClient.storage.from('avatars').upload(filePath, file, { upsert: true });
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(filePath);
+
+        const { error: dbError } = await supabaseClient.from('users').update({ avatar_url: publicUrl }).eq('id', MY_ID);
+        if (dbError) throw dbError;
+
+        let s = getStats(); s.avatar_url = publicUrl; saveStats(s);
+
+        const avatarEl = document.getElementById('tg-avatar');
+        if (avatarEl) avatarEl.innerHTML = `<img src="${publicUrl}" style="width:100%; height:100%; object-fit:cover;">`;
+        showToast('✅ Аватарка обновлена!');
+    } catch (error) {
+        console.error(error); showToast('❌ Ошибка загрузки: ' + error.message);
+    } finally { event.target.value = ''; }
 }
 
 function renderEffectParticles(container, effectClass) {
@@ -618,7 +617,6 @@ function renderEffectParticles(container, effectClass) {
         container.appendChild(span);
     }
 }
-function renderParticles() { renderEffectParticles(document.getElementById('particle-effect-container'), ACTIVE_EFFECT_CSS); }
 
 // ==========================================
 // 6. ПРЕДПРОСМОТР
@@ -653,7 +651,7 @@ function renderPreviewCard() {
     if (bannerEl) bannerEl.style.backgroundImage = ACTIVE_BANNER_URL ? `url('${ACTIVE_BANNER_URL}')` : 'none';
     const avatarEl = document.getElementById('preview-avatar');
     if (avatarEl) {
-        if (MY_PHOTO_URL) avatarEl.innerHTML = `<img src="${safeUrl(MY_PHOTO_URL)}" style="width:100%; height:100%; object-fit:cover;">`;
+        if (stats.avatar_url || MY_PHOTO_URL) avatarEl.innerHTML = `<img src="${safeUrl(stats.avatar_url || MY_PHOTO_URL)}" style="width:100%; height:100%; object-fit:cover;">`;
         else avatarEl.innerHTML = `<span>${escapeHTML((MY_NAME || '?')[0].toUpperCase())}</span>`;
     }
     setElText('preview-name', MY_NAME || 'Гость');
@@ -676,9 +674,7 @@ function renderPreviewCard() {
 
 function cancelPreview() {
     if (!isPreviewMode) return;
-    if (savedStats) {
-        ACTIVE_BANNER_URL = savedStats._active_banner_url || ''; ACTIVE_TITLE_DATA = savedStats._active_title_data || null; ACTIVE_EFFECT_CSS = savedStats._active_effect_css || ''; ACTIVE_BADGE_URL = savedStats._active_badge_url || '';
-    }
+    if (savedStats) { ACTIVE_BANNER_URL = savedStats._active_banner_url || ''; ACTIVE_TITLE_DATA = savedStats._active_title_data || null; ACTIVE_EFFECT_CSS = savedStats._active_effect_css || ''; ACTIVE_BADGE_URL = savedStats._active_badge_url || ''; }
     isPreviewMode = false; previewItem = null; savedStats = null;
     document.getElementById('previewBar')?.classList.remove('active');
     switchTab('profile'); switchProfileTab('shop');
@@ -829,30 +825,21 @@ async function buyItem(type, itemId, price) {
     try {
         const { data: existing } = await supabaseClient.from('user_inventory').select('id').eq('user_id', MY_ID).eq('item_type', type).eq('item_id', itemId).limit(1);
         if (existing && existing.length > 0) {
-            if (type === 'title') await applyTitle(itemId);
-            else if (type === 'effect') await applyEffect(itemId);
-            else if (type === 'badge') await applyBadge(itemId);
-            else if (type === 'frame') await applyFrame(itemId);
+            if (type === 'title') await applyTitle(itemId); else if (type === 'effect') await applyEffect(itemId); else if (type === 'badge') await applyBadge(itemId); else if (type === 'frame') await applyFrame(itemId);
             return;
         }
     } catch(e) { console.error(e); }
-
     stats.coins -= price; saveStats(stats);
     try {
         const { error } = await supabaseClient.from('user_inventory').insert({ user_id: MY_ID, item_type: type, item_id: itemId });
         if (error) throw error;
         await syncProfileToDB(true);
         showToast('✅ Покупка успешна!');
-        if (type === 'title') await applyTitle(itemId);
-        else if (type === 'effect') await applyEffect(itemId);
-        else if (type === 'badge') await applyBadge(itemId);
-        else if (type === 'frame') await applyFrame(itemId);
+        if (type === 'title') await applyTitle(itemId); else if (type === 'effect') await applyEffect(itemId); else if (type === 'badge') await applyBadge(itemId); else if (type === 'frame') await applyFrame(itemId);
         else { await loadProfileData(); renderShopTab(type + 's'); }
     } catch(e) {
-        console.error(e);
-        stats.coins += price; saveStats(stats);
-        showToast('Ошибка покупки — монеты возвращены');
-        await syncProfileToDB(true);
+        console.error(e); stats.coins += price; saveStats(stats);
+        showToast('Ошибка покупки — монеты возвращены'); await syncProfileToDB(true);
     }
 }
 
@@ -875,8 +862,7 @@ async function buyBanner(bannerId, price) {
             const { data: b } = await supabaseClient.from('banners').select('image_url').eq('id', bannerId).single();
             if (b) { stats.active_banner_url = safeUrl(b.image_url); ACTIVE_BANNER_URL = stats.active_banner_url; }
             saveStats(stats); await syncProfileToDB(true);
-            showToast('Баннер надет!'); await loadProfileData(); renderShopTab('banners');
-            return;
+            showToast('Баннер надет!'); await loadProfileData(); renderShopTab('banners'); return;
         }
     } catch(e) { console.error(e); }
     stats.coins -= price; stats.hasPurchasedBanner = true; saveStats(stats);
@@ -922,7 +908,7 @@ async function loadFriends() {
                 inUsers.forEach(u => {
                     const nameChar = u.name && u.name[0] ? escapeHTML(u.name[0].toUpperCase()) : '?';
                     const avatarUrl = u.avatar_url ? safeUrl(u.avatar_url) : '';
-                    html += `<div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${nameChar}';">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(u.name)}</h3><p>ID: ${escapeHTML(u.id)}</p></div><div style="display: flex; gap: 5px; margin-left: auto;"><button onclick="acceptFriend('${escapeHTML(String(u.id))}')" style="background: #2ecc71; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✓</button><button onclick="rejectFriend('${escapeHTML(String(u.id))}')" style="background: #e74c3c; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✕</button></div></div>`;
+                    html += `<div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${nameChar}';">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(u.name)}</h3><p>ID: ${escapeHTML(u.public_id || '...')}</p></div><div style="display: flex; gap: 5px; margin-left: auto;"><button onclick="acceptFriend('${escapeHTML(String(u.id))}')" style="background: #2ecc71; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✓</button><button onclick="rejectFriend('${escapeHTML(String(u.id))}')" style="background: #e74c3c; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✕</button></div></div>`;
                 });
             }
         }
@@ -935,7 +921,7 @@ async function loadFriends() {
                 accUsers.forEach(friend => {
                     const nameChar = friend.name && friend.name[0] ? escapeHTML(friend.name[0].toUpperCase()) : '?';
                     const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
-                    html += `<div class="friend-card" onclick="openFriendProfile('${escapeHTML(String(friend.id))}', '${escapeHTML(friend.name).replace(/'/g, "\\'")}')"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${nameChar}';">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(friend.name)}</h3><p>ID: ${escapeHTML(friend.id)} • Ур. ${Math.floor((friend.xp||0) / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
+                    html += `<div class="friend-card" onclick="openFriendProfile('${escapeHTML(String(friend.id))}', '${escapeHTML(friend.name).replace(/'/g, "\\'")}')"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${nameChar}';">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(friend.name)}</h3><p>ID: ${escapeHTML(friend.public_id || '...')} • Ур. ${Math.floor((friend.xp||0) / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
                 });
             }
         }
@@ -944,17 +930,17 @@ async function loadFriends() {
 }
 
 async function searchFriend() {
-    const id = document.getElementById('friend-search-input').value.trim();
+    const searchId = document.getElementById('friend-search-input').value.trim();
     const resultContainer = document.getElementById('search-result-container');
-    if (!id) return;
-    if (String(id) === String(MY_ID)) { resultContainer.innerHTML = '<div style="color: #ffd700; text-align: center; font-size: 14px;">Это ваш ID 🙂</div>'; return; }
+    if (!searchId) return;
+    if (String(searchId) === String(MY_PUBLIC_ID)) { resultContainer.innerHTML = '<div style="color: #ffd700; text-align: center; font-size: 14px;">Это ваш ID 🙂</div>'; return; }
     resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Поиск...</div>';
     try {
-        const { data: userData } = await supabaseClient.from('users').select('*').eq('id', id).single();
+        const { data: userData } = await supabaseClient.from('users').select('*').eq('public_id', searchId).single();
         if (!userData) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Не найден</div>'; return; }
         const nameChar = userData.name && userData.name[0] ? escapeHTML(userData.name[0].toUpperCase()) : '?';
         const avatarUrl = userData.avatar_url ? safeUrl(userData.avatar_url) : '';
-        resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(userData.name)}</h3><p>ID: ${escapeHTML(userData.id)}</p></div><button onclick="sendFriendRequest('${escapeHTML(String(userData.id))}')" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Заявка</button></div>`;
+        resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(userData.name)}</h3><p>ID: ${escapeHTML(userData.public_id || '...')}</p></div><button onclick="sendFriendRequest('${escapeHTML(String(userData.id))}')" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Заявка</button></div>`;
     } catch (e) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Ошибка</div>'; }
 }
 
@@ -977,8 +963,7 @@ async function acceptFriend(userId) {
     } catch(e) { console.error(e); showToast('Ошибка'); }
 }
 async function rejectFriend(userId) {
-    try { await supabaseClient.from('friends').delete().eq('user_id', userId).eq('friend_id', MY_ID); loadFriends(); }
-    catch(e) { console.error(e); }
+    try { await supabaseClient.from('friends').delete().eq('user_id', userId).eq('friend_id', MY_ID); loadFriends(); } catch(e) { console.error(e); }
 }
 async function removeFriend(friendId) {
     try {
@@ -1027,7 +1012,7 @@ async function openFriendProfile(id, name) {
                         <div class="user-details">
                             <div class="user-name-row"><h2>${escapeHTML(friend.name)}</h2>${friendBadgeHtml}</div>
                             ${friendTitleHtml}
-                            <div class="id-container"><span style="color: #ccc; font-size: 12px;">ID:</span><span style="color: #fff; font-weight: bold; font-size: 14px;">${escapeHTML(friend.id)}</span></div>
+                            <div class="id-container"><span style="color: #ccc; font-size: 12px;">ID:</span><span style="color: #fff; font-weight: bold; font-size: 14px;">${escapeHTML(friend.public_id || '...')}</span></div>
                         </div>
                     </div>
                 </div>
@@ -1198,7 +1183,7 @@ async function sendComment(animeId) {
     if (!text) { showToast('Напишите текст!'); return; }
     if (!supabaseClient || !MY_ID) return;
     try {
-        const { error } = await supabaseClient.from('anime_comments').insert({ anime_id: animeId, user_id: MY_ID, user_name: MY_NAME, user_avatar: MY_PHOTO_URL, text });
+        const { error } = await supabaseClient.from('anime_comments').insert({ anime_id: animeId, user_id: MY_ID, user_name: MY_NAME, user_avatar: getStats().avatar_url || MY_PHOTO_URL, text });
         if (error) throw error;
         input.value = ''; showToast('✅ Отправлено!'); openAnimeDetail(animeId, previousScreen);
     } catch(e) { console.error(e); showToast('Ошибка'); }
@@ -1267,8 +1252,7 @@ async function loadPopularByRating(limit = 6) {
     list.innerHTML = Skeletons.cards(4);
     try {
         if (!supabaseClient) {
-            const fallback = await API.getCatalog(1, limit, { sort: 'popularity' });
-            renderSectionCards(list, fallback, 'home'); return;
+            const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return;
         }
         const { data: ratings, error } = await supabaseClient.from('user_lists').select('anime_id, rating').not('rating', 'is', null).gte('rating', 4);
         if (error) throw error;
@@ -1348,10 +1332,7 @@ async function loadHomePage() {
         if (heroItems && heroItems.length > 0) {
             heroData = heroItems.map(a => ({ id: a.id, title: a.title, img: a.images.jpg.image_url, score: a.score ? Number(a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year, trailerId: a.trailerId }));
         } else { throw new Error('empty hero'); }
-    } catch (e) {
-        // Если баннер не загрузился, мы просто оставим пустой блок, не роняя страницу
-        console.warn('[Home] Hero fallback (empty)'); heroData = [];
-    }
+    } catch (e) { console.warn('[Home] Hero fallback (empty)'); heroData = []; }
     initHeroSlider();
 
     try {
@@ -1492,7 +1473,7 @@ const LEVEL_TITLES = ["Первый эпизод","Любопытный зрит
 
 function getStats() {
     let s = JSON.parse(localStorage.getItem('onika_stats'));
-    if (!s) { s = { episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0, active_banner: null, active_banner_url: '', active_title: null, active_effect: null, active_badge: null, active_frame: null, lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [], cachedAnime: {}, totalMinutesOnSite: 0, hasPurchasedBanner: false, _lastAwardedHours: 0 }; localStorage.setItem('onika_stats', JSON.stringify(s)); }
+    if (!s) { s = { episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0, active_banner: null, active_banner_url: '', active_title: null, active_effect: null, active_badge: null, active_frame: null, lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [], cachedAnime: {}, totalMinutesOnSite: 0, hasPurchasedBanner: false, _lastAwardedHours: 0, avatar_url: '' }; localStorage.setItem('onika_stats', JSON.stringify(s)); }
     if (!s.unlockedAchievements) s.unlockedAchievements = [];
     if (!s.favedAnime) s.favedAnime = [];
     if (!s.watchedToday) s.watchedToday = [];
