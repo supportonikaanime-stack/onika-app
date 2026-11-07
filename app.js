@@ -161,7 +161,7 @@ document.addEventListener('pointerdown', function(e) {
 }, { passive: true });
 
 // ==========================================
-// 3. API — AniList + AniLibria (RU) + Shikimori (RU)
+// 3. API — AniList + AniLibria + Shikimori
 // ==========================================
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 const ANILIST_URL = 'https://graphql.anilist.co';
@@ -216,6 +216,12 @@ const API_AniList = {
         if (!data?.Page?.media) return [];
         const exclude = new Set((excludeIds||[]).map(x=>String(x).replace('anilist_','')));
         return data.Page.media.filter(a=>!exclude.has(String(a.id))).slice(0, limit);
+    },
+    // Новый метод для "Популярное сейчас" — Топ по оценкам
+    async getTopRated(limit = 6) {
+        const q = `query($page:Int,$perPage:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,sort:SCORE_DESC){${this._mediaFields}}}}`;
+        const data = await this.fetch(q, { page: 1, perPage: Math.min(limit, 50) }).catch(()=>null);
+        return data?.Page?.media || [];
     }
 };
 
@@ -233,37 +239,6 @@ const API_AniLibria = {
             if (item) return item.name?.main || item.name?.english || null;
         } catch(e) { console.warn('[AniLibria] ошибка', e); }
         return null;
-    },
-    
-    // НОВЫЙ МЕТОД: Получаем популярные релизы из AniLibria
-    async getPopular(limit = 6) {
-        // sort_by=views - сортировка по просмотрам (популярности)
-        const url = `${ANILIBRIA_API}/anime/releases?sort_by=views&limit=${limit}&page=1`;
-        try {
-            const res = await fetch(PROXY_URL + encodeURIComponent(url));
-            if (!res.ok) throw new Error('AniLibria HTTP ' + res.status);
-            const data = await res.json();
-            
-            if (!data?.data || !Array.isArray(data.data)) return [];
-
-            return data.data.map(item => ({
-                id: 'anilibria_' + item.id, // Уникальный префикс
-                rawId: item.id,
-                title: item.name?.main || item.name?.english || 'Без названия',
-                year: item.year || '--',
-                episodes: item.episodes_total || '?',
-                // AniLibria отдаёт постер в item.poster.src
-                images: { jpg: { image_url: item.poster?.src || item.poster?.preview || '' } },
-                description: item.description || 'Описание отсутствует.',
-                genres: (item.genres || []).map(g => g.name),
-                score: item.rating || 0, // Используем рейтинг AniLibria
-                status: item.is_ongoing ? 'Онгоинг' : 'Завершено',
-                kind: item.type?.name || 'TV'
-            }));
-        } catch(e) { 
-            console.warn('[AniLibria] getPopular ошибка', e); 
-            return []; 
-        }
     }
 };
 
@@ -288,15 +263,24 @@ const API_Shikimori = {
 };
 
 async function buildAnimeObject(raw) {
+    // Ищем по английскому названию
     const searchTitle = raw.title?.english || raw.title?.romaji || raw.title?.native || '';
+    
+    // 1. Пытаемся найти русское в AniLibria
     let russianFromAniLibria = await API_AniLibria.searchRussian(searchTitle);
     let shikiData = { russian:null, description:null };
     
+    // 2. Если не нашли, идём в Shikimori
     if (!russianFromAniLibria) {
         shikiData = await API_Shikimori.getRussianData(searchTitle);
     }
 
-    const title = russianFromAniLibria || shikiData.russian || raw.title?.english || raw.title?.romaji || raw.title?.native || 'Без названия';
+    // Формируем ФИНАЛЬНОЕ русское название (без английских вставок)
+    const finalRussianTitle = russianFromAniLibria || shikiData.russian || 'Название на русском отсутствует';
+    
+    // Английское оставляем для служебных нужд (навигация, поиск)
+    const fallbackTitle = raw.title?.english || raw.title?.romaji || 'Без названия';
+
     const score = raw.averageScore ? (raw.averageScore/10).toFixed(1) : 0;
     
     let cleanDesc = shikiData.description || raw.description || 'Описание отсутствует.';
@@ -306,7 +290,9 @@ async function buildAnimeObject(raw) {
         id: 'anilist_' + raw.id,
         rawId: raw.id,
         idMal: raw.idMal,
-        title,
+        title_ru: finalRussianTitle, // Только для UI
+        title_raw: fallbackTitle,    // Для поиска/служебного
+        title: finalRussianTitle,    // Оставляем для совместимости со старым кодом
         year: raw.seasonYear || '--',
         episodes: raw.episodes || '?',
         images: { jpg: { image_url: raw.coverImage?.extraLarge || raw.coverImage?.large || '' } },
@@ -330,7 +316,7 @@ const API = {
     getRandom(limit) { return this._cached(`r_${limit}`, async()=>{ const raw=await API_AniList.getRandom(limit); return await Promise.all(raw.map(buildAnimeObject)); }); },
     getSeasonal(limit) { return this._cached(`s_${limit}`, async()=>{ const raw=await API_AniList.getSeasonal(limit); return await Promise.all(raw.map(buildAnimeObject)); }); },
     searchByGenres(g,l,ex) { return this._cached(`g_${JSON.stringify(g)}_${l}`, async()=>{ const raw=await API_AniList.searchByGenres(g,l,ex); return await Promise.all(raw.map(buildAnimeObject)); }); },
-    getPopularAniLibria(limit) { return this._cached(`p_al_${limit}`, async()=>{ return await API_AniLibria.getPopular(limit); }); } // Кэшируем популярные из AniLibria
+    getTopRated(limit) { return this._cached(`top_${limit}`, async()=>{ const raw=await API_AniList.getTopRated(limit); return await Promise.all(raw.map(buildAnimeObject)); }); }
 };
 
 // ==========================================
@@ -622,7 +608,7 @@ async function renderEffectsInShop(container) {
         (items || []).forEach(e => { 
             const isActive = stats.active_effect === e.id; 
             let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${e.price} 🪙</div>`; 
-            html += `<div class="shop-item" onclick="startPreview('effect', parseJSONAttr('${safeJSONAttr(e)}'))"><div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items: center; justify-content: center;"><div class="avatar" style="width:40px; height:40px; font-size:12px; background:#333; border:1px solid #555;">AA</div></div><div class="shop-info"><div class="shop-name">${escapeHTML(e.name)}</div>${btnHtml}</div></div>`; 
+            html += `<div class="shop-item" onclick="startPreview('effect', parseJSONAttr('${safeJSONAttr(e)}'))"><div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items:center; justify-content:center;"><div class="avatar" style="width:40px; height:40px; font-size:12px; background:#333; border:1px solid #555;">AA</div></div><div class="shop-info"><div class="shop-name">${escapeHTML(e.name)}</div>${btnHtml}</div></div>`; 
         }); 
         container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет эффектов</div>'; 
     } catch(e) { console.error(e); } 
@@ -817,7 +803,7 @@ async function openFriendProfile(id, name) {
         let lastWatchedHtml = '';
         if (friend.last_watched) {
             const animeData = await API.getDetails(friend.last_watched);
-            if (animeData) lastWatchedHtml = `<div style="margin-top: 15px; padding: 15px; background: rgba(91,91,255,0.1); border-radius: 12px; border: 1px solid rgba(91,91,255,0.2); cursor: pointer;" onclick="openAnimeDetail('${escapeHTML(animeData.id)}', 'friends')"><div style="font-size: 12px; color: #888; margin-bottom: 8px;">Последнее аниме:</div><div style="display: flex; gap: 10px; align-items: center;"><img src="${safeUrl(animeData.images.jpg.image_url)}" style="width: 40px; height: 55px; border-radius: 6px; object-fit: cover;"><div style="font-size: 14px; font-weight: bold; color: #fff;">${escapeHTML(animeData.title)}</div></div></div>`;
+            if (animeData) lastWatchedHtml = `<div style="margin-top: 15px; padding: 15px; background: rgba(91,91,255,0.1); border-radius: 12px; border: 1px solid rgba(91,91,255,0.2); cursor: pointer;" onclick="openAnimeDetail('${escapeHTML(animeData.id)}', 'friends')"><div style="font-size: 12px; color: #888; margin-bottom: 8px;">Последнее аниме:</div><div style="display: flex; gap: 10px; align-items: center;"><img src="${safeUrl(animeData.images.jpg.image_url)}" style="width: 40px; height: 55px; border-radius: 6px; object-fit: cover;"><div style="font-size: 14px; font-weight: bold; color: #fff;">${escapeHTML(animeData.title_ru)}</div></div></div>`;
         }
         const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
         const nameChar = friend.name && friend.name[0] ? escapeHTML(friend.name[0].toUpperCase()) : '?';
@@ -890,7 +876,7 @@ function playEpisode(epNum) {
     let stats = getStats();
     stats.episodesWatched += 1; stats.minutesWatched += 24;
     saveStats(stats); checkAchievements(stats); addXP(5); syncProfileToDB(true);
-    if (tg) tg.showAlert(`🎬 Просмотр:\n${currentAnimeForPlayer.title}\n${selectedVoice}\n${selectedPlayer}\nСерия: ${epNum}`);
+    if (tg) tg.showAlert(`🎬 Просмотр:\n${currentAnimeForPlayer.title_ru}\n${selectedVoice}\n${selectedPlayer}\nСерия: ${epNum}`);
     currentAnimeForPlayer = null; switchTab('home');
 }
 
@@ -942,7 +928,9 @@ async function loadCatalog(reset = false) {
             hasMoreCatalog = false; if (lm) lm.style.display = 'none'; return;
         }
         items.forEach(anime => {
-            const title = escapeHTML(anime.title); const img = safeUrl(anime.images.jpg.image_url); const score = anime.score ? Number(anime.score).toFixed(1) : '?';
+            const title = escapeHTML(anime.title_ru); // Только русское название
+            const img = safeUrl(anime.images.jpg.image_url); 
+            const score = anime.score ? Number(anime.score).toFixed(1) : '?';
             grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`);
         });
         hasMoreCatalog = items.length >= 30;
@@ -969,7 +957,10 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 comments = cmts || [];
             } catch(e) { console.error(e); }
         }
-        const title = escapeHTML(anime.title); const desc = escapeHTML(anime.description); const score = anime.score ? Number(anime.score).toFixed(1) : '?'; const poster = safeUrl(anime.images.jpg.image_url);
+        const title = escapeHTML(anime.title_ru); // Только русское
+        const desc = escapeHTML(anime.description); 
+        const score = anime.score ? Number(anime.score).toFixed(1) : '?'; 
+        const poster = safeUrl(anime.images.jpg.image_url);
         let statusColor = '#2ecc71'; if (anime.status === 'Онгоинг') statusColor = '#3498db'; if (anime.status === 'Анонс') statusColor = '#e74c3c';
         const stats = getStats();
         const favEntry = (stats.favedAnime || []).find(a => a.id === anime.id);
@@ -1015,7 +1006,7 @@ async function sendComment(animeId) {
         input.value = ''; showToast('✅ Отправлено!'); openAnimeDetail(animeId, previousScreen);
     } catch(e) { console.error(e); showToast('Ошибка'); }
 }
-function openStatusModal(id) { const t = window._animeCache && window._animeCache[id] ? window._animeCache[id].title : 'Аниме'; document.getElementById('status-anime-title').textContent = t; document.getElementById('statusModal').classList.add('active'); window._currentAnimeForStatus = id; }
+function openStatusModal(id) { const t = window._animeCache && window._animeCache[id] ? window._animeCache[id].title_ru : 'Аниме'; document.getElementById('status-anime-title').textContent = t; document.getElementById('statusModal').classList.add('active'); window._currentAnimeForStatus = id; }
 async function setAnimeStatus(status) {
     const id = window._currentAnimeForStatus; if (!id) return;
     let stats = getStats();
@@ -1066,7 +1057,9 @@ async function renderMyList() {
     } catch (e) { console.error(e); grid.innerHTML = '<div class="loading-text" style="color:#ff4444;">Ошибка</div>'; }
 }
 function renderMyListCard(anime, grid) {
-    const title = escapeHTML(anime.title); const img = safeUrl(anime.images.jpg.image_url); const score = anime.score ? Number(anime.score).toFixed(1) : '?';
+    const title = escapeHTML(anime.title_ru); // Только русское
+    const img = safeUrl(anime.images.jpg.image_url); 
+    const score = anime.score ? Number(anime.score).toFixed(1) : '?';
     grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'my')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`);
 }
 
@@ -1077,29 +1070,16 @@ async function loadPopularByRating(limit = 6) {
     const list = document.getElementById('popular-list'); if (!list) return;
     list.innerHTML = Skeletons.cards(4);
     try {
-        // 1. Пробуем взять популярное из AniLibria
-        const items = await API.getPopularAniLibria(limit);
+        // Топ по оценкам через AniList (SCORE_DESC)
+        const items = await API.getTopRated(limit);
         if (items && items.length > 0) {
             renderSectionCards(list, items, 'home');
-            return;
+        } else {
+            list.innerHTML = '<div class="loading-text">Не удалось загрузить</div>';
         }
-    } catch(e) { console.warn('[Popular] AniLibria fallback'); }
-
-    // 2. Если AniLibria не ответила, используем старую логику (AniList)
-    try {
-        if (!supabaseClient) { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return; }
-        const { data: ratings, error } = await supabaseClient.from('user_lists').select('anime_id, rating').not('rating', 'is', null).gte('rating', 4);
-        if (error) throw error;
-        if (!ratings || ratings.length === 0) { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return; }
-        const stats = {}; ratings.forEach(r => { if (!stats[r.anime_id]) stats[r.anime_id] = { sum: 0, count: 0 }; stats[r.anime_id].sum += r.rating; stats[r.anime_id].count += 1; });
-        const sorted = Object.entries(stats).map(([id, s]) => ({ id, avg: s.sum / s.count, count: s.count })).filter(x => x.avg >= 4.0).sort((a, b) => b.avg - a.avg || b.count - a.count).slice(0, limit);
-        if (sorted.length === 0) { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return; }
-        const fallbackItems = await Promise.all(sorted.map(x => API.getDetails(x.id)));
-        const valid = fallbackItems.filter(Boolean);
-        if (valid.length === 0) { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return; }
-        renderSectionCards(list, valid, 'home');
     } catch (e) { 
-        try { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); } catch(e2) { list.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; } 
+        console.error(e);
+        list.innerHTML = '<div class="loading-text" style="color:#ff4444;">Ошибка загрузки</div>'; 
     }
 }
 
@@ -1128,7 +1108,8 @@ async function loadRecommendations(limit = 4) {
 function renderSectionCards(container, items, fromScreen = 'home') {
     if (!container) return;
     if (!items || items.length === 0) { container.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; return; }
-    container.innerHTML = items.map(anime => { const title = escapeHTML(anime.title); const img = safeUrl(anime.images.jpg.image_url); return `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', '${fromScreen}')"><img class="card-img" src="${img}" loading="lazy"><div class="card-title">${title}</div></div>`; }).join('');
+    // Выводим только title_ru
+    container.innerHTML = items.map(anime => { const title = escapeHTML(anime.title_ru); const img = safeUrl(anime.images.jpg.image_url); return `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', '${fromScreen}')"><img class="card-img" src="${img}" loading="lazy"><div class="card-title">${title}</div></div>`; }).join('');
 }
 
 // ==========================================
@@ -1150,7 +1131,8 @@ async function loadHomePage() {
     try {
         const heroItems = await API.getRandom(5);
         if (heroItems && heroItems.length > 0) {
-            heroData = heroItems.map(a => ({ id: a.id, title: a.title, poster: a.images.jpg.image_url, score: a.score ? Number(a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year }));
+            // В баннере тоже только русское название
+            heroData = heroItems.map(a => ({ id: a.id, title: a.title_ru, poster: a.images.jpg.image_url, score: a.score ? Number(a.score).toFixed(1) : '?', type: a.kind || 'TV', year: a.year }));
         } else { throw new Error('empty hero'); }
     } catch (e) { console.warn('[Home] Hero fallback (empty)'); heroData = []; }
     initHeroSlider();
