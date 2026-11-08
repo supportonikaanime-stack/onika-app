@@ -368,22 +368,6 @@
         .icon-star { color: #ffd700; fill: #ffd700; stroke: none; width: 16px; height: 16px; }
         .icon-text { display: inline-flex; align-items: center; gap: 6px; }
 
-        /* Стили для живого поиска (Live Search) */
-        #live-search-results {
-            position: absolute; top: 100%; left: 0; width: 100%; background: #14141f;
-            border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-top: 5px;
-            z-index: 100; max-height: 350px; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            display: none;
-        }
-        #live-search-results.active { display: block; }
-        .ls-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background 0.2s; }
-        .ls-item:hover, .ls-item:active { background: rgba(255,255,255,0.05); }
-        .ls-img { width: 40px; height: 55px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
-        .ls-info { flex: 1; min-width: 0; }
-        .ls-title { font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .ls-meta { font-size: 12px; color: #888; margin-top: 2px; }
-        .ls-loading { padding: 20px; text-align: center; color: #888; font-size: 14px; }
-
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
         }
@@ -531,10 +515,8 @@
         <div style="padding: 20px 20px 10px 20px; position: relative;">
             <div style="display: flex; align-items: center; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 0 15px; margin-bottom: 15px;">
                 <span style="color: #888; display: flex; align-items: center;"><svg style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-search"></use></svg></span>
-                <input type="text" id="search-input" placeholder="Найти аниме..." oninput="handleLiveSearch()" onblur="hideLiveSearch()" style="flex: 1; background: transparent; border: none; padding: 14px 10px; color: #fff; font-size: 15px; outline: none;">
+                <input type="text" id="search-input" placeholder="Найти аниме..." oninput="searchAnime()" style="flex: 1; background: transparent; border: none; padding: 14px 10px; color: #fff; font-size: 15px; outline: none;">
             </div>
-            <!-- Выпадающее окно поиска -->
-            <div id="live-search-results"></div>
             
             <div onclick="openRandomAnime()" style="display: flex; align-items: center; justify-content: space-between; background: #14141f; border-radius: 16px; padding: 16px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;">
                 <div style="display: flex; align-items: center; gap: 15px;">
@@ -878,6 +860,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4610"></script>
+    <script src="app.js?v=4612"></script>
 </body>
 </html>
