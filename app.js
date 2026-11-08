@@ -1082,13 +1082,14 @@ async function searchFranchiseByTitle(anime) {
 
     let foundItems = [];
 
-    // 1. Ищем по названию
+    // 1. Ищем по названию (с фильтром по формату)
     try {
         const searchQuery = `query($search: String) { Page(page: 1, perPage: 20) { media(search: $search, type: ANIME, sort: START_DATE) { id idMal title{romaji english native} coverImage{large} seasonYear format } } }`;
         const data = await API_AniList.fetch(searchQuery, { search: query }).catch(() => null);
         
         if (data?.Page?.media) {
-            foundItems = data.Page.media;
+            // Берем только аниме (TV, Movie, OVA, ONA, Special)
+            foundItems = data.Page.media.filter(m => ['TV', 'TV_SHORT', 'MOVIE', 'OVA', 'ONA', 'SPECIAL'].includes(m.format));
         }
     } catch (e) {
         console.error('Ошибка поиска по названию:', e);
@@ -1096,7 +1097,10 @@ async function searchFranchiseByTitle(anime) {
 
     // 2. Если по названию ничего не нашли (или нашли мало), берем связи (relations)
     if (foundItems.length < 2 && anime.relations?.edges) {
-        const relations = anime.relations.edges.map(e => e.node).filter(n => n.format === 'TV' || n.format === 'TV_SHORT' || n.format === 'MOVIE' || n.format === 'OVA' || n.format === 'ONA');
+        const relations = anime.relations.edges
+            .map(e => e.node)
+            .filter(n => ['TV', 'TV_SHORT', 'MOVIE', 'OVA', 'ONA', 'SPECIAL'].includes(n.format));
+        
         const existingIds = new Set(foundItems.map(i => i.id));
         relations.forEach(r => {
             if (!existingIds.has(r.id)) {
@@ -1112,12 +1116,8 @@ async function searchFranchiseByTitle(anime) {
         });
     }
 
-    // Фильтруем: убираем текущее аниме и мангу/ранобэ
-    const filtered = foundItems.filter(m => 
-        String(m.id) !== String(anime.rawId) && 
-        m.format !== 'MANGA' && 
-        m.format !== 'NOVEL'
-    );
+    // Фильтруем: убираем текущее аниме (если оно попало в список)
+    const filtered = foundItems.filter(m => String(m.id) !== String(anime.rawId));
 
     // 3. Переводим названия на русский через наш кэш
     const translatedItems = await processWithLimit(filtered, 3, async (item) => {
@@ -1187,18 +1187,39 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         
         try {
             if (anime.genres && anime.genres.length > 0) {
-                const genreQuery = `query($genre: String) { Page(page: 1, perPage: 10) { media(type: ANIME, genre: $genre, sort: POPULARITY_DESC) { id title{romaji english} coverImage{large} averageScore seasonYear format } } }`;
+                const genreQuery = `query($genre: String) { Page(page: 1, perPage: 10) { media(type: ANIME, genre: $genre, sort: POPULARITY_DESC) { id title{romaji english native} coverImage{large} averageScore seasonYear format } } }`;
                 const genreData = await API_AniList.fetch(genreQuery, { genre: anime.genres[0] });
                 if (genreData?.Page?.media) {
-                    similarItems = genreData.Page.media
-                        .filter(m => String(m.id) !== String(anime.rawId))
-                        .slice(0, 6)
-                        .map(m => ({
-                            id: 'anilist_' + m.id,
-                            title: m.title.romaji || m.title.english,
-                            image: m.coverImage.large,
-                            score: m.averageScore ? (m.averageScore/10).toFixed(1) : '?'
-                        }));
+                    similarItems = await processWithLimit(
+                        genreData.Page.media.filter(m => String(m.id) !== String(anime.rawId)).slice(0, 6), 
+                        3, 
+                        async (m) => {
+                            const rawTitle = m.title?.romaji || m.title?.english || m.title?.native || '';
+                            let ruTitle = rawTitle;
+                            // Пытаемся найти русское название
+                            if (!/[а-яА-ЯёЁ]/.test(rawTitle)) {
+                                try {
+                                    const cached = await getCachedTitle(m.id);
+                                    if (cached && cached.title_ru) {
+                                        ruTitle = cached.title_ru;
+                                    } else {
+                                        const anilibria = await API_AniLibria.searchRussian(rawTitle);
+                                        if (anilibria) ruTitle = anilibria;
+                                        else {
+                                            const shiki = await API_Shikimori.getRussianData(rawTitle);
+                                            if (shiki.russian) ruTitle = shiki.russian;
+                                        }
+                                    }
+                                } catch(e) {}
+                            }
+                            return {
+                                id: 'anilist_' + m.id,
+                                title: ruTitle,
+                                image: m.coverImage.large,
+                                score: m.averageScore ? (m.averageScore/10).toFixed(1) : '?'
+                            };
+                        }
+                    );
                 }
             }
         } catch(e) { console.error('Similar error:', e); }
