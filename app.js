@@ -22,7 +22,6 @@ if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
 function escapeHTML(str) { if (str == null) return ''; return String(str).replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t] || t)); }
 function safeUrl(url) { if (!url || typeof url !== 'string') return ''; if (url.startsWith('/')) return 'https://shikimori.io' + url; try { const u = new URL(url, location.origin); return (u.protocol==='http:'||u.protocol==='https:')?u.href:''; } catch { return ''; } }
 
-// Безопасный механизм примерки: храним объект в window, в onclick передаём только id
 window._previewCache = {};
 function cachePreviewItem(item) { const key = 'p_' + Math.random().toString(36).slice(2, 10); window._previewCache[key] = item; return key; }
 
@@ -197,7 +196,7 @@ const API_AniList = {
     },
     async getDetails(id) {
         const cleanId = String(id).replace('anilist_','');
-        const q = `query($id:Int){Media(id:$id,type:ANIME){${this._mediaFields} description(asHtml:false)}}`;
+        const q = `query($id:Int){Media(id:$id,type:ANIME){${this._mediaFields} description(asHtml:false) bannerImage}}`;
         const data = await this.fetch(q, { id: parseInt(cleanId) }).catch(()=>null);
         return data?.Media || null;
     },
@@ -324,7 +323,8 @@ async function buildAnimeObject(raw) {
             score: raw.averageScore ? (raw.averageScore/10).toFixed(1) : 0,
             status: raw.status==='RELEASING'?'Онгоинг':raw.status==='FINISHED'?'Завершено':raw.status==='NOT_YET_RELEASED'?'Анонс':'Анонс',
             kind: raw.format || 'TV',
-            trailerId: raw.trailer?.id || null
+            trailerId: raw.trailer?.id || null,
+            banner_image: raw.bannerImage || null
         };
     }
 
@@ -360,7 +360,8 @@ async function buildAnimeObject(raw) {
         score,
         status: raw.status==='RELEASING'?'Онгоинг':raw.status==='FINISHED'?'Завершено':raw.status==='NOT_YET_RELEASED'?'Анонс':'Анонс',
         kind: raw.format || 'TV',
-        trailerId: raw.trailer?.id || null
+        trailerId: raw.trailer?.id || null,
+        banner_image: raw.bannerImage || null
     };
 }
 
@@ -562,7 +563,7 @@ function renderEffectParticles(container, effectClass) {
 }
 
 // ==========================================
-// 6. ПРЕДПРОСМОТР (безопасный, через window._previewCache)
+// 6. ПРЕДПРОСМОТР
 // ==========================================
 function startPreview(type, item) {
     if (isPreviewMode || !item) return;
@@ -1068,19 +1069,52 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 comments = cmts || [];
             } catch(e) { console.error(e); }
         }
+        
         const title = escapeHTML(anime.title_ru);
+        const titleRaw = escapeHTML(anime.title_raw || anime.title_ru);
         const desc = escapeHTML(anime.description);
         const score = anime.score ? Number(anime.score).toFixed(1) : '?';
         const poster = safeUrl(anime.images.jpg.image_url);
-        let statusColor = '#2ecc71'; if (anime.status === 'Онгоинг') statusColor = '#3498db'; if (anime.status === 'Анонс') statusColor = '#e74c3c';
+        
+        const bgImage = anime.banner_image ? safeUrl(anime.banner_image) : poster;
+
         const stats = getStats();
         const favEntry = (stats.favedAnime || []).find(a => a.id === anime.id);
         const isFaved = !!favEntry;
+        
         window._animeCache = window._animeCache || {};
         window._animeCache[anime.id] = anime;
-        const bookmarkSvg = `<svg style="width: 26px; height: 26px;"><use href="#oa-bookmark"></use></svg>`;
+
+        let screenshotsHtml = '';
+        if (anime.trailerId) {
+            const ytFrames = [0, 1, 2, 3].map(i => `https://img.youtube.com/vi/${anime.trailerId}/${i}.jpg`);
+            const frames = [...ytFrames, poster, bgImage, poster];
+            screenshotsHtml = frames.map((url, i) => `
+                <div style="scroll-snap-align: start; flex: 0 0 75%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; background: #222; border: 1px solid rgba(255,255,255,0.1); position: relative;">
+                    <img src="${url}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">
+                    ${i === 0 ? `<div style="position: absolute; inset: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><svg style="width: 40px; height: 40px; fill: #fff; stroke: none; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8));"><use href="#oa-play"></use></svg></div>` : ''}
+                </div>
+            `).join('');
+        } else {
+            const frames = [poster, bgImage, poster, bgImage];
+            screenshotsHtml = frames.map(url => `
+                <div style="scroll-snap-align: start; flex: 0 0 75%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; background: #222; border: 1px solid rgba(255,255,255,0.1);">
+                    <img src="${url}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+            `).join('');
+        }
+
+        const isUpcoming = anime.status === 'Анонс';
+        const watchBtnHtml = isUpcoming 
+            ? `<button class="btn-primary" style="background: #2a2a3e; color: #888; box-shadow: none; cursor: not-allowed;" disabled><svg class="icon-inline" style="stroke:#888;fill:#888;width:20px;height:20px;margin-right:8px;"><use href="#oa-clock"></use></svg> Скоро... <span style="margin-left: auto; font-size: 20px; line-height: 1;">⋮</span></button>`
+            : `<button class="btn-primary ripple-btn" onclick="startWatching(window._animeCache['${escapeHTML(anime.id)}'])" style="flex: 1; padding: 18px; font-size: 18px; display:flex;align-items:center;gap:8px;"><svg class="icon-inline" style="stroke:#fff;fill:#fff;width:22px;height:22px;"><use href="#oa-play"></use></svg> Смотреть</button>`;
+
         let starsHtml = '';
-        for (let i = 1; i <= 5; i++) { const active = i <= userRating ? 'color: #ffd700;' : 'color: #444;'; starsHtml += `<span onclick="rateAnime('${escapeHTML(anime.id)}', ${i})" style="font-size: 28px; cursor: pointer; ${active}; display:inline-block;">★</span>`; }
+        for (let i = 1; i <= 5; i++) { 
+            const active = i <= userRating ? 'color: #ffd700;' : 'color: #444;'; 
+            starsHtml += `<span onclick="rateAnime('${escapeHTML(anime.id)}', ${i})" style="font-size: 32px; cursor: pointer; ${active} display:inline-block; transition: transform 0.1s;" onpointerdown="this.style.transform='scale(0.9)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">★</span>`; 
+        }
+
         let commentsHtml = '';
         if (comments && comments.length > 0) {
             comments.forEach(c => {
@@ -1103,17 +1137,121 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                     </div>`;
             });
         } else commentsHtml = '<div style="font-size: 13px; color: #888; text-align: center; padding: 10px;">Пока нет комментариев</div>';
-        container.innerHTML = `<div class="fade-in"><div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;"><img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"></div><div style="padding-top: 30px;"><div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;"><img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; border: 2px solid rgba(255,255,255,0.1);"><div style="flex: 1;"><h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff;">${title}</h1><div style="display: flex; flex-wrap: wrap; gap: 6px;"><span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800; display:flex;align-items:center;gap:4px;"><svg class="icon-star" style="width:14px;height:14px;"><use href="#oa-star"></use></svg> ${score}</span><span style="background: rgba(255,255,255,0.15); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; display:flex;align-items:center;gap:4px;"><svg class="icon-inline" style="width:14px;height:14px;"><use href="#oa-tv"></use></svg> ${anime.episodes || '?'} эп.</span><span style="background: ${statusColor}; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px;">${escapeHTML(anime.status)}</span></div></div></div><div style="display: flex; gap: 10px; margin-bottom: 20px;"><button class="btn-primary ripple-btn" onclick="startWatching(window._animeCache['${escapeHTML(anime.id)}'])" style="flex: 1; padding: 16px; display:flex;align-items:center;gap:8px;"><svg class="icon-inline" style="stroke:#fff;fill:#fff;width:18px;height:18px;"><use href="#oa-play"></use></svg> Смотреть</button><button onclick="openStatusModal('${escapeHTML(anime.id)}')" class="btn-icon-heart ${isFaved ? 'faved' : ''}" style="background: ${isFaved ? 'rgba(91,91,255,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#5b5bff' : '#fff'};">${bookmarkSvg}</button></div><div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px;">${escapeHTML(g)}</span>`).join('')}</div><div style="margin-bottom: 25px;"><p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p><button id="desc-btn" onclick="toggleDescription()" style="display: none; background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button></div><div style="background: #14141f; border-radius: 16px; padding: 15px; margin-bottom: 20px; text-align: center;"><h3 style="font-size: 15px; color: #fff; margin-bottom: 10px;">Ваша оценка:</h3><div style="display: flex; justify-content: center; gap: 5px;">${starsHtml}</div></div><div style="margin-bottom: 40px;"><h3 style="font-size: 16px; margin-bottom: 15px; color: #fff; display:flex;align-items:center;gap:6px;"><svg class="icon-inline"><use href="#oa-message"></use></svg> Комментарии</h3><div style="display: flex; gap: 10px; margin-bottom: 20px;"><input type="text" id="comment-input" placeholder="Написать отзыв..." style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;"><button onclick="sendComment('${escapeHTML(anime.id)}')" class="ripple-btn" style="background: #5b5bff; border: none; border-radius: 12px; padding: 0 15px; color: #fff; font-weight: bold; cursor: pointer;"><svg class="icon-inline" style="stroke:#fff;width:16px;height:16px;"><use href="#oa-send"></use></svg></button></div><div>${commentsHtml}</div></div></div></div>`;
-        setTimeout(() => { const d = document.getElementById('desc-text'); const b = document.getElementById('desc-btn'); if (d && b && d.scrollHeight > d.clientHeight) b.style.display = 'block'; }, 50);
-    } catch (e) { console.error(e); container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>'; }
+
+        container.innerHTML = `
+        <div class="fade-in" style="position: relative;">
+            <div style="position: absolute; top: -20px; left: -20px; width: calc(100% + 40px); height: 350px; z-index: -1; overflow: hidden;">
+                <img src="${bgImage}" style="width: 100%; height: 100%; object-fit: cover; object-position: center top; opacity: 0.5; mask-image: linear-gradient(to bottom, black 10%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 10%, transparent 100%);">
+                <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 40%, var(--bg) 95%);"></div>
+            </div>
+
+            <div style="padding-top: 100px;">
+                <div style="display: flex; gap: 16px; margin-bottom: 25px; align-items: flex-end;">
+                    <img class="detail-poster" src="${poster}" style="width: 110px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); object-fit: cover; aspect-ratio: 2/3; flex-shrink: 0;">
+                    <div style="flex: 1; min-width: 0; padding-bottom: 2px;">
+                        <h1 style="font-size: 20px; font-weight: 800; line-height: 1.15; margin-bottom: 6px; color: #fff; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${title}</h1>
+                        <p style="font-size: 12px; color: #aaa; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${titleRaw} (${anime.year})</p>
+                        
+                        <div style="display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: #fff;">
+                            <svg style="width:16px;height:16px;color:#ffd700;fill:#ffd700;stroke:none;"><use href="#oa-star"></use></svg>
+                            ${score} <span style="color: #666; font-weight: 500; font-size: 13px;">AQ • ${anime.year}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 25px;">
+                    ${watchBtnHtml}
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-bottom: 30px; padding: 0 10px;">
+                    <div onclick="openStatusModal('${escapeHTML(anime.id)}')" style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; color: ${isFaved ? '#5b5bff' : '#fff'}; transition: 0.2s;" onpointerdown="this.style.transform='scale(0.95)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">
+                        <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.05);">
+                            <svg style="width: 24px; height: 24px; fill: ${isFaved ? '#5b5bff' : 'none'}; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-bookmark"></use></svg>
+                        </div>
+                        <span style="font-size: 12px; font-weight: 500;">В список</span>
+                    </div>
+                    <div onclick="showToast('Вы подписались на обновления!')" style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; color: #fff; transition: 0.2s;" onpointerdown="this.style.transform='scale(0.95)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">
+                        <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.05);">
+                            <svg style="width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-calendar"></use></svg>
+                        </div>
+                        <span style="font-size: 12px; font-weight: 500;">Следить</span>
+                    </div>
+                    <div onclick="shareAnime('${escapeHTML(anime.id)}', '${title.replace(/'/g, "\\'")}')" style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; color: #fff; transition: 0.2s;" onpointerdown="this.style.transform='scale(0.95)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">
+                        <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.05);">
+                            <svg style="width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-send"></use></svg>
+                        </div>
+                        <span style="font-size: 12px; font-weight: 500;">Поделиться</span>
+                    </div>
+                    <div onclick="openStatusModal('${escapeHTML(anime.id)}')" style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; color: #fff; transition: 0.2s;" onpointerdown="this.style.transform='scale(0.95)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">
+                        <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.05);">
+                            <svg style="width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-book"></use></svg>
+                        </div>
+                        <span style="font-size: 12px; font-weight: 500;">Ещё</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">
+                    ${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #ccc; padding: 8px 16px; border-radius: 20px; font-size: 14px;">${escapeHTML(g)}</span>`).join('')}
+                </div>
+
+                <div style="margin-bottom: 25px;">
+                    <p id="desc-text" style="color: #ccc; font-size: 15px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p>
+                    <button id="desc-btn" onclick="toggleDescription()" style="display: none; background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 15px; margin-top: 8px; cursor: pointer; padding: 0; display: flex; align-items: center; gap: 4px;">Читать дальше <svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;"><use href="#oa-chevron-down"></use></svg></button>
+                </div>
+
+                <div style="margin-bottom: 30px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="font-size: 18px; color: #fff; margin: 0;">Кадры</h3>
+                        ${anime.trailerId ? `<a href="https://youtube.com/watch?v=${anime.trailerId}" target="_blank" style="color: #5b5bff; font-size: 13px; font-weight: 600; text-decoration: none;">Смотреть трейлер →</a>` : ''}
+                    </div>
+                    <div style="display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">
+                        ${screenshotsHtml}
+                    </div>
+                </div>
+
+                <div style="background: #14141f; border-radius: 16px; padding: 20px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
+                    <h3 style="font-size: 16px; color: #fff; margin-bottom: 12px;">Ваша оценка:</h3>
+                    <div style="display: flex; justify-content: center; gap: 8px;">${starsHtml}</div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 style="font-size: 18px; margin-bottom: 15px; color: #fff; display:flex;align-items:center;gap:8px;"><svg class="icon-inline" style="width:20px;height:20px;"><use href="#oa-message"></use></svg> Комментарии</h3>
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <input type="text" id="comment-input" placeholder="Написать отзыв..." style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 16px; color: #fff; font-size: 15px; outline: none;">
+                        <button onclick="sendComment('${escapeHTML(anime.id)}')" class="ripple-btn" style="background: #5b5bff; border: none; border-radius: 12px; padding: 0 20px; color: #fff; font-weight: bold; cursor: pointer; display:flex;align-items:center;justify-content:center;"><svg class="icon-inline" style="stroke:#fff;width:18px;height:18px;"><use href="#oa-send"></use></svg></button>
+                    </div>
+                    <div>${commentsHtml}</div>
+                </div>
+            </div>
+        </div>`;
+
+        setTimeout(() => { 
+            const d = document.getElementById('desc-text'); 
+            const b = document.getElementById('desc-btn'); 
+            if (d && b && d.scrollHeight > d.clientHeight) b.style.display = 'flex'; 
+        }, 50);
+    } catch (e) { 
+        console.error(e); 
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>'; 
+    }
 }
+
+function shareAnime(id, title) {
+    const url = window.location.origin + window.location.pathname + '?anime=' + id;
+    if (navigator.share) {
+        navigator.share({ title: title, url: url }).catch(() => {});
+    } else {
+        navigator.clipboard.writeText(url).then(() => showToast('Ссылка скопирована!')).catch(() => showToast('Ошибка копирования'));
+    }
+}
+
 async function rateAnime(animeId, rating) {
     if (!supabaseClient || !MY_ID) return;
     try {
         const { data: ex } = await supabaseClient.from('user_lists').select('id').eq('user_id', MY_ID).eq('anime_id', animeId).single();
         if (ex) await supabaseClient.from('user_lists').update({ rating }).eq('user_id', MY_ID).eq('anime_id', animeId);
         else await supabaseClient.from('user_lists').insert({ user_id: MY_ID, anime_id: animeId, status: 'planned', rating });
-        const starDiv = document.querySelector('#detail-content div[style*="justify-content: center; gap: 5px"]');
+        const starDiv = document.querySelector('#detail-content div[style*="justify-content: center; gap: 8px"]');
         if (starDiv) { starDiv.querySelectorAll('span').forEach((sp, i) => { sp.style.color = (i + 1) <= rating ? '#ffd700' : '#444'; }); }
         showToast(`Оценка ${rating}`);
     } catch(e) { showToast('Ошибка'); }
@@ -1150,7 +1288,7 @@ async function setAnimeStatus(status) {
         checkAchievements(stats); await syncProfileToDB(true);
     } catch(e) { console.error(e); showToast('Ошибка'); }
 }
-function toggleDescription() { const d = document.getElementById('desc-text'); const b = document.getElementById('desc-btn'); if (d.style.webkitLineClamp === '4' || d.style.webkitLineClamp === '') { d.style.webkitLineClamp = 'unset'; b.innerHTML = 'Свернуть ▲'; } else { d.style.webkitLineClamp = '4'; b.innerHTML = 'Читать полностью ▼'; } }
+function toggleDescription() { const d = document.getElementById('desc-text'); const b = document.getElementById('desc-btn'); if (d.style.webkitLineClamp === '4' || d.style.webkitLineClamp === '') { d.style.webkitLineClamp = 'unset'; b.innerHTML = 'Свернуть ▲'; } else { d.style.webkitLineClamp = '4'; b.innerHTML = 'Читать дальше ▼'; } }
 async function openRandomAnime() { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium'); showToast('Ищем...'); try { const items = await API.getRandom(1); if (items && items.length > 0) openAnimeDetail(items[0].id, 'catalog'); } catch (e) {} }
 
 // ==========================================
@@ -1316,6 +1454,7 @@ async function loadTopUsers() {
                             ${avatarHtml}
                         </div>
                     </div>
+                    
                     <div style="flex: 1; min-width: 0;">
                         <div style="display: flex; align-items: center; gap: 4px;">
                             <h3 style="color: ${nameColor}; font-size: 15px; margin: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(user.name)}</h3>
@@ -1476,7 +1615,6 @@ function trimCachedAnime(s) {
     if (!s.cachedAnime) return;
     const keys = Object.keys(s.cachedAnime);
     if (keys.length > CACHED_ANIME_LIMIT) {
-        // Простейшая LRU-подобная очистка: удаляем самые старые (по порядку вставки)
         const toRemove = keys.length - CACHED_ANIME_LIMIT;
         for (let i = 0; i < toRemove; i++) delete s.cachedAnime[keys[i]];
     }
