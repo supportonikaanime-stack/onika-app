@@ -23,7 +23,6 @@
         .screen.active { display: block; animation: screenEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
 
         @keyframes screenEnter { from { opacity: 0; transform: translateY(14px) scale(0.995); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        @keyframes cardEnter { from { opacity: 0; transform: translateY(20px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
         @keyframes skeletonShimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
         @keyframes skeletonFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes rippleAnim { to { transform: scale(4); opacity: 0; } }
@@ -53,13 +52,7 @@
         .skeleton-circle { border-radius: 50%; }
         .skeleton-poster { width: 100%; aspect-ratio: 2/3; border-radius: 12px; }
 
-        .skeleton-hero {
-            position: relative; height: 62vh; min-height: 380px; max-height: 520px;
-            background: var(--bg); overflow: hidden;
-            display: flex; align-items: flex-end;
-            padding: 16px 20px; padding-bottom: 28px;
-            border-radius: 0 0 20px 20px;
-        }
+        .skeleton-hero { position: relative; height: 62vh; min-height: 380px; max-height: 520px; background: var(--bg); overflow: hidden; display: flex; align-items: flex-end; padding: 16px 20px; padding-bottom: 28px; border-radius: 0 0 20px 20px; }
         .skeleton-hero-bg { position: absolute; inset: 0; background: linear-gradient(135deg, #1a1a24 0%, #12121a 100%); z-index: 0; }
         .skeleton-hero-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 40%, var(--bg) 95%); }
         .skeleton-hero-content { position: relative; z-index: 1; width: 100%; }
@@ -70,11 +63,7 @@
 
         .skeleton-card { position: relative; border-radius: 12px; overflow: hidden; background: #14141f; aspect-ratio: 2/3; }
         .skeleton-card .skeleton-poster { border-radius: 0; width: 100%; height: 100%; }
-        .skeleton-card .skeleton-card-title {
-            position: absolute; bottom: 10px; left: 10px; right: 10px; height: 12px; border-radius: 6px;
-            background: linear-gradient(90deg, #2a2a35 0%, #353542 50%, #2a2a35 100%);
-            background-size: 400px 100%; animation: skeletonShimmer 1.4s linear infinite;
-        }
+        .skeleton-card .skeleton-card-title { position: absolute; bottom: 10px; left: 10px; right: 10px; height: 12px; border-radius: 6px; background: linear-gradient(90deg, #2a2a35 0%, #353542 50%, #2a2a35 100%); background-size: 400px 100%; animation: skeletonShimmer 1.4s linear infinite; }
         .horizontal-scroll .skeleton-card { min-width: 130px; width: 130px; height: 195px; flex-shrink: 0; }
 
         .skeleton-shop-item { background: #1a1a20; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; }
@@ -92,7 +81,6 @@
         .fade-in { animation: skeletonFadeIn 0.4s ease; }
         .ripple-btn { position: relative; overflow: hidden; -webkit-tap-highlight-color: transparent; }
         .ripple-btn .ripple { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.35); transform: scale(0); animation: rippleAnim 0.6s ease-out; pointer-events: none; }
-        .spinner { width: 32px; height: 32px; border: 3px solid rgba(91,91,255,0.2); border-top-color: #5b5bff; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 20px auto; }
         .loading-text { animation: textPulse 1.2s ease-in-out infinite; color: #888; text-align: center; padding: 20px; }
 
         /* АВТОРИЗАЦИЯ */
@@ -119,7 +107,6 @@
         .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; visibility: hidden; transition: 0.6s; display: flex; align-items: flex-end; }
         .hero-slide.active { opacity: 1; visibility: visible; z-index: 2; }
         
-        /* Только постер (без широкого превью) */
         .hero-bg-poster { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center top; z-index: 1; transition: opacity 0.8s ease; }
         .hero-slide.active .hero-bg-poster { animation: kenBurns 8s ease-out forwards; }
         
@@ -127,24 +114,14 @@
         .hero-content { position: relative; z-index: 3; padding: 16px 20px; width: 100%; padding-bottom: 28px; transform: translateY(20px); opacity: 0; transition: 0.6s; }
         .hero-slide.active .hero-content { transform: translateY(0); opacity: 1; transition-delay: 0.2s; }
         
-        /* Оставили только прогресс-бар сверху */
-        .hero-progress-bar {
-            position: absolute; top: 0; left: 0; width: 100%; height: 3px;
-            display: flex; gap: 2px; z-index: 10; padding: 0 4px;
-        }
-        .hero-progress-seg {
-            flex: 1; height: 100%; background: rgba(255,255,255,0.2);
-            border-radius: 2px; overflow: hidden; position: relative;
-        }
-        .hero-progress-seg .fill {
-            position: absolute; top: 0; left: 0; height: 100%;
-            background: #5b5bff; width: 0%; border-radius: 2px;
-        }
+        .hero-progress-bar { position: absolute; top: 0; left: 0; width: 100%; height: 3px; display: flex; gap: 2px; z-index: 10; padding: 0 4px; }
+        .hero-progress-seg { flex: 1; height: 100%; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; position: relative; }
+        .hero-progress-seg .fill { position: absolute; top: 0; left: 0; height: 100%; background: #5b5bff; width: 0%; border-radius: 2px; }
         .hero-progress-seg.active .fill { animation: heroProgress 5s linear forwards; }
         .hero-progress-seg.done .fill { width: 100%; background: rgba(255,255,255,0.6); }
         
-        .hero-badges { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-        .badge { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+        .hero-badges { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+        .badge { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #fff; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 4px; }
         .badge.star { color: #ffd700; background: rgba(0,0,0,0.4); border-color: rgba(255,215,0,0.2); animation: badgePulse 2.5s infinite; }
         
         .hero-title { font-size: 28px; font-weight: 800; line-height: 1.15; margin-bottom: 12px; color: #fff; text-shadow: 0 4px 20px rgba(0,0,0,0.8); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -163,7 +140,7 @@
         .content-section { padding: 20px 0; opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
         .content-section.fade-in-section { animation: sectionFadeUp 0.6s ease forwards; }
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-bottom: 15px; }
-        .section-header h2 { font-size: 20px; font-weight: 700; }
+        .section-header h2 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
         .horizontal-scroll { display: flex; gap: 12px; padding: 0 20px; overflow-x: auto; scrollbar-width: none; }
         .horizontal-scroll::-webkit-scrollbar { display: none; }
         .grid-catalog { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 0 20px; }
@@ -174,12 +151,9 @@
         .card-title { position: absolute; bottom: 0; left: 0; width: 100%; padding: 30px 10px 10px 10px; font-size: 13px; font-weight: 700; color: #fff; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, transparent 100%); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; z-index: 2; }
         .horizontal-scroll .card { min-width: 130px; width: 130px; height: 195px; }
 
-        .tg-banner-section { padding: 10px 20px 20px; opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
-        .tg-banner-section.fade-in-section { animation: sectionFadeUp 0.6s ease forwards; }
-        .tg-banner { display: flex; align-items: center; background: linear-gradient(135deg, rgba(0,136,204,0.15), rgba(0,136,204,0.05)); border: 1px solid rgba(0,136,204,0.3); padding: 16px; border-radius: 16px; text-decoration: none !important; color: white !important; margin-bottom: 10px; }
-        .tg-icon { width: 45px; height: 45px; background: #0088cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-right: 15px; color: white; font-weight: bold; flex-shrink: 0; }
-        .tg-text h3 { font-size: 16px; font-weight: 700; margin-bottom: 2px; color: white !important; }
-        .tg-text p { font-size: 12px; color: rgba(255,255,255,0.6) !important; }
+        .tg-banner { display: flex; align-items: center; padding: 12px; border-radius: 16px; text-decoration: none !important; color: white !important; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); }
+        .tg-text h3 { font-size: 15px; font-weight: 700; margin-bottom: 2px; color: white !important; }
+        .tg-text p { font-size: 11px; color: rgba(255,255,255,0.6) !important; }
 
         .filter-btn { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc; padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
         .filter-btn.active { background: rgba(91,91,255,0.15); border-color: #5b5bff; color: #a29bfe; }
@@ -407,6 +381,10 @@
         .preview-hint { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 14px; z-index: 10005; pointer-events: none; opacity: 0; transition: 0.3s; text-align: center; width: 80%; }
         .preview-hint.show { opacity: 1; }
 
+        .icon-inline { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .icon-star { color: #ffd700; fill: currentColor; stroke: none; width: 16px; height: 16px; }
+        .icon-text { display: inline-flex; align-items: center; gap: 6px; }
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
@@ -418,7 +396,6 @@
 </head>
 <body>
 
-    <!-- ХОЛСТ ДЛЯ ФОНА -->
     <canvas id="bg-canvas"></canvas>
 
     <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
@@ -445,6 +422,15 @@
       <symbol id="oa-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></symbol>
       <symbol id="oa-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
       <symbol id="oa-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+      <symbol id="oa-fire" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+      <symbol id="oa-planet" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+      <symbol id="oa-clapper" viewBox="0 0 24 24"><path d="M4 11v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8H4z"/><path d="m4 11 2-6h12l2 6"/><path d="m9 5 2 6M15 5l-2 6"/></symbol>
+      <symbol id="oa-sparkles" viewBox="0 0 24 24"><path d="m12 3 1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/></symbol>
+      <symbol id="oa-tv" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></symbol>
+      <symbol id="oa-message" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+      <symbol id="oa-send" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+      <symbol id="oa-alert-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
+      <symbol id="oa-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
     </svg>
 
     <!-- ЭКРАН АВТОРИЗАЦИИ -->
@@ -457,7 +443,6 @@
             </div>
             <div class="auth-error" id="authError"></div>
             
-            <!-- ВХОД -->
             <div id="form-login">
                 <input type="email" id="login-email" class="auth-input" placeholder="Почта (Email)" autocomplete="email">
                 <input type="password" id="login-password" class="auth-input" placeholder="Пароль" autocomplete="current-password">
@@ -465,7 +450,6 @@
                 <div class="auth-footer">Нет аккаунта? <span class="auth-link" onclick="switchAuthTab('register')">Зарегистрироваться</span></div>
             </div>
             
-            <!-- РЕГИСТРАЦИЯ -->
             <div id="form-register" style="display:none;">
                 <input type="email" id="reg-email" class="auth-input" placeholder="Настоящая почта (Email)" autocomplete="email">
                 <input type="text" id="reg-nickname" class="auth-input" placeholder="Никнейм (макс. 12 символов)" maxlength="12" autocomplete="username">
@@ -474,7 +458,6 @@
                 <div class="auth-footer">Уже есть аккаунт? <span class="auth-link" onclick="switchAuthTab('login')">Войти</span></div>
             </div>
 
-            <!-- ПОДТВЕРЖДЕНИЕ КОДА -->
             <div id="form-verify" style="display:none;">
                 <p style="text-align: center; color: #ccc; margin-bottom: 20px; font-size: 14px;">
                     Мы отправили код на вашу почту. Введите его ниже:
@@ -504,49 +487,49 @@
             <div class="hero-slider" id="heroSlider"></div>
         </section>
         <section class="content-section" id="section-seasonal">
-            <div class="section-header"><h2>📅 Новинки сезона</h2></div>
+            <div class="section-header"><h2><svg class="icon-inline" style="color:#fff;"><use href="#oa-calendar"></use></svg> Новинки сезона</h2></div>
             <div class="horizontal-scroll" id="seasonal-list"></div>
         </section>
         <section class="content-section" id="section-popular">
-            <div class="section-header"><h2>🔥 Популярное сейчас</h2></div>
+            <div class="section-header"><h2><svg class="icon-inline" style="color:#ff4500;"><use href="#oa-fire"></use></svg> Популярное сейчас</h2></div>
             <div class="horizontal-scroll" id="popular-list"></div>
         </section>
         
         <!-- БЛОК СОЦИАЛЬНЫХ СЕТЕЙ -->
         <section class="content-section" id="section-socials">
-            <div class="section-header"><h2>🌐 Наши сообщества</h2></div>
+            <div class="section-header"><h2><svg class="icon-inline" style="color:#fff;"><use href="#oa-planet"></use></svg> Наши сообщества</h2></div>
             <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 20px;">
                 
                 <!-- Telegram -->
-                <a href="https://t.me/onikaanime" target="_blank" class="tg-banner" style="margin-bottom: 0; padding: 12px; background: rgba(0,136,204,0.1); border-color: rgba(0,136,204,0.2);">
+                <a href="https://t.me/onikaanime" target="_blank" class="tg-banner" style="background: rgba(0,136,204,0.1); border-color: rgba(0,136,204,0.2);">
                     <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 15px;">
-                        <img src="telegram.png" style="width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 4px rgba(0,136,204,0.8));" onerror="this.style.display='none'; this.parentElement.innerHTML='✈️';">
+                        <img src="telegram.png" style="width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 4px rgba(0,136,204,0.8));" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'icon-inline\' style=\'color:#0088cc;width:32px;height:32px;\'><use href=\'#oa-send\'></use></svg>';">
                     </div>
                     <div class="tg-text">
-                        <h3 style="font-size: 15px;">Наш Telegram-канал</h3>
-                        <p style="font-size: 11px;">Новости, розыгрыши и анонсы</p>
+                        <h3>Наш Telegram-канал</h3>
+                        <p>Новости, розыгрыши и анонсы</p>
                     </div>
                 </a>
                 
                 <!-- VK -->
-                <a href="https://vk.com/onikaanime" target="_blank" class="tg-banner" style="margin-bottom: 0; padding: 12px; background: rgba(0,119,255,0.1); border-color: rgba(0,119,255,0.2);">
+                <a href="https://vk.com/onikaanime" target="_blank" class="tg-banner" style="background: rgba(0,119,255,0.1); border-color: rgba(0,119,255,0.2);">
                     <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 15px;">
-                        <img src="vk.png" style="width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 4px rgba(0,119,255,0.8));" onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\'color:#0077FF;font-weight:900;font-size:14px;\'>VK</span>';">
+                        <img src="vk.png" style="width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 4px rgba(0,119,255,0.8));" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'icon-inline\' style=\'color:#0077FF;width:32px;height:32px;\'><use href=\'#oa-friends\'></use></svg>';">
                     </div>
                     <div class="tg-text">
-                        <h3 style="font-size: 15px;">Мы во ВКонтакте</h3>
-                        <p style="font-size: 11px;">Мемы, обсуждения и опросы</p>
+                        <h3>Мы во ВКонтакте</h3>
+                        <p>Мемы, обсуждения и опросы</p>
                     </div>
                 </a>
                 
                 <!-- TikTok -->
-                <a href="https://tiktok.com/@onikaanime" target="_blank" class="tg-banner" style="margin-bottom: 0; padding: 12px; background: rgba(255,0,80,0.1); border-color: rgba(255,0,80,0.2);">
+                <a href="https://tiktok.com/@onikaanime" target="_blank" class="tg-banner" style="background: rgba(255,0,80,0.1); border-color: rgba(255,0,80,0.2);">
                     <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 15px;">
-                        <img src="tiktok.png" style="width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 4px rgba(255,255,255,0.5));" onerror="this.style.display='none'; this.parentElement.innerHTML='🎵';">
+                        <img src="tiktok.png" style="width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 4px rgba(255,255,255,0.5));" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'icon-inline\' style=\'color:#fff;width:32px;height:32px;\'><use href=\'#oa-play\'></use></svg>';">
                     </div>
                     <div class="tg-text">
-                        <h3 style="font-size: 15px;">Мы в TikTok</h3>
-                        <p style="font-size: 11px;">Короткие видео и нарезки</p>
+                        <h3>Мы в TikTok</h3>
+                        <p>Короткие видео и нарезки</p>
                     </div>
                 </a>
 
@@ -554,7 +537,7 @@
         </section>
 
         <section class="content-section" id="section-upcoming">
-            <div class="section-header"><h2>📅 Скоро выйдет</h2></div>
+            <div class="section-header"><h2><svg class="icon-inline" style="color:#fff;"><use href="#oa-sparkles"></use></svg> Скоро выйдет</h2></div>
             <div class="horizontal-scroll" id="upcoming-list"></div>
         </section>
     </div>
@@ -656,7 +639,7 @@
         <button onclick="switchTab('profile')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
             <div class="ach-icon-big" style="width: 50px; height: 50px;">
-                <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='🏆';">
+                <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'icon-inline\' style=\'color:#ffd700;width:50px;height:50px;\'><use href=\'#oa-achievement\'></use></svg>';">
             </div>
             <div>
                 <h1 style="font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 2px;">Достижения</h1>
@@ -699,7 +682,7 @@
                             <div onclick="copyMyId()" class="id-container">
                                 <span style="color: #ccc; font-size: 12px;">Мой ID:</span>
                                 <span id="my-tg-id" style="color: #fff; font-weight: bold; font-size: 14px;">...</span>
-                                <span style="color: #5b5bff; font-size: 16px;">📋</span>
+                                <svg class="icon-inline" style="color: #5b5bff; width: 16px; height: 16px;"><use href="#oa-copy"></use></svg>
                             </div>
                         </div>
                     </div>
@@ -730,7 +713,7 @@
                 <div class="achievements-card" onclick="openAchievementsPage()">
                     <div class="ach-header">
                         <div class="ach-icon-big">
-                            <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='🏆';">
+                            <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'icon-inline\' style=\'color:#ffd700;width:60px;height:60px;\'><use href=\'#oa-achievement\'></use></svg>';">
                         </div>
                         <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p><span id="ach-points">0</span> очков</p></div>
                         <div class="ach-total"><span id="ach-earned">0</span>/<span id="ach-total-count">12</span></div>
@@ -844,8 +827,8 @@
             <div class="modal-xp-text"><span id="modal-xp-cur">0</span> / <span id="modal-xp-next">100</span> XP</div>
             <div class="modal-desc">
                 <b>Как фармить XP:</b><br>
-                📅 Ежедневный вход: +5 XP<br>
-                ⏱️ Время на сайте (за 1 час): +2 XP
+                <span class="icon-text"><svg class="icon-inline"><use href="#oa-calendar"></use></svg> Ежедневный вход: +5 XP</span><br>
+                <span class="icon-text"><svg class="icon-inline"><use href="#oa-clock"></use></svg> Время на сайте (за 1 час): +2 XP</span>
             </div>
         </div>
     </div>
@@ -912,12 +895,10 @@
             
             let width, height;
             let particles = [];
-            // Настройки
-            const particleCount = 60; // Количество точек
-            const maxDistance = 120;  // Максимальное расстояние для линии
-            const speed = 0.5;        // Скорость движения
+            const particleCount = 60; 
+            const maxDistance = 120;  
+            const speed = 0.5;        
             
-            // Фиолетовый цвет (RGB)
             const lineColor = 'rgba(140, 80, 255, 0.4)'; 
             const dotColor = 'rgba(180, 120, 255, 0.8)';
 
@@ -940,54 +921,31 @@
 
             function animate() {
                 ctx.clearRect(0, 0, width, height);
-
-                // Двигаем и рисуем точки
                 particles.forEach(p => {
-                    p.x += p.vx;
-                    p.y += p.vy;
-
-                    // Отталкивание от краев
+                    p.x += p.vx; p.y += p.vy;
                     if (p.x < 0 || p.x > width) p.vx *= -1;
                     if (p.y < 0 || p.y > height) p.vy *= -1;
-
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
-                    ctx.fillStyle = dotColor;
-                    ctx.fill();
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2); ctx.fillStyle = dotColor; ctx.fill();
                 });
-
-                // Рисуем линии
                 for (let i = 0; i < particles.length; i++) {
                     for (let j = i + 1; j < particles.length; j++) {
                         const dx = particles[i].x - particles[j].x;
                         const dy = particles[i].y - particles[j].y;
                         const dist = Math.sqrt(dx * dx + dy * dy);
-
                         if (dist < maxDistance) {
-                            ctx.beginPath();
-                            ctx.moveTo(particles[i].x, particles[i].y);
-                            ctx.lineTo(particles[j].x, particles[j].y);
-                            // Прозрачность зависит от расстояния
-                            ctx.strokeStyle = `rgba(140, 80, 255, ${0.4 * (1 - dist / maxDistance)})`;
-                            ctx.lineWidth = 1;
-                            ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.strokeStyle = `rgba(140, 80, 255, ${0.4 * (1 - dist / maxDistance)})`; ctx.lineWidth = 1; ctx.stroke();
                         }
                     }
                 }
                 requestAnimationFrame(animate);
             }
 
-            window.addEventListener('resize', () => {
-                resize();
-                createParticles();
-            });
-
-            resize();
-            createParticles();
-            animate();
+            window.addEventListener('resize', () => { resize(); createParticles(); });
+            resize(); createParticles(); animate();
         })();
     </script>
 
-    <script src="app.js?v=4300"></script>
+    <script src="app.js?v=4400"></script>
 </body>
 </html>
