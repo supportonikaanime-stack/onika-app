@@ -161,7 +161,7 @@ document.addEventListener('pointerdown', function(e) {
 }, { passive: true });
 
 // ==========================================
-// 3. API — AniList + AniLibria + Shikimori
+// 3. API — AniList + AniLibria + Shikimori + Кэш БД
 // ==========================================
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 const ANILIST_URL = 'https://graphql.anilist.co';
@@ -236,7 +236,7 @@ const API_AniLibria = {
             const data = await res.json();
             const item = data?.data && data.data[0]; 
             if (item) return item.name?.main || item.name?.english || null;
-        } catch(e) { console.warn('[AniLibria] ошибка', e); }
+        } catch(e) { }
         return null;
     }
 };
@@ -251,60 +251,100 @@ const API_Shikimori = {
     },
     async getRussianData(searchTitle) {
         if (!searchTitle) return { russian:null, description:null };
-        
-        // Очищаем название от скобок, чтобы поиск был точнее
         const clean = searchTitle.replace(/\s*\([^)]*\)/g,'').trim();
-        
-        // Увеличиваем количество попыток и паузу, чтобы Shikimori 100% успевал
-        for (let attempt = 1; attempt <= 3; attempt++) {
+        for (let attempt = 1; attempt <= 2; attempt++) {
             try {
                 const q = `{animes(search:"${clean.replace(/"/g,'')}",limit:1){id name russian description}}`;
                 const d = await this.fetchGraphQL(q);
-                if (d.animes && d.animes.length) {
-                    return { russian: d.animes[0].russian || null, description: d.animes[0].description || null };
-                }
-                break; // Если нашли (даже если russian пустой), прерываем
+                if (d.animes && d.animes.length) return { russian: d.animes[0].russian || null, description: d.animes[0].description || null };
+                break; 
             } catch(e) { 
-                console.warn(`[Shikimori] Попытка ${attempt} упала:`, e.message); 
-                if (attempt < 3) await new Promise(r => setTimeout(r, 500)); // Ждём полсекунды перед повтором
+                if (attempt === 1) await new Promise(r => setTimeout(r, 300)); 
             }
         }
         return { russian:null, description:null };
     }
 };
 
-// Вспомогательная функция для последовательной обработки очереди
-async function processQueue(items, asyncProcessor) {
+// Функция для работы с кэшем БД (очень быстро)
+async function getCachedTitle(anilistId) {
+    if (!supabaseClient) return null;
+    try {
+        const { data } = await supabaseClient.from('anime_cache').select('title_ru, description').eq('id', String(anilistId)).single();
+        return data || null;
+    } catch(e) { return null; }
+}
+
+async function saveCachedTitle(anilistId, titleRu, description) {
+    if (!supabaseClient) return;
+    try {
+        // Сохраняем только если есть русский перевод (избегаем кэшировать английский)
+        if (titleRu && titleRu !== 'Без названия') {
+            await supabaseClient.from('anime_cache').upsert({ id: String(anilistId), title_ru: titleRu, description: description || '', updated_at: new Date().toISOString() }, { onConflict: 'id' });
+        }
+    } catch(e) {}
+}
+
+// Функция для параллельной обработки с ограничением (concurrency limit)
+async function processWithLimit(items, limit, asyncProcessor) {
     const results = [];
+    const executing = [];
     for (const item of items) {
-        const result = await asyncProcessor(item);
-        results.push(result);
-        // Задержка 150мс, чтобы прокси не захлебывался
-        await new Promise(r => setTimeout(r, 150)); 
+        const p = Promise.resolve().then(() => asyncProcessor(item));
+        results.push(p);
+        if (limit <= items.length) {
+            const e = p.then(() => executing.splice(executing.indexOf(e), 1));
+            executing.push(e);
+            if (executing.length >= limit) await Promise.race(executing);
+        }
     }
-    return results;
+    return Promise.all(results);
 }
 
 async function buildAnimeObject(raw) {
     const searchTitle = raw.title?.english || raw.title?.romaji || raw.title?.native || '';
+    const anilistId = String(raw.id);
     
-    // 1. Пытаемся найти в AniLibria
+    // 1. Проверяем наш кэш в БД (мгновенно!)
+    const cached = await getCachedTitle(anilistId);
+    if (cached && cached.title_ru) {
+        return {
+            id: 'anilist_' + raw.id,
+            rawId: raw.id,
+            idMal: raw.idMal,
+            title_ru: cached.title_ru, // Берём из кэша
+            title_raw: searchTitle,
+            title: cached.title_ru,
+            year: raw.seasonYear || '--',
+            episodes: raw.episodes || '?',
+            images: { jpg: { image_url: raw.coverImage?.extraLarge || raw.coverImage?.large || '' } },
+            description: cached.description || raw.description || 'Описание отсутствует.',
+            genres: raw.genres || [],
+            score: raw.averageScore ? (raw.averageScore/10).toFixed(1) : 0,
+            status: raw.status==='RELEASING'?'Онгоинг':raw.status==='FINISHED'?'Завершено':'Анонс',
+            kind: raw.format || 'TV',
+            trailerId: raw.trailer?.id || null
+        };
+    }
+    
+    // 2. Если в кэше нет — ищем в AniLibria и Shikimori
     let russianFromAniLibria = null;
     try { russianFromAniLibria = await API_AniLibria.searchRussian(searchTitle); } catch(e) {}
     
-    // 2. Если нет, идём в Shikimori (только если AniLibria не нашла)
     let shikiData = { russian:null, description:null };
     if (!russianFromAniLibria) {
         shikiData = await API_Shikimori.getRussianData(searchTitle);
     }
 
-    // 3. Финал: русское -> английское
     const finalRussianTitle = russianFromAniLibria || shikiData.russian || raw.title?.english || raw.title?.romaji || raw.title?.native || 'Без названия';
-    
     const score = raw.averageScore ? (raw.averageScore/10).toFixed(1) : 0;
-    
     let cleanDesc = shikiData.description || raw.description || 'Описание отсутствует.';
     cleanDesc = cleanDesc.replace(/\[[^\]]*\]/g,'').replace(/<[^>]*>?/gm,'').trim();
+
+    // 3. Сохраняем в БД для будущих запросов (только если есть русский)
+    if (russianFromAniLibria || shikiData.russian) {
+        await saveCachedTitle(anilistId, finalRussianTitle, cleanDesc);
+    }
 
     return {
         id: 'anilist_' + raw.id,
@@ -334,7 +374,8 @@ const API = {
     getCatalog(page,limit,filters) { 
         return this._cached(`c_${page}_${limit}_${JSON.stringify(filters||{})}`, async()=>{ 
             const raw=await API_AniList.getCatalog(page,limit,filters); 
-            return await processQueue(raw, buildAnimeObject); 
+            // Параллельно по 4 запроса
+            return await processWithLimit(raw, 4, buildAnimeObject); 
         }); 
     },
     getDetails(id) { 
@@ -346,25 +387,29 @@ const API = {
     getRandom(limit) { 
         return this._cached(`r_${limit}`, async()=>{ 
             const raw=await API_AniList.getRandom(limit); 
-            return await processQueue(raw, buildAnimeObject); 
+            // Параллельно по 4 запроса
+            return await processWithLimit(raw, 4, buildAnimeObject); 
         }); 
     },
     getSeasonal(limit) { 
         return this._cached(`s_${limit}`, async()=>{ 
             const raw=await API_AniList.getSeasonal(limit); 
-            return await processQueue(raw, buildAnimeObject); 
+            // Параллельно по 4 запроса
+            return await processWithLimit(raw, 4, buildAnimeObject); 
         }); 
     },
     searchByGenres(g,l,ex) { 
         return this._cached(`g_${JSON.stringify(g)}_${l}`, async()=>{ 
             const raw=await API_AniList.searchByGenres(g,l,ex); 
-            return await processQueue(raw, buildAnimeObject); 
+            // Параллельно по 4 запроса
+            return await processWithLimit(raw, 4, buildAnimeObject); 
         }); 
     },
     getTopRated(limit) { 
         return this._cached(`top_${limit}`, async()=>{ 
             const raw=await API_AniList.getTopRated(limit); 
-            return await processQueue(raw, buildAnimeObject); 
+            // Параллельно по 4 запроса
+            return await processWithLimit(raw, 4, buildAnimeObject); 
         }); 
     }
 };
@@ -658,7 +703,7 @@ async function renderEffectsInShop(container) {
         (items || []).forEach(e => { 
             const isActive = stats.active_effect === e.id; 
             let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${e.price} 🪙</div>`; 
-            html += `<div class="shop-item" onclick="startPreview('effect', parseJSONAttr('${safeJSONAttr(e)}'))"><div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items: center; justify-content: center;"><div class="avatar" style="width:40px; height:40px; font-size:12px; background:#333; border:1px solid #555;">AA</div></div><div class="shop-info"><div class="shop-name">${escapeHTML(e.name)}</div>${btnHtml}</div></div>`; 
+            html += `<div class="shop-item" onclick="startPreview('effect', parseJSONAttr('${safeJSONAttr(e)}'))"><div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items:center; justify-content:center;"><div class="avatar" style="width:40px; height:40px; font-size:12px; background:#333; border:1px solid #555;">AA</div></div><div class="shop-info"><div class="shop-name">${escapeHTML(e.name)}</div>${btnHtml}</div></div>`; 
         }); 
         container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет эффектов</div>'; 
     } catch(e) { console.error(e); } 
