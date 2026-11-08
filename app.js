@@ -196,7 +196,7 @@ const API_AniList = {
     },
     async getDetails(id) {
         const cleanId = String(id).replace('anilist_','');
-        const q = `query($id:Int){Media(id:$id,type:ANIME){${this._mediaFields} description(asHtml:false) relations{edges{relationType node{id title{romaji english} coverImage{large} seasonYear format}}}}}`;
+        const q = `query($id:Int){Media(id:$id,type:ANIME){${this._mediaFields} description(asHtml:false) relations{edges{relationType node{id idMal title{romaji english native} coverImage{large} seasonYear format}}}}}`;
         const data = await this.fetch(q, { id: parseInt(cleanId) }).catch(()=>null);
         return data?.Media || null;
     },
@@ -1066,7 +1066,7 @@ async function loadCatalog(reset = false) {
 }
 function loadMoreCatalog() { if (!hasMoreCatalog || isCatalogLoading) return; catalogPage++; loadCatalog(false); }
 
-// --- ПОИСК СЕЗОНОВ ПО НАЗВАНИЮ ---
+// --- ПОИСК СЕЗОНОВ ПО НАЗВАНИЮ И СВЯЗЯМ ---
 async function searchFranchiseByTitle(anime) {
     const cleanTitle = (title) => {
         if (!title) return '';
@@ -1080,25 +1080,73 @@ async function searchFranchiseByTitle(anime) {
     const query = cleanTitle(anime.title_ru) || cleanTitle(anime.title_raw);
     if (!query) return [];
 
+    let foundItems = [];
+
+    // 1. Ищем по названию
     try {
-        const searchQuery = `query($search: String) { Page(page: 1, perPage: 20) { media(search: $search, type: ANIME, sort: START_DATE) { id title{romaji english} coverImage{large} seasonYear format } } }`;
+        const searchQuery = `query($search: String) { Page(page: 1, perPage: 20) { media(search: $search, type: ANIME, sort: START_DATE) { id idMal title{romaji english native} coverImage{large} seasonYear format } } }`;
         const data = await API_AniList.fetch(searchQuery, { search: query }).catch(() => null);
         
-        if (!data?.Page?.media) return [];
-
-        return data.Page.media
-            .filter(m => String(m.id) !== String(anime.rawId) && m.format !== 'MANGA' && m.format !== 'NOVEL')
-            .map(m => ({
-                id: 'anilist_' + m.id,
-                title: m.title.romaji || m.title.english,
-                image: m.coverImage.large,
-                year: m.seasonYear,
-                format: m.format
-            }));
+        if (data?.Page?.media) {
+            foundItems = data.Page.media;
+        }
     } catch (e) {
-        console.error('Ошибка поиска сезонов:', e);
-        return [];
+        console.error('Ошибка поиска по названию:', e);
     }
+
+    // 2. Если по названию ничего не нашли (или нашли мало), берем связи (relations)
+    if (foundItems.length < 2 && anime.relations?.edges) {
+        const relations = anime.relations.edges.map(e => e.node).filter(n => n.format === 'TV' || n.format === 'TV_SHORT' || n.format === 'MOVIE' || n.format === 'OVA' || n.format === 'ONA');
+        const existingIds = new Set(foundItems.map(i => i.id));
+        relations.forEach(r => {
+            if (!existingIds.has(r.id)) {
+                foundItems.push({
+                    id: r.id,
+                    idMal: r.idMal,
+                    title: r.title,
+                    coverImage: r.coverImage,
+                    seasonYear: r.seasonYear,
+                    format: r.format
+                });
+            }
+        });
+    }
+
+    // Фильтруем: убираем текущее аниме и мангу/ранобэ
+    const filtered = foundItems.filter(m => 
+        String(m.id) !== String(anime.rawId) && 
+        m.format !== 'MANGA' && 
+        m.format !== 'NOVEL'
+    );
+
+    // 3. Переводим названия на русский через наш кэш
+    const translatedItems = await processWithLimit(filtered, 3, async (item) => {
+        const rawTitle = item.title?.romaji || item.title?.english || item.title?.native || '';
+        if (/[а-яА-ЯёЁ]/.test(rawTitle)) {
+            return { id: 'anilist_' + item.id, title: rawTitle, image: item.coverImage.large, year: item.seasonYear, format: item.format };
+        }
+
+        let ruTitle = rawTitle;
+        try {
+            const cached = await getCachedTitle(item.id);
+            if (cached && cached.title_ru) {
+                ruTitle = cached.title_ru;
+            } else {
+                const anilibria = await API_AniLibria.searchRussian(rawTitle);
+                if (anilibria) {
+                    ruTitle = anilibria;
+                } else {
+                    const shiki = await API_Shikimori.getRussianData(rawTitle);
+                    if (shiki.russian) ruTitle = shiki.russian;
+                }
+            }
+        } catch(e) { /* игнорируем ошибки перевода */ }
+
+        return { id: 'anilist_' + item.id, title: ruTitle, image: item.coverImage.large, year: item.seasonYear, format: item.format };
+    });
+
+    // Сортируем по году выхода
+    return translatedItems.sort((a, b) => (a.year || 0) - (b.year || 0));
 }
 
 // --- СКРИНШОТЫ ИЗ SHIKIMORI ---
