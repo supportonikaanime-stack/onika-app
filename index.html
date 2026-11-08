@@ -508,9 +508,12 @@
         <section class="content-section" id="section-socials">
             <div class="section-header"><h2>🌐 Наши сообщества</h2></div>
             <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 20px;">
+                
                 <!-- Telegram -->
                 <a href="https://t.me/onikaanime" target="_blank" class="tg-banner" style="margin-bottom: 0; padding: 12px; background: rgba(0,136,204,0.1); border-color: rgba(0,136,204,0.2);">
-                    <div class="tg-icon" style="background: #0088cc; width: 40px; height: 40px; font-size: 18px;">✈️</div>
+                    <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 15px;">
+                        <img src="telegram.png" style="width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 4px rgba(0,136,204,0.8));" onerror="this.style.display='none'; this.parentElement.innerHTML='✈️';">
+                    </div>
                     <div class="tg-text">
                         <h3 style="font-size: 15px;">Наш Telegram-канал</h3>
                         <p style="font-size: 11px;">Новости, розыгрыши и анонсы</p>
@@ -519,7 +522,9 @@
                 
                 <!-- VK -->
                 <a href="https://vk.com/onikaanime" target="_blank" class="tg-banner" style="margin-bottom: 0; padding: 12px; background: rgba(0,119,255,0.1); border-color: rgba(0,119,255,0.2);">
-                    <div class="tg-icon" style="background: #0077FF; width: 40px; height: 40px; font-size: 14px; font-weight: 800; border-radius: 8px;">VK</div>
+                    <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 15px;">
+                        <img src="vk.png" style="width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 4px rgba(0,119,255,0.8));" onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\'color:#0077FF;font-weight:900;font-size:14px;\'>VK</span>';">
+                    </div>
                     <div class="tg-text">
                         <h3 style="font-size: 15px;">Мы во ВКонтакте</h3>
                         <p style="font-size: 11px;">Мемы, обсуждения и опросы</p>
@@ -528,12 +533,15 @@
                 
                 <!-- TikTok -->
                 <a href="https://tiktok.com/@onikaanime" target="_blank" class="tg-banner" style="margin-bottom: 0; padding: 12px; background: rgba(255,0,80,0.1); border-color: rgba(255,0,80,0.2);">
-                    <div class="tg-icon" style="background: #000; border: 1px solid #25F4EE; width: 40px; height: 40px; font-size: 20px; border-radius: 12px;">🎵</div>
+                    <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 15px;">
+                        <img src="tiktok.png" style="width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 4px rgba(255,255,255,0.5));" onerror="this.style.display='none'; this.parentElement.innerHTML='🎵';">
+                    </div>
                     <div class="tg-text">
                         <h3 style="font-size: 15px;">Мы в TikTok</h3>
                         <p style="font-size: 11px;">Короткие видео и нарезки</p>
                     </div>
                 </a>
+
             </div>
         </section>
 
@@ -887,6 +895,6 @@
         </div>
     </nav>
 
-    <script src="app.js?v=4100"></script>
+    <script src="app.js?v=4200"></script>
 </body>
 </html>
