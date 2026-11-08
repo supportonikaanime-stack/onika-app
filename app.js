@@ -196,7 +196,7 @@ const API_AniList = {
     },
     async getDetails(id) {
         const cleanId = String(id).replace('anilist_','');
-        const q = `query($id:Int){Media(id:$id,type:ANIME){${this._mediaFields} description(asHtml:false) relations{edges{relationType node{id idMal title{romaji english native} coverImage{large} seasonYear format}}}}}`;
+        const q = `query($id:Int){Media(id:$id,type:ANIME){${this._mediaFields} description(asHtml:false) nextAiringEpisode{airingAt timeUntilAiring episode} relations{edges{relationType node{id idMal title{romaji english native} coverImage{large} seasonYear format}}}}}`;
         const data = await this.fetch(q, { id: parseInt(cleanId) }).catch(()=>null);
         return data?.Media || null;
     },
@@ -332,7 +332,8 @@ async function buildAnimeObject(raw) {
             status: raw.status==='RELEASING'?'Онгоинг':raw.status==='FINISHED'?'Завершено':raw.status==='NOT_YET_RELEASED'?'Анонс':'Анонс',
             kind: raw.format || 'TV',
             trailerId: raw.trailer?.id || null,
-            relations: raw.relations || null
+            relations: raw.relations || null,
+            nextAiringEpisode: raw.nextAiringEpisode || null
         };
     }
 
@@ -369,7 +370,8 @@ async function buildAnimeObject(raw) {
         status: raw.status==='RELEASING'?'Онгоинг':raw.status==='FINISHED'?'Завершено':raw.status==='NOT_YET_RELEASED'?'Анонс':'Анонс',
         kind: raw.format || 'TV',
         trailerId: raw.trailer?.id || null,
-        relations: raw.relations || null
+        relations: raw.relations || null,
+        nextAiringEpisode: raw.nextAiringEpisode || null
     };
 }
 
@@ -1266,6 +1268,49 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             </div>`;
         }
 
+        // Блок "Следующая серия"
+        let nextEpisodeHtml = '';
+        if (anime.nextAiringEpisode && anime.nextAiringEpisode.airingAt) {
+            const airingAt = anime.nextAiringEpisode.airingAt * 1000;
+            const now = Date.now();
+            const diffMs = airingAt - now;
+            
+            let timeText = '';
+            if (diffMs > 0) {
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                const diffDays = Math.floor(diffHours / 24);
+                const remainingHours = diffHours % 24;
+                
+                if (diffDays > 0) {
+                    timeText = `через ${diffDays} д. ${remainingHours} ч.`;
+                } else if (diffHours > 0) {
+                    timeText = `через ${diffHours} ч.`;
+                } else {
+                    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+                    timeText = `через ${diffMinutes} мин.`;
+                }
+            } else {
+                timeText = 'уже вышла!';
+            }
+
+            const airDate = new Date(airingAt);
+            const dateStr = airDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+            const timeStr = airDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
+            nextEpisodeHtml = `
+            <div style="background: linear-gradient(135deg, rgba(91,91,255,0.15), rgba(180,74,255,0.15)); border: 1px solid rgba(91,91,255,0.4); border-radius: 16px; padding: 15px 20px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <div style="font-size: 12px; color: #a29bfe; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 4px;">Следующая серия</div>
+                    <div style="font-size: 18px; font-weight: 800; color: #fff;">Серия ${anime.nextAiringEpisode.episode}</div>
+                    <div style="font-size: 13px; color: #ccc; margin-top: 2px;">${dateStr} в ${timeStr}</div>
+                </div>
+                <div style="background: rgba(91,91,255,0.3); color: #fff; padding: 8px 14px; border-radius: 12px; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                    <svg style="width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#oa-clock"></use></svg>
+                    ${timeText}
+                </div>
+            </div>`;
+        }
+
         // Блок кадров
         let screenshotsHtml = '';
         let hasScreenshots = false;
@@ -1383,6 +1428,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 </div>
 
                 ${relationsHtml}
+                ${nextEpisodeHtml}
                 ${hasScreenshots ? `
                 <div style="margin-bottom: 30px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
