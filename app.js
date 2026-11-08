@@ -400,10 +400,11 @@ const API = {
         });
     },
     getRandom(limit) {
-        return this._cached(`r_${limit}`, async()=>{
+        // Убрано кэширование, чтобы каждый раз было новое аниме
+        return (async () => {
             const raw=await API_AniList.getRandom(limit);
             return await processWithLimit(raw, 4, buildAnimeObject);
-        });
+        })();
     },
     getSeasonal(limit) {
         return this._cached(`s_${limit}`, async()=>{
@@ -433,7 +434,7 @@ const VOICES = [{id:'anilibria',name:'AniLibria',icon:'🎙️'},{id:'studioband
 const PLAYERS = [{id:'kodik',name:'Kodik',icon:'▶️'},{id:'sibnet',name:'Sibnet',icon:'🎬'},{id:'veoveo',name:'Veoveo',icon:'🎥'}];
 let catalogPage=1, isCatalogLoading=false, hasMoreCatalog=true, catalogRequestVersion=0;
 let currentFilters = {search:'',genre:'',year:'',status:'',sort:'popularity'};
-let currentMyListFilter='all', previousScreen='catalog', searchDebounceTimer, liveSearchDebounceTimer;
+let currentMyListFilter='all', previousScreen='catalog', searchDebounceTimer;
 let currentShopTab='banners';
 let isPreviewMode=false, previewItem=null, savedStats=null;
 
@@ -1033,7 +1034,34 @@ function initCatalogFilters() {
     gc.innerHTML = h;
 }
 function setGenreFilter(genreName, btn) { currentFilters.genre = genreName; document.querySelectorAll('#genre-filters .genre-pill').forEach(el => el.classList.remove('active')); if (btn) btn.classList.add('active'); if (genreName === '' && btn) btn.innerHTML = '<div class="dot"></div>Все'; loadCatalog(true); }
-function searchAnime() { clearTimeout(searchDebounceTimer); searchDebounceTimer = setTimeout(() => { currentFilters.search = document.getElementById('search-input').value.trim(); loadCatalog(true); }, 500); }
+
+let isSearching = false;
+function searchAnime() { 
+    clearTimeout(searchDebounceTimer); 
+    searchDebounceTimer = setTimeout(async () => { 
+        const query = document.getElementById('search-input').value.trim(); 
+        currentFilters.search = query; 
+        
+        if (query && /[а-яА-ЯёЁ]/.test(query) && !isSearching) {
+            isSearching = true;
+            try {
+                const anilibria = await API_AniLibria.searchRussian(query);
+                if (anilibria) {
+                    currentFilters.search = anilibria;
+                } else {
+                    const shiki = await API_Shikimori.getRussianData(query);
+                    if (shiki && shiki.russian) {
+                        // Если Shikimori вернул русское, оставляем (AniList иногда понимает)
+                    }
+                }
+            } catch(e) { console.error(e); }
+            isSearching = false;
+        }
+        
+        loadCatalog(true); 
+    }, 500); 
+}
+
 function openFilterModal(type) {
     const modal = document.getElementById('filterModal'); const title = document.getElementById('filter-modal-title'); const container = document.getElementById('filter-options-container');
     let options = [], currentVal = currentFilters[type];
@@ -1081,95 +1109,6 @@ async function loadCatalog(reset = false) {
     finally { isCatalogLoading = false; }
 }
 function loadMoreCatalog() { if (!hasMoreCatalog || isCatalogLoading) return; catalogPage++; loadCatalog(false); }
-
-// --- ЖИВОЙ ПОИСК (LIVE SEARCH) ---
-let liveSearchVersion = 0;
-function handleLiveSearch() {
-    const query = document.getElementById('search-input').value.trim();
-    const container = document.getElementById('live-search-results');
-    if (!container) return;
-
-    if (query.length < 2) {
-        container.classList.remove('active');
-        container.innerHTML = '';
-        return;
-    }
-
-    container.classList.add('active');
-    container.innerHTML = '<div class="ls-loading">Поиск...</div>';
-
-    clearTimeout(liveSearchDebounceTimer);
-    liveSearchDebounceTimer = setTimeout(async () => {
-        const myVersion = ++liveSearchVersion;
-        try {
-            // Умный поиск: если ввели русское название, сначала ищем английское
-            let searchQuery = query;
-            if (/[а-яА-ЯёЁ]/.test(query)) {
-                const shiki = await API_Shikimori.getRussianData(query);
-                // Если нашли английское название (romaji), используем его, иначе оставляем как есть
-                if (shiki && shiki.russian) {
-                    // На самом деле Shikimori возвращает русское, а нам нужно английское.
-                    // Попробуем поискать через AniList напрямую по русскому запросу (AniList иногда понимает)
-                    // Или используем AniLibria для поиска
-                }
-            }
-
-            // Запрос в AniList
-            const q = `query($search: String) { Page(page: 1, perPage: 5) { media(search: $search, type: ANIME, sort: POPULARITY_DESC) { id title{romaji english native} coverImage{large} seasonYear format } } }`;
-            const data = await API_AniList.fetch(q, { search: searchQuery });
-
-            if (myVersion !== liveSearchVersion) return;
-
-            if (!data?.Page?.media || data.Page.media.length === 0) {
-                container.innerHTML = '<div class="ls-loading">Ничего не найдено</div>';
-                return;
-            }
-
-            let html = '';
-            for (const m of data.Page.media) {
-                const rawTitle = m.title?.romaji || m.title?.english || m.title?.native || '';
-                let ruTitle = rawTitle;
-                // Пытаемся найти русское название
-                if (!/[а-яА-ЯёЁ]/.test(rawTitle)) {
-                    try {
-                        const cached = await getCachedTitle(m.id);
-                        if (cached && cached.title_ru) ruTitle = cached.title_ru;
-                        else {
-                            const anilibria = await API_AniLibria.searchRussian(rawTitle);
-                            if (anilibria) ruTitle = anilibria;
-                            else {
-                                const shiki = await API_Shikimori.getRussianData(rawTitle);
-                                if (shiki.russian) ruTitle = shiki.russian;
-                            }
-                        }
-                    } catch(e) {}
-                }
-                const img = safeUrl(m.coverImage?.large || '');
-                const year = m.seasonYear || '';
-                const kind = m.format || '';
-                html += `<div class="ls-item" onclick="openAnimeDetail('anilist_${m.id}', 'catalog')">
-                    <img class="ls-img" src="${img}" loading="lazy">
-                    <div class="ls-info">
-                        <div class="ls-title">${escapeHTML(ruTitle)}</div>
-                        <div class="ls-meta">${year} • ${kind}</div>
-                    </div>
-                </div>`;
-            }
-            container.innerHTML = html;
-
-        } catch (e) {
-            console.error('Live search error:', e);
-            if (myVersion === liveSearchVersion) container.innerHTML = '<div class="ls-loading">Ошибка поиска</div>';
-        }
-    }, 400); // Дебаунс 400мс
-}
-
-function hideLiveSearch() {
-    setTimeout(() => {
-        const container = document.getElementById('live-search-results');
-        if (container) container.classList.remove('active');
-    }, 200);
-}
 
 // --- ПОИСК СЕЗОНОВ ПО НАЗВАНИЮ И СВЯЗЯМ ---
 async function searchFranchiseByTitle(anime) {
@@ -1620,7 +1559,19 @@ async function setAnimeStatus(status) {
     } catch(e) { console.error(e); showToast('Ошибка'); }
 }
 function toggleDescription() { const d = document.getElementById('desc-text'); const b = document.getElementById('desc-btn'); if (d.style.webkitLineClamp === '4' || d.style.webkitLineClamp === '') { d.style.webkitLineClamp = 'unset'; b.innerHTML = 'Свернуть ▲'; } else { d.style.webkitLineClamp = '4'; b.innerHTML = 'Читать дальше ▼'; } }
-async function openRandomAnime() { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium'); showToast('Ищем...'); try { const items = await API.getRandom(1); if (items && items.length > 0) openAnimeDetail(items[0].id, 'catalog'); } catch (e) {} }
+
+async function openRandomAnime() { 
+    if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium'); 
+    showToast('Ищем...'); 
+    try { 
+        // Очищаем кэш, чтобы получить новое случайное аниме
+        API._cache.delete('r_1'); 
+        const items = await API.getRandom(1); 
+        if (items && items.length > 0) openAnimeDetail(items[0].id, 'catalog'); 
+    } catch (e) {
+        console.error(e);
+    } 
+}
 
 // ==========================================
 // 11. МОЁ
