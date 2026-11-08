@@ -128,9 +128,20 @@
         .tg-text h3 { font-size: 15px; font-weight: 700; margin-bottom: 2px; color: white !important; }
         .tg-text p { font-size: 11px; color: rgba(255,255,255,0.6) !important; }
 
-        .filter-btn { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc; padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
+        .filter-btn { 
+            background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc; 
+            padding: 10px 18px; border-radius: 20px; font-size: 14px; font-weight: 600; 
+            white-space: nowrap; cursor: pointer; transition: 0.2s; 
+            display: flex; align-items: center; gap: 6px; flex-shrink: 0; 
+        }
         .filter-btn.active { background: rgba(91,91,255,0.15); border-color: #5b5bff; color: #a29bfe; }
-        .genre-pill { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc; padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        
+        .genre-pill { 
+            background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc; 
+            padding: 10px 18px; border-radius: 20px; font-size: 14px; font-weight: 600; 
+            white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 8px; 
+            flex-shrink: 0; 
+        }
         .genre-pill.active { background: #2a2a3e; color: #fff; border-color: #5b5bff; }
         .genre-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; }
 
@@ -357,6 +368,22 @@
         .icon-star { color: #ffd700; fill: #ffd700; stroke: none; width: 16px; height: 16px; }
         .icon-text { display: inline-flex; align-items: center; gap: 6px; }
 
+        /* Стили для живого поиска (Live Search) */
+        #live-search-results {
+            position: absolute; top: 100%; left: 0; width: 100%; background: #14141f;
+            border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-top: 5px;
+            z-index: 100; max-height: 350px; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            display: none;
+        }
+        #live-search-results.active { display: block; }
+        .ls-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background 0.2s; }
+        .ls-item:hover, .ls-item:active { background: rgba(255,255,255,0.05); }
+        .ls-img { width: 40px; height: 55px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+        .ls-info { flex: 1; min-width: 0; }
+        .ls-title { font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ls-meta { font-size: 12px; color: #888; margin-top: 2px; }
+        .ls-loading { padding: 20px; text-align: center; color: #888; font-size: 14px; }
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
         }
@@ -501,11 +528,14 @@
     </div>
 
     <div id="screen-catalog" class="screen">
-        <div style="padding: 20px 20px 10px 20px;">
+        <div style="padding: 20px 20px 10px 20px; position: relative;">
             <div style="display: flex; align-items: center; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 0 15px; margin-bottom: 15px;">
                 <span style="color: #888; display: flex; align-items: center;"><svg style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-search"></use></svg></span>
-                <input type="text" id="search-input" placeholder="Найти аниме..." oninput="searchAnime()" style="flex: 1; background: transparent; border: none; padding: 14px 10px; color: #fff; font-size: 15px; outline: none;">
+                <input type="text" id="search-input" placeholder="Найти аниме..." oninput="handleLiveSearch()" onblur="hideLiveSearch()" style="flex: 1; background: transparent; border: none; padding: 14px 10px; color: #fff; font-size: 15px; outline: none;">
             </div>
+            <!-- Выпадающее окно поиска -->
+            <div id="live-search-results"></div>
+            
             <div onclick="openRandomAnime()" style="display: flex; align-items: center; justify-content: space-between; background: #14141f; border-radius: 16px; padding: 16px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <div style="width: 45px; height: 45px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #a29bfe;"><svg style="width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-dice"></use></svg></div>
@@ -526,7 +556,7 @@
             </div>
 
             <div id="filters-wrapper" class="filters-collapsed">
-                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;" id="genre-filters"></div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;" id="genre-filters"></div>
                 <div style="display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 10px;" id="dropdown-filters">
                     <button id="filter-btn-year" class="filter-btn ripple-btn" onclick="openFilterModal('year')">Год ⌄</button>
                     <button id="filter-btn-status" class="filter-btn ripple-btn" onclick="openFilterModal('status')">Статус ⌄</button>
@@ -848,6 +878,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4608"></script>
+    <script src="app.js?v=4610"></script>
 </body>
 </html>
