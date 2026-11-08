@@ -1157,6 +1157,18 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             }
         }
 
+        // --- ВОССТАНОВЛЕННЫЙ БЛОК (ОЦЕНКИ И КОММЕНТАРИИ) ---
+        let userRating = 0;
+        let comments = [];
+        if (supabaseClient && MY_ID) {
+            try {
+                const { data: listItem } = await supabaseClient.from('user_lists').select('rating').eq('user_id', MY_ID).eq('anime_id', id).single();
+                if (listItem && listItem.rating) userRating = listItem.rating;
+                const { data: cmts } = await supabaseClient.from('anime_comments').select('*').eq('anime_id', id).order('created_at', { ascending: false });
+                comments = cmts || [];
+            } catch(e) { console.error(e); }
+        }
+
         const title = escapeHTML(anime.title_ru);
         const titleRaw = escapeHTML(anime.title_raw || anime.title_ru);
         const desc = escapeHTML(anime.description);
