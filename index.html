@@ -12,9 +12,14 @@
         
         :root { --bg: #0a0a0f; --card: #1a1a20; --primary: #5b5bff; --text: #fff; --muted: #888; --nav-h: 65px; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background: var(--bg); color: var(--text); padding-bottom: calc(var(--nav-h) + 20px); overflow-x: hidden; }
         
-        .screen { display: none; }
+        /* CANVAS НА ФОНЕ */
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; opacity: 0.4; background: transparent; }
+        
+        /* Основной фон теперь полупрозрачный, чтобы сетка просвечивала */
+        body { background: linear-gradient(180deg, #0a0a0f 0%, #050508 100%); color: var(--text); padding-bottom: calc(var(--nav-h) + 20px); overflow-x: hidden; }
+        
+        .screen { display: none; position: relative; z-index: 1; }
         .screen.active { display: block; animation: screenEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
 
         @keyframes screenEnter { from { opacity: 0; transform: translateY(14px) scale(0.995); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -91,7 +96,7 @@
         .loading-text { animation: textPulse 1.2s ease-in-out infinite; color: #888; text-align: center; padding: 20px; }
 
         /* АВТОРИЗАЦИЯ */
-        .auth-screen { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 100000; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+        .auth-screen { display: none; position: fixed; inset: 0; background: rgba(10, 10, 15, 0.98); z-index: 100000; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
         .auth-screen.active { display: flex; }
         .auth-box { width: 100%; max-width: 400px; background: #14141f; border-radius: 24px; padding: 30px 24px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 60px rgba(0,0,0,0.6); animation: modalPop 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
         .auth-logo { text-align: center; font-size: 32px; font-weight: 900; margin-bottom: 24px; background: linear-gradient(90deg, #5b5bff, #b44aff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
@@ -412,6 +417,9 @@
     </style>
 </head>
 <body>
+
+    <!-- ХОЛСТ ДЛЯ ФОНА -->
+    <canvas id="bg-canvas"></canvas>
 
     <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
       <symbol id="oa-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
@@ -895,6 +903,91 @@
         </div>
     </nav>
 
-    <script src="app.js?v=4200"></script>
+    <!-- СКРИПТ ГЕНЕРАЦИИ ФОНА -->
+    <script>
+        (function initNeuralBackground() {
+            const canvas = document.getElementById('bg-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            let width, height;
+            let particles = [];
+            // Настройки
+            const particleCount = 60; // Количество точек
+            const maxDistance = 120;  // Максимальное расстояние для линии
+            const speed = 0.5;        // Скорость движения
+            
+            // Фиолетовый цвет (RGB)
+            const lineColor = 'rgba(140, 80, 255, 0.4)'; 
+            const dotColor = 'rgba(180, 120, 255, 0.8)';
+
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+
+            function createParticles() {
+                particles = [];
+                for (let i = 0; i < particleCount; i++) {
+                    particles.push({
+                        x: Math.random() * width,
+                        y: Math.random() * height,
+                        vx: (Math.random() - 0.5) * speed,
+                        vy: (Math.random() - 0.5) * speed
+                    });
+                }
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+
+                // Двигаем и рисуем точки
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    // Отталкивание от краев
+                    if (p.x < 0 || p.x > width) p.vx *= -1;
+                    if (p.y < 0 || p.y > height) p.vy *= -1;
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+                    ctx.fillStyle = dotColor;
+                    ctx.fill();
+                });
+
+                // Рисуем линии
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const dx = particles[i].x - particles[j].x;
+                        const dy = particles[i].y - particles[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < maxDistance) {
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            // Прозрачность зависит от расстояния
+                            ctx.strokeStyle = `rgba(140, 80, 255, ${0.4 * (1 - dist / maxDistance)})`;
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(animate);
+            }
+
+            window.addEventListener('resize', () => {
+                resize();
+                createParticles();
+            });
+
+            resize();
+            createParticles();
+            animate();
+        })();
+    </script>
+
+    <script src="app.js?v=4300"></script>
 </body>
 </html>
