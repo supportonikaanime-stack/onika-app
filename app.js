@@ -1075,7 +1075,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         const desc = escapeHTML(anime.description);
         const score = anime.score ? Number(anime.score).toFixed(1) : '?';
         const poster = safeUrl(anime.images.jpg.image_url);
-        const bgImage = anime.banner_image ? safeUrl(anime.banner_image) : poster;
 
         const stats = getStats();
         const favEntry = (stats.favedAnime || []).find(a => a.id === anime.id);
@@ -1084,17 +1083,17 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         window._animeCache = window._animeCache || {};
         window._animeCache[anime.id] = anime;
 
+        // Генерация кадров
         let screenshotsHtml = '';
+        let hasScreenshots = false;
         if (anime.trailerId) {
-            // Берем стандартные превью YouTube (hqdefault и maxresdefault, sddefault, mqdefault)
-            // Это даст 4 разных кадра
             const ytFrames = [
                 `https://img.youtube.com/vi/${anime.trailerId}/maxresdefault.jpg`,
                 `https://img.youtube.com/vi/${anime.trailerId}/sddefault.jpg`,
                 `https://img.youtube.com/vi/${anime.trailerId}/hqdefault.jpg`,
                 `https://img.youtube.com/vi/${anime.trailerId}/mqdefault.jpg`
             ];
-            
+            hasScreenshots = true;
             screenshotsHtml = ytFrames.map((url, i) => `
                 <div style="scroll-snap-align: start; flex: 0 0 75%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; background: #222; border: 1px solid rgba(255,255,255,0.1); position: relative;">
                     <img src="${url}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none'">
@@ -1105,7 +1104,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
 
         const isUpcoming = anime.status === 'Анонс';
         const watchBtnHtml = isUpcoming 
-            ? `<button class="btn-primary" style="background: #2a2a3e; color: #888; box-shadow: none; cursor: not-allowed;" disabled><svg class="icon-inline" style="stroke:#888;fill:#888;width:20px;height:20px;margin-right:8px;"><use href="#oa-clock"></use></svg> Скоро... <span style="margin-left: auto; font-size: 20px; line-height: 1;">⋮</span></button>`
+            ? `<button class="btn-primary" style="background: #2a2a3e; color: #888; box-shadow: none; cursor: not-allowed;" disabled><svg class="icon-inline" style="stroke:#888;fill:#888;width:20px;height:20px;margin-right:8px;"><use href="#oa-clock"></use></svg> Скоро</button>`
             : `<button class="btn-primary ripple-btn" onclick="startWatching(window._animeCache['${escapeHTML(anime.id)}'])" style="padding: 18px; font-size: 18px; display:flex;align-items:center;justify-content:center;gap:8px; border-radius: 14px;"><svg class="icon-inline" style="stroke:#fff;fill:#fff;width:22px;height:22px;"><use href="#oa-play"></use></svg> Смотреть</button>`;
 
         let starsHtml = '';
@@ -1140,7 +1139,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         container.innerHTML = `
         <div class="fade-in" style="position: relative;">
             <div style="position: absolute; top: -20px; left: -20px; width: calc(100% + 40px); height: 350px; z-index: -1; overflow: hidden;">
-                <img src="${bgImage}" style="width: 100%; height: 100%; object-fit: cover; object-position: center top; opacity: 0.5; mask-image: linear-gradient(to bottom, black 10%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 10%, transparent 100%);">
+                <img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; object-position: center top; opacity: 0.5; mask-image: linear-gradient(to bottom, black 10%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 10%, transparent 100%);">
                 <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 40%, var(--bg) 95%);"></div>
             </div>
 
@@ -1167,8 +1166,9 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                     </button>
                 </div>
 
-                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;">
                     ${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #ccc; padding: 8px 16px; border-radius: 20px; font-size: 14px;">${escapeHTML(g)}</span>`).join('')}
+                    <span style="background: ${isUpcoming ? 'rgba(255,193,7,0.15)' : 'rgba(46,204,113,0.15)'}; border: 1px solid ${isUpcoming ? 'rgba(255,193,7,0.4)' : 'rgba(46,204,113,0.4)'}; color: ${isUpcoming ? '#ffc107' : '#2ecc71'}; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;">${escapeHTML(anime.status)}</span>
                 </div>
 
                 <div style="margin-bottom: 25px;">
@@ -1176,15 +1176,16 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                     <button id="desc-btn" onclick="toggleDescription()" style="display: none; background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 15px; margin-top: 8px; cursor: pointer; padding: 0; display: flex; align-items: center; gap: 4px;">Читать дальше <svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;"><use href="#oa-chevron-down"></use></svg></button>
                 </div>
 
+                ${hasScreenshots ? `
                 <div style="margin-bottom: 30px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <h3 style="font-size: 18px; color: #fff; margin: 0;">Кадры</h3>
-                        ${anime.trailerId ? `<a href="https://youtube.com/watch?v=${anime.trailerId}" target="_blank" style="color: #5b5bff; font-size: 13px; font-weight: 600; text-decoration: none;">Смотреть трейлер →</a>` : ''}
+                        <a href="https://youtube.com/watch?v=${anime.trailerId}" target="_blank" style="color: #5b5bff; font-size: 13px; font-weight: 600; text-decoration: none;">Смотреть трейлер →</a>
                     </div>
                     <div style="display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">
                         ${screenshotsHtml}
                     </div>
-                </div>
+                </div>` : ''}
 
                 <div style="background: #14141f; border-radius: 16px; padding: 20px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
                     <h3 style="font-size: 16px; color: #fff; margin-bottom: 12px;">Ваша оценка:</h3>
