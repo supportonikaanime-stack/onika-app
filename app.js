@@ -1120,55 +1120,52 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
     previousScreen = fromScreen; switchTab('detail');
     const container = document.getElementById('detail-content');
     container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
-    try {
-        const anime = await API.getDetails(id);
-        if (!anime) throw new Error('Not found');
-        
-        const franchiseItems = await searchFranchiseByTitle(anime);
-        const shikiScreenshots = await getShikimoriScreenshots(anime.idMal);
-        
-        let similarHtml = '';
-        if (anime.genres && anime.genres.length > 0) {
-            const genreQuery = `query($genre: String) { Page(page: 1, perPage: 10) { media(type: ANIME, genre: $genre, sort: POPULARITY_DESC) { id title{romaji english} coverImage{large} averageScore seasonYear format } } }`;
-            const genreData = await API_AniList.fetch(genreQuery, { genre: anime.genres[0] }).catch(() => null);
-            
-            if (genreData?.Page?.media) {
-                const similarItems = genreData.Page.media
-                    .filter(m => String(m.id) !== String(anime.rawId))
-                    .slice(0, 6)
-                    .map(m => ({
-                        id: 'anilist_' + m.id,
-                        title: m.title.romaji || m.title.english,
-                        image: m.coverImage.large,
-                        score: m.averageScore ? (m.averageScore/10).toFixed(1) : '?'
-                    }));
+    
+    // Инициализируем переменные заранее, чтобы они точно были доступны
+    let userRating = 0;
+    let comments = [];
+    let franchiseItems = [];
+    let shikiScreenshots = [];
+    let similarItems = [];
 
-                if (similarItems.length > 0) {
-                    similarHtml = `
-                    <div style="margin-bottom: 30px;">
-                        <h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">Похожие по жанру (${anime.genres[0]})</h3>
-                        <div style="display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">
-                            ${similarItems.map(s => {
-                                return `<div class="card" style="min-width: 130px; width: 130px; height: 195px;" onclick="openAnimeDetail('${escapeHTML(s.id)}', 'detail')"><img class="card-img" src="${safeUrl(s.image)}" loading="lazy"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;display:flex;align-items:center;gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${s.score}</div><div class="card-title">${escapeHTML(s.title)}</div></div>`;
-                            }).join('')}
-                        </div>
-                    </div>`;
+    try {
+        // 1. Получаем данные об аниме
+        const anime = await API.getDetails(id);
+        if (!anime) throw new Error('Anime not found');
+
+        // 2. Безопасно грузим всё остальное (если что-то упадет, страница всё равно отрисуется)
+        try { franchiseItems = await searchFranchiseByTitle(anime); } catch(e) { console.error('Franchise error:', e); }
+        try { shikiScreenshots = await getShikimoriScreenshots(anime.idMal); } catch(e) { console.error('Shiki error:', e); }
+        
+        try {
+            if (anime.genres && anime.genres.length > 0) {
+                const genreQuery = `query($genre: String) { Page(page: 1, perPage: 10) { media(type: ANIME, genre: $genre, sort: POPULARITY_DESC) { id title{romaji english} coverImage{large} averageScore seasonYear format } } }`;
+                const genreData = await API_AniList.fetch(genreQuery, { genre: anime.genres[0] });
+                if (genreData?.Page?.media) {
+                    similarItems = genreData.Page.media
+                        .filter(m => String(m.id) !== String(anime.rawId))
+                        .slice(0, 6)
+                        .map(m => ({
+                            id: 'anilist_' + m.id,
+                            title: m.title.romaji || m.title.english,
+                            image: m.coverImage.large,
+                            score: m.averageScore ? (m.averageScore/10).toFixed(1) : '?'
+                        }));
                 }
             }
-        }
+        } catch(e) { console.error('Similar error:', e); }
 
-        // --- ВОССТАНОВЛЕННЫЙ БЛОК (ОЦЕНКИ И КОММЕНТАРИИ) ---
-        let userRating = 0;
-        let comments = [];
+        // 3. Безопасно грузим оценки и комментарии
         if (supabaseClient && MY_ID) {
             try {
                 const { data: listItem } = await supabaseClient.from('user_lists').select('rating').eq('user_id', MY_ID).eq('anime_id', id).single();
                 if (listItem && listItem.rating) userRating = listItem.rating;
                 const { data: cmts } = await supabaseClient.from('anime_comments').select('*').eq('anime_id', id).order('created_at', { ascending: false });
                 comments = cmts || [];
-            } catch(e) { console.error(e); }
+            } catch(e) { console.error('DB error:', e); }
         }
 
+        // 4. Формируем переменные для отрисовки
         const title = escapeHTML(anime.title_ru);
         const titleRaw = escapeHTML(anime.title_raw || anime.title_ru);
         const desc = escapeHTML(anime.description);
@@ -1182,28 +1179,52 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         window._animeCache = window._animeCache || {};
         window._animeCache[anime.id] = anime;
 
+        // Блок сезонов
         let relationsHtml = '';
-        if (franchiseItems.length > 0) {
+        if (franchiseItems && franchiseItems.length > 0) {
             relationsHtml = `
             <div style="margin-bottom: 30px;">
                 <h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">Все сезоны</h3>
                 <div style="display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">
-                    ${franchiseItems.map(r => {
-                        return `<div class="card" style="min-width: 130px; width: 130px; height: 195px;" onclick="openAnimeDetail('${escapeHTML(r.id)}', 'detail')"><img class="card-img" src="${safeUrl(r.image)}" loading="lazy"><div style="position:absolute;top:8px;left:8px;background:rgba(91,91,255,0.8);padding:2px 6px;border-radius:6px;font-size:9px;color:#fff;font-weight:bold;">${r.year || r.format}</div><div class="card-title">${escapeHTML(r.title)}</div></div>`;
-                    }).join('')}
+                    ${franchiseItems.map(r => `
+                        <div class="card" style="min-width: 130px; width: 130px; height: 195px;" onclick="openAnimeDetail('${escapeHTML(r.id)}', 'detail')">
+                            <img class="card-img" src="${safeUrl(r.image)}" loading="lazy">
+                            <div style="position:absolute;top:8px;left:8px;background:rgba(91,91,255,0.8);padding:2px 6px;border-radius:6px;font-size:9px;color:#fff;font-weight:bold;">${r.year || r.format}</div>
+                            <div class="card-title">${escapeHTML(r.title)}</div>
+                        </div>
+                    `).join('')}
                 </div>
             </div>`;
         }
 
+        // Блок кадров
         let screenshotsHtml = '';
         let hasScreenshots = false;
-        if (shikiScreenshots.length > 0) {
+        if (shikiScreenshots && shikiScreenshots.length > 0) {
             hasScreenshots = true;
-            screenshotsHtml = shikiScreenshots.map((url, i) => `
+            screenshotsHtml = shikiScreenshots.map((url) => `
                 <div style="scroll-snap-align: start; flex: 0 0 75%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; background: #222; border: 1px solid rgba(255,255,255,0.1); position: relative;">
                     <img src="${safeUrl(url)}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none'">
                 </div>
             `).join('');
+        }
+
+        // Блок похожих
+        let similarHtml = '';
+        if (similarItems && similarItems.length > 0) {
+            similarHtml = `
+            <div style="margin-bottom: 30px;">
+                <h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">Похожие по жанру (${anime.genres[0]})</h3>
+                <div style="display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">
+                    ${similarItems.map(s => `
+                        <div class="card" style="min-width: 130px; width: 130px; height: 195px;" onclick="openAnimeDetail('${escapeHTML(s.id)}', 'detail')">
+                            <img class="card-img" src="${safeUrl(s.image)}" loading="lazy">
+                            <div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;display:flex;align-items:center;gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${s.score}</div>
+                            <div class="card-title">${escapeHTML(s.title)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
         }
 
         const isUpcoming = anime.status === 'Анонс';
@@ -1219,15 +1240,14 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
 
         let commentsHtml = '';
         if (comments && comments.length > 0) {
-            comments.forEach(c => {
+            commentsHtml = comments.map(c => {
                 const aUrl = c.user_avatar ? safeUrl(c.user_avatar) : '';
                 const nameChar = c.user_name && c.user_name[0] ? escapeHTML(c.user_name[0].toUpperCase()) : '?';
                 const av = aUrl ? `<img src="${aUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : nameChar;
                 const date = new Date(c.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
                 const clickAttr = c.user_id ? `onclick="openUserFromComments('${escapeHTML(String(c.user_id))}')"` : '';
-                const cursorStyle = c.user_id ? 'cursor: pointer;' : '';
-                commentsHtml += `
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px; ${cursorStyle} transition: transform 0.15s ease;" ${clickAttr} onpointerdown="${c.user_id ? "this.style.transform='scale(0.98)'" : ''}" onpointerup="${c.user_id ? "this.style.transform='scale(1)'" : ''}" onpointerleave="${c.user_id ? "this.style.transform='scale(1)'" : ''}">
+                return `
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px; ${c.user_id ? 'cursor: pointer;' : ''} transition: transform 0.15s ease;" ${clickAttr}>
                         <div class="friend-avatar" style="width: 36px; height: 36px; flex-shrink: 0; font-size: 14px;">${av}</div>
                         <div style="flex: 1; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px;">
                             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
@@ -1237,9 +1257,12 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                             <p style="font-size: 13px; color: #ccc;">${escapeHTML(c.text)}</p>
                         </div>
                     </div>`;
-            });
-        } else commentsHtml = '<div style="font-size: 13px; color: #888; text-align: center; padding: 10px;">Пока нет комментариев</div>';
+            }).join('');
+        } else {
+            commentsHtml = '<div style="font-size: 13px; color: #888; text-align: center; padding: 10px;">Пока нет комментариев</div>';
+        }
 
+        // 5. Собираем весь HTML
         container.innerHTML = `
         <div class="fade-in" style="position: relative;">
             <div style="position: absolute; top: 0; left: -20px; width: calc(100% + 40px); height: 400px; z-index: -1; overflow: hidden;">
@@ -1267,7 +1290,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
 
                 <div style="display: flex; gap: 10px; margin-bottom: 25px; align-items: stretch; justify-content: flex-start;">
                     ${watchBtnHtml}
-                    <button onclick="openStatusModal('${escapeHTML(anime.id)}')" style="background: ${isFaved ? 'rgba(91,91,255,0.2)' : 'rgba(255,255,255,0.08)'}; border: 1px solid ${isFaved ? '#5b5bff' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#5b5bff' : '#fff'}; width: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;" onpointerdown="this.style.transform='scale(0.95)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">
+                    <button onclick="openStatusModal('${escapeHTML(anime.id)}')" style="background: ${isFaved ? 'rgba(91,91,255,0.2)' : 'rgba(255,255,255,0.08)'}; border: 1px solid ${isFaved ? '#5b5bff' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#5b5bff' : '#fff'}; width: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;">
                         <svg style="width: 24px; height: 24px; fill: ${isFaved ? '#5b5bff' : 'none'}; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-bookmark"></use></svg>
                     </button>
                 </div>
@@ -1316,9 +1339,14 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             const b = document.getElementById('desc-btn'); 
             if (d && b && d.scrollHeight > d.clientHeight) b.style.display = 'flex'; 
         }, 50);
+
     } catch (e) { 
-        console.error(e); 
-        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>'; 
+        console.error('CRITICAL DETAIL ERROR:', e); 
+        container.innerHTML = `<div style="text-align: center; padding: 40px; color: #ff4444;">
+            <h3>Ошибка загрузки</h3>
+            <p style="font-size: 12px; color: #888; margin-top: 10px;">${e.message || 'Неизвестная ошибка'}</p>
+            <button onclick="goBackFromDetail()" style="margin-top: 20px; background: #5b5bff; color: #fff; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer;">← Вернуться назад</button>
+        </div>`; 
     }
 }
 
