@@ -13,7 +13,6 @@
         :root { --bg: #0a0a0f; --card: #1a1a20; --primary: #5b5bff; --text: #fff; --muted: #888; --nav-h: 65px; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
         
-        /* CANVAS НА ФОНЕ */
         #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; opacity: 0.4; background: transparent; }
         
         body { background: linear-gradient(180deg, #0a0a0f 0%, #050508 100%); color: var(--text); padding-bottom: calc(var(--nav-h) + 20px); overflow-x: hidden; }
@@ -37,13 +36,7 @@
         @keyframes heroProgress { from { width: 0%; } to { width: 100%; } }
         @keyframes sectionFadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* SKELETON LOADERS */
-        .skeleton {
-            background: linear-gradient(90deg, #1a1a20 0%, #25252e 40%, #2e2e3a 50%, #25252e 60%, #1a1a20 100%);
-            background-size: 800px 100%;
-            animation: skeletonShimmer 1.4s linear infinite;
-            border-radius: 8px; position: relative; overflow: hidden;
-        }
+        .skeleton { background: linear-gradient(90deg, #1a1a20 0%, #25252e 40%, #2e2e3a 50%, #25252e 60%, #1a1a20 100%); background-size: 800px 100%; animation: skeletonShimmer 1.4s linear infinite; border-radius: 8px; position: relative; overflow: hidden; }
         .skeleton-text { height: 12px; margin-bottom: 8px; border-radius: 6px; }
         .skeleton-text.short { width: 60%; }
         .skeleton-circle { border-radius: 50%; }
@@ -80,7 +73,6 @@
         .ripple-btn .ripple { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.35); transform: scale(0); animation: rippleAnim 0.6s ease-out; pointer-events: none; }
         .loading-text { animation: textPulse 1.2s ease-in-out infinite; color: #888; text-align: center; padding: 20px; }
 
-        /* АВТОРИЗАЦИЯ */
         .auth-screen { display: none; position: fixed; inset: 0; background: rgba(10, 10, 15, 0.98); z-index: 100000; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
         .auth-screen.active { display: flex; }
         .auth-box { width: 100%; max-width: 400px; background: #14141f; border-radius: 24px; padding: 30px 24px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 60px rgba(0,0,0,0.6); animation: modalPop 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
@@ -98,7 +90,6 @@
         .auth-footer { text-align: center; color: #888; font-size: 13px; margin-top: 20px; line-height: 1.5; }
         .auth-link { color: #5b5bff; font-weight: 700; cursor: pointer; text-decoration: underline; }
 
-        /* ОСНОВНЫЕ СТИЛИ */
         .hero-section { position: relative; height: 62vh; min-height: 380px; max-height: 520px; overflow: hidden; border-radius: 0 0 20px 20px; background: #111; }
         .hero-slider { position: relative; width: 100%; height: 100%; }
         .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; visibility: hidden; transition: 0.6s; display: flex; align-items: flex-end; }
@@ -268,7 +259,6 @@
         .settings-btn { width: 100%; padding: 15px; border-radius: 12px; background: #1a1a20; border: 1px solid rgba(255,255,255,0.1); color: #fff; text-align: left; font-size: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .settings-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; margin-right: 10px; }
 
-        /* МАГАЗИН */
         .shop-tabs { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 15px; margin-top: 10px; }
         .shop-tabs::-webkit-scrollbar { display: none; }
         .shop-tab { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #888; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: 0.2s; }
@@ -383,11 +373,7 @@
         .icon-text { display: inline-flex; align-items: center; gap: 6px; }
 
         @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
+            *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
         }
     </style>
 </head>
@@ -462,14 +448,10 @@
             </div>
 
             <div id="form-verify" style="display:none;">
-                <p style="text-align: center; color: #ccc; margin-bottom: 20px; font-size: 14px;">
-                    Мы отправили код на вашу почту. Введите его ниже:
-                </p>
+                <p style="text-align: center; color: #ccc; margin-bottom: 20px; font-size: 14px;">Мы отправили код на вашу почту. Введите его ниже:</p>
                 <input type="text" id="verify-code" class="auth-input" placeholder="8-значный код" maxlength="8" inputmode="numeric">
                 <button class="auth-btn" id="verify-btn" onclick="handleVerifyCode()">Подтвердить</button>
-                <div class="auth-footer">
-                    <span class="auth-link" onclick="switchAuthTab('login')">Назад ко входу</span>
-                </div>
+                <div class="auth-footer"><span class="auth-link" onclick="switchAuthTab('login')">Назад ко входу</span></div>
             </div>
         </div>
     </div>
@@ -498,41 +480,27 @@
             <div class="horizontal-scroll" id="popular-list"></div>
         </section>
         
-        <!-- БЛОК СОЦИАЛЬНЫХ СЕТЕЙ -->
         <section class="content-section" id="section-socials">
             <div class="section-header"><h2><svg class="icon-inline" style="color:#fff;"><use href="#oa-planet"></use></svg> Наши сообщества</h2></div>
             <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 20px;">
-                
                 <a href="https://t.me/onikaanime" target="_blank" class="tg-banner" style="background: rgba(0,136,204,0.1); border-color: rgba(0,136,204,0.2);">
                     <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 15px;">
                         <img src="telegram.png" style="width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 4px rgba(0,136,204,0.8));" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'icon-inline\' style=\'color:#0088cc;width:32px;height:32px;\'><use href=\'#oa-send\'></use></svg>';">
                     </div>
-                    <div class="tg-text">
-                        <h3>Наш Telegram-канал</h3>
-                        <p>Новости, розыгрыши и анонсы</p>
-                    </div>
+                    <div class="tg-text"><h3>Наш Telegram-канал</h3><p>Новости, розыгрыши и анонсы</p></div>
                 </a>
-                
                 <a href="https://vk.com/onikaanime" target="_blank" class="tg-banner" style="background: rgba(0,119,255,0.1); border-color: rgba(0,119,255,0.2);">
                     <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 15px;">
                         <img src="vk.png" style="width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 4px rgba(0,119,255,0.8));" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'icon-inline\' style=\'color:#0077FF;width:32px;height:32px;\'><use href=\'#oa-friends\'></use></svg>';">
                     </div>
-                    <div class="tg-text">
-                        <h3>Мы во ВКонтакте</h3>
-                        <p>Мемы, обсуждения и опросы</p>
-                    </div>
+                    <div class="tg-text"><h3>Мы во ВКонтакте</h3><p>Мемы, обсуждения и опросы</p></div>
                 </a>
-                
                 <a href="https://tiktok.com/@onikaanime" target="_blank" class="tg-banner" style="background: rgba(255,0,80,0.1); border-color: rgba(255,0,80,0.2);">
                     <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 15px;">
                         <img src="tiktok.png" style="width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 4px rgba(255,255,255,0.5));" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'icon-inline\' style=\'color:#fff;width:32px;height:32px;\'><use href=\'#oa-play\'></use></svg>';">
                     </div>
-                    <div class="tg-text">
-                        <h3>Мы в TikTok</h3>
-                        <p>Короткие видео и нарезки</p>
-                    </div>
+                    <div class="tg-text"><h3>Мы в TikTok</h3><p>Короткие видео и нарезки</p></div>
                 </a>
-
             </div>
         </section>
 
@@ -541,7 +509,6 @@
             <div class="horizontal-scroll" id="upcoming-list"></div>
         </section>
 
-        <!-- ТОП ПОЛЬЗОВАТЕЛЕЙ -->
         <section class="content-section" id="section-top-users" style="display: none;">
             <div class="section-header"><h2><svg class="icon-inline" style="color:#ffd700;"><use href="#oa-trophy"></use></svg> Топы</h2></div>
             <div id="top-users-list" style="display: flex; flex-direction: column; gap: 12px; padding: 0 20px;"></div>
@@ -658,16 +625,13 @@
     <div id="screen-profile" class="screen">
         <header class="profile-header">
             <h1>Профиль</h1>
-            <button onclick="signOut()" class="settings-btn ripple-btn" style="width: auto; margin: 0; padding: 8px 16px; font-size: 14px; color: #ff2d78; border-color: rgba(255,45,120,0.3);">
-                Выйти
-            </button>
+            <button onclick="signOut()" class="settings-btn ripple-btn" style="width: auto; margin: 0; padding: 8px 16px; font-size: 14px; color: #ff2d78; border-color: rgba(255,45,120,0.3);">Выйти</button>
         </header>
         <div class="profile-container">
             <div class="user-card-wrapper">
                 <div class="user-card-top" id="profile-banner">
                     <div class="effect-container" id="particle-effect-container"></div>
                     <div class="user-card-top-content">
-                        <!-- Кнопка смены аватарки -->
                         <div class="avatar-container" onclick="document.getElementById('avatar-upload').click()" style="cursor: pointer; position: relative;">
                             <div class="avatar" id="tg-avatar"><span id="avatar-letter">?</span></div>
                             <div style="position: absolute; bottom: 0; right: 0; background: #5b5bff; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #14141f; z-index: 10;">
@@ -747,22 +711,10 @@
             <div class="settings-card" id="settings-content-tab" style="display: none;">
                 <div style="padding: 20px;">
                     <h3 style="margin-bottom: 15px; color: #fff;">Настройки</h3>
-                    <button class="settings-btn" onclick="resetBanner()">
-                        <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять баннер</span>
-                        <span style="color: #888;">›</span>
-                    </button>
-                    <button class="settings-btn" onclick="resetTitle()">
-                        <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять титул</span>
-                        <span style="color: #888;">›</span>
-                    </button>
-                    <button class="settings-btn" onclick="resetEffect()">
-                        <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять эффект</span>
-                        <span style="color: #888;">›</span>
-                    </button>
-                    <button class="settings-btn" onclick="resetBadge()">
-                        <span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять значок</span>
-                        <span style="color: #888;">›</span>
-                    </button>
+                    <button class="settings-btn" onclick="resetBanner()"><span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять баннер</span><span style="color: #888;">›</span></button>
+                    <button class="settings-btn" onclick="resetTitle()"><span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять титул</span><span style="color: #888;">›</span></button>
+                    <button class="settings-btn" onclick="resetEffect()"><span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять эффект</span><span style="color: #888;">›</span></button>
+                    <button class="settings-btn" onclick="resetBadge()"><span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять значок</span><span style="color: #888;">›</span></button>
                 </div>
             </div>
 
@@ -870,26 +822,11 @@
     <div class="preview-hint" id="previewHint">Тапни вещь — примерь её вживую до покупки</div>
 
     <nav class="bottom-nav">
-        <div class="nav-item active" onclick="switchTab('home', this)">
-            <span class="nav-icon"><svg><use href="#oa-home"></use></svg></span>
-            <span class="nav-text">Главная</span>
-        </div>
-        <div class="nav-item" onclick="switchTab('catalog', this)">
-            <span class="nav-icon"><svg><use href="#oa-catalog"></use></svg></span>
-            <span class="nav-text">Каталог</span>
-        </div>
-        <div class="nav-item" onclick="switchTab('my', this)">
-            <span class="nav-icon"><svg><use href="#oa-bookmark"></use></svg></span>
-            <span class="nav-text">Моё</span>
-        </div>
-        <div class="nav-item" onclick="switchTab('friends', this)">
-            <span class="nav-icon"><svg><use href="#oa-friends"></use></svg></span>
-            <span class="nav-text">Друзья</span>
-        </div>
-        <div class="nav-item" onclick="switchTab('profile', this)">
-            <span class="nav-icon"><svg><use href="#oa-profile"></use></svg></span>
-            <span class="nav-text">Профиль</span>
-        </div>
+        <div class="nav-item active" onclick="switchTab('home', this)"><span class="nav-icon"><svg><use href="#oa-home"></use></svg></span><span class="nav-text">Главная</span></div>
+        <div class="nav-item" onclick="switchTab('catalog', this)"><span class="nav-icon"><svg><use href="#oa-catalog"></use></svg></span><span class="nav-text">Каталог</span></div>
+        <div class="nav-item" onclick="switchTab('my', this)"><span class="nav-icon"><svg><use href="#oa-bookmark"></use></svg></span><span class="nav-text">Моё</span></div>
+        <div class="nav-item" onclick="switchTab('friends', this)"><span class="nav-icon"><svg><use href="#oa-friends"></use></svg></span><span class="nav-text">Друзья</span></div>
+        <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon"><svg><use href="#oa-profile"></use></svg></span><span class="nav-text">Профиль</span></div>
     </nav>
 
     <!-- СКРИПТ ГЕНЕРАЦИИ ФОНА -->
@@ -901,27 +838,18 @@
             
             let width, height;
             let particles = [];
-            const particleCount = 60; 
-            const maxDistance = 120;  
-            const speed = 0.5;        
+            const particleCount = 40;
+            const maxDistance = 120;
+            const speed = 0.5;
             
-            const lineColor = 'rgba(140, 80, 255, 0.4)'; 
             const dotColor = 'rgba(180, 120, 255, 0.8)';
 
-            function resize() {
-                width = canvas.width = window.innerWidth;
-                height = canvas.height = window.innerHeight;
-            }
+            function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
 
             function createParticles() {
                 particles = [];
                 for (let i = 0; i < particleCount; i++) {
-                    particles.push({
-                        x: Math.random() * width,
-                        y: Math.random() * height,
-                        vx: (Math.random() - 0.5) * speed,
-                        vy: (Math.random() - 0.5) * speed
-                    });
+                    particles.push({ x: Math.random() * width, y: Math.random() * height, vx: (Math.random() - 0.5) * speed, vy: (Math.random() - 0.5) * speed });
                 }
             }
 
@@ -952,6 +880,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4600"></script>
+    <script src="app.js?v=4601"></script>
 </body>
 </html>
