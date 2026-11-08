@@ -1075,7 +1075,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         const desc = escapeHTML(anime.description);
         const score = anime.score ? Number(anime.score).toFixed(1) : '?';
         const poster = safeUrl(anime.images.jpg.image_url);
-        
         const bgImage = anime.banner_image ? safeUrl(anime.banner_image) : poster;
 
         const stats = getStats();
@@ -1087,19 +1086,19 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
 
         let screenshotsHtml = '';
         if (anime.trailerId) {
-            const ytFrames = [0, 1, 2, 3].map(i => `https://img.youtube.com/vi/${anime.trailerId}/${i}.jpg`);
-            const frames = [...ytFrames, poster, bgImage, poster];
-            screenshotsHtml = frames.map((url, i) => `
+            // Берем стандартные превью YouTube (hqdefault и maxresdefault, sddefault, mqdefault)
+            // Это даст 4 разных кадра
+            const ytFrames = [
+                `https://img.youtube.com/vi/${anime.trailerId}/maxresdefault.jpg`,
+                `https://img.youtube.com/vi/${anime.trailerId}/sddefault.jpg`,
+                `https://img.youtube.com/vi/${anime.trailerId}/hqdefault.jpg`,
+                `https://img.youtube.com/vi/${anime.trailerId}/mqdefault.jpg`
+            ];
+            
+            screenshotsHtml = ytFrames.map((url, i) => `
                 <div style="scroll-snap-align: start; flex: 0 0 75%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; background: #222; border: 1px solid rgba(255,255,255,0.1); position: relative;">
-                    <img src="${url}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">
+                    <img src="${url}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none'">
                     ${i === 0 ? `<div style="position: absolute; inset: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><svg style="width: 40px; height: 40px; fill: #fff; stroke: none; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8));"><use href="#oa-play"></use></svg></div>` : ''}
-                </div>
-            `).join('');
-        } else {
-            const frames = [poster, bgImage, poster, bgImage];
-            screenshotsHtml = frames.map(url => `
-                <div style="scroll-snap-align: start; flex: 0 0 75%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; background: #222; border: 1px solid rgba(255,255,255,0.1);">
-                    <img src="${url}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">
                 </div>
             `).join('');
         }
@@ -1107,7 +1106,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         const isUpcoming = anime.status === 'Анонс';
         const watchBtnHtml = isUpcoming 
             ? `<button class="btn-primary" style="background: #2a2a3e; color: #888; box-shadow: none; cursor: not-allowed;" disabled><svg class="icon-inline" style="stroke:#888;fill:#888;width:20px;height:20px;margin-right:8px;"><use href="#oa-clock"></use></svg> Скоро... <span style="margin-left: auto; font-size: 20px; line-height: 1;">⋮</span></button>`
-            : `<button class="btn-primary ripple-btn" onclick="startWatching(window._animeCache['${escapeHTML(anime.id)}'])" style="flex: 1; padding: 18px; font-size: 18px; display:flex;align-items:center;gap:8px;"><svg class="icon-inline" style="stroke:#fff;fill:#fff;width:22px;height:22px;"><use href="#oa-play"></use></svg> Смотреть</button>`;
+            : `<button class="btn-primary ripple-btn" onclick="startWatching(window._animeCache['${escapeHTML(anime.id)}'])" style="padding: 18px; font-size: 18px; display:flex;align-items:center;justify-content:center;gap:8px; border-radius: 14px;"><svg class="icon-inline" style="stroke:#fff;fill:#fff;width:22px;height:22px;"><use href="#oa-play"></use></svg> Смотреть</button>`;
 
         let starsHtml = '';
         for (let i = 1; i <= 5; i++) { 
@@ -1154,40 +1153,18 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                         
                         <div style="display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: #fff;">
                             <svg style="width:16px;height:16px;color:#ffd700;fill:#ffd700;stroke:none;"><use href="#oa-star"></use></svg>
-                            ${score} <span style="color: #666; font-weight: 500; font-size: 13px;">AQ • ${anime.year}</span>
+                            ${score} <span style="color: #666; font-weight: 500; font-size: 13px;">${anime.year}</span>
                         </div>
                     </div>
                 </div>
 
-                <div style="margin-bottom: 25px;">
-                    ${watchBtnHtml}
-                </div>
-
-                <div style="display: flex; justify-content: space-between; margin-bottom: 30px; padding: 0 10px;">
-                    <div onclick="openStatusModal('${escapeHTML(anime.id)}')" style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; color: ${isFaved ? '#5b5bff' : '#fff'}; transition: 0.2s;" onpointerdown="this.style.transform='scale(0.95)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">
-                        <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.05);">
-                            <svg style="width: 24px; height: 24px; fill: ${isFaved ? '#5b5bff' : 'none'}; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-bookmark"></use></svg>
-                        </div>
-                        <span style="font-size: 12px; font-weight: 500;">В список</span>
+                <div style="display: flex; gap: 12px; margin-bottom: 25px; align-items: stretch;">
+                    <div style="flex: 1;">
+                        ${watchBtnHtml}
                     </div>
-                    <div onclick="showToast('Вы подписались на обновления!')" style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; color: #fff; transition: 0.2s;" onpointerdown="this.style.transform='scale(0.95)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">
-                        <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.05);">
-                            <svg style="width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-calendar"></use></svg>
-                        </div>
-                        <span style="font-size: 12px; font-weight: 500;">Следить</span>
-                    </div>
-                    <div onclick="shareAnime('${escapeHTML(anime.id)}', '${title.replace(/'/g, "\\'")}')" style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; color: #fff; transition: 0.2s;" onpointerdown="this.style.transform='scale(0.95)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">
-                        <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.05);">
-                            <svg style="width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-send"></use></svg>
-                        </div>
-                        <span style="font-size: 12px; font-weight: 500;">Поделиться</span>
-                    </div>
-                    <div onclick="openStatusModal('${escapeHTML(anime.id)}')" style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; color: #fff; transition: 0.2s;" onpointerdown="this.style.transform='scale(0.95)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">
-                        <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.05);">
-                            <svg style="width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-book"></use></svg>
-                        </div>
-                        <span style="font-size: 12px; font-weight: 500;">Ещё</span>
-                    </div>
+                    <button onclick="openStatusModal('${escapeHTML(anime.id)}')" style="background: ${isFaved ? 'rgba(91,91,255,0.2)' : 'rgba(255,255,255,0.08)'}; border: 1px solid ${isFaved ? '#5b5bff' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#5b5bff' : '#fff'}; width: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;" onpointerdown="this.style.transform='scale(0.95)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">
+                        <svg style="width: 26px; height: 26px; fill: ${isFaved ? '#5b5bff' : 'none'}; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-bookmark"></use></svg>
+                    </button>
                 </div>
 
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">
@@ -1233,15 +1210,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
     } catch (e) { 
         console.error(e); 
         container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>'; 
-    }
-}
-
-function shareAnime(id, title) {
-    const url = window.location.origin + window.location.pathname + '?anime=' + id;
-    if (navigator.share) {
-        navigator.share({ title: title, url: url }).catch(() => {});
-    } else {
-        navigator.clipboard.writeText(url).then(() => showToast('Ссылка скопирована!')).catch(() => showToast('Ошибка копирования'));
     }
 }
 
