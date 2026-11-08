@@ -1199,6 +1199,123 @@ async function loadUpcomingAnime(limit = 6) {
     }
 }
 
+async function loadTopUsers() {
+    const container = document.getElementById('top-users-list');
+    const section = document.getElementById('section-top-users');
+    if (!container || !section || !supabaseClient) return;
+
+    try {
+        const { data: users, error } = await supabaseClient
+            .from('users')
+            .select('*')
+            .order('xp', { ascending: false })
+            .limit(20); 
+
+        if (error) throw error;
+        if (!users || users.length === 0) return;
+
+        const sortedUsers = users.sort((a, b) => {
+            const scoreA = (a.xp || 0) + ((a.unlocked_achievements || []).length * 1000) + ((a.minutes_watched || 0) / 60);
+            const scoreB = (b.xp || 0) + ((b.unlocked_achievements || []).length * 1000) + ((b.minutes_watched || 0) / 60);
+            return scoreB - scoreA;
+        }).slice(0, 5);
+
+        const topUsersHtml = await Promise.all(sortedUsers.map(async (user, index) => {
+            let titleHtml = '';
+            let badgeHtml = '';
+
+            if (user.active_title) {
+                const { data: titleData } = await supabaseClient.from('titles').select('*').eq('id', user.active_title).single();
+                if (titleData) {
+                    if (titleData.is_animated) {
+                        titleHtml = `<div class="user-title-display animated-title" data-title="${escapeHTML(titleData.animation_key || 'gold')}" style="font-size:9px; padding: 1px 6px; margin-top: 3px; height: 14px; line-height: 12px;"><span class="title-text">${escapeHTML(titleData.name)}</span></div>`;
+                    } else {
+                        titleHtml = `<div class="user-title-display" style="color:${escapeHTML(titleData.color)}; border-color:${escapeHTML(titleData.color)}; font-size:9px; padding: 1px 6px; margin-top: 3px; height: 14px; line-height: 12px;">${escapeHTML(titleData.name)}</div>`;
+                    }
+                }
+            }
+
+            if (user.active_badge) {
+                const { data: badgeData } = await supabaseClient.from('badges').select('image_url').eq('id', user.active_badge).single();
+                if (badgeData) {
+                    badgeHtml = `<img src="${safeUrl(badgeData.image_url)}" style="width:16px; height:16px; object-fit:contain; margin-left: 4px;" alt="badge">`;
+                }
+            }
+
+            const avatarUrl = user.avatar_url ? safeUrl(user.avatar_url) : '';
+            const nameChar = user.name && user.name[0] ? escapeHTML(user.name[0].toUpperCase()) : '?';
+            const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:100%; height:100%; object-fit:cover;">` : nameChar;
+
+            const lvl = Math.floor((user.xp || 0) / 100) + 1;
+            const achCount = (user.unlocked_achievements || []).length;
+            const hours = Math.floor((user.minutes_watched || 0) / 60);
+
+            let rankIndicator = '';
+            let nameColor = 'var(--text)';
+
+            if (index === 0) {
+                rankIndicator = `<svg style="width:14px; height:14px; margin-right: 8px; filter: drop-shadow(0 0 6px #FFD700);"><use href="#oa-dot-gold"></use></svg>`;
+                nameColor = '#FFD700';
+            } else if (index === 1) {
+                rankIndicator = `<svg style="width:14px; height:14px; margin-right: 8px; filter: drop-shadow(0 0 6px #87CEEB);"><use href="#oa-dot-blue"></use></svg>`;
+                nameColor = '#87CEEB';
+            } else if (index === 2) {
+                rankIndicator = `<svg style="width:14px; height:14px; margin-right: 8px; filter: drop-shadow(0 0 6px #2ecc71);"><use href="#oa-dot-green"></use></svg>`;
+                nameColor = '#2ecc71';
+            } else {
+                rankIndicator = `<div style="width: 18px; height: 18px; margin-right: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); border-radius: 50%; font-size: 11px; font-weight: bold; color: #aaa; flex-shrink: 0;">${index + 1}</div>`;
+            }
+
+            const statBlock = `
+                <div style="display: flex; justify-content: space-around; width: 100%; margin-top: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 6px 0;">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                        <svg class="icon-inline" style="width: 14px; height: 14px; color: #ffd700;"><use href="#oa-star"></use></svg>
+                        <span style="font-size: 11px; font-weight: bold; color: #fff; line-height: 1;">${lvl}</span>
+                        <span style="font-size: 8px; color: #888; text-transform: uppercase;">lvl</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                        <svg class="icon-inline" style="width: 14px; height: 14px; color: #b44aff;"><use href="#oa-trophy"></use></svg>
+                        <span style="font-size: 11px; font-weight: bold; color: #fff; line-height: 1;">${achCount}</span>
+                        <span style="font-size: 8px; color: #888; text-transform: uppercase;">ach</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                        <svg class="icon-inline" style="width: 14px; height: 14px; color: #00d2ff;"><use href="#oa-clock"></use></svg>
+                        <span style="font-size: 11px; font-weight: bold; color: #fff; line-height: 1;">${hours}</span>
+                        <span style="font-size: 8px; color: #888; text-transform: uppercase;">hrs</span>
+                    </div>
+                </div>
+            `;
+
+            return `
+                <div style="display: flex; align-items: flex-start; background: #14141f; border-radius: 12px; padding: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display: flex; align-items: center; margin-right: 12px; margin-top: 2px;">
+                        ${rankIndicator}
+                        <div class="friend-avatar" style="width: 46px; height: 46px; font-size: 18px; border: 2px solid ${index < 3 ? nameColor : 'rgba(255,255,255,0.1)'};">
+                            ${avatarHtml}
+                        </div>
+                    </div>
+                    
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <h3 style="color: ${nameColor}; font-size: 15px; margin: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(user.name)}</h3>
+                            ${badgeHtml}
+                        </div>
+                        ${titleHtml}
+                        ${statBlock}
+                    </div>
+                </div>
+            `;
+        }));
+
+        container.innerHTML = topUsersHtml.join('');
+        section.style.display = 'block';
+
+    } catch (e) {
+        console.error('[Top Users] Ошибка загрузки:', e);
+        section.style.display = 'none';
+    }
+}
+
 function renderSectionCards(container, items, fromScreen = 'home') {
     if (!container) return;
     if (!items || items.length === 0) { container.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; return; }
@@ -1237,6 +1354,7 @@ async function loadHomePage() {
 
     loadPopularByRating(6);
     loadUpcomingAnime(6);
+    loadTopUsers(); // <--- Убедись, что эта строка есть
 
     const obs = getSectionObserver();
     document.querySelectorAll('.content-section').forEach(sec => { if (!observedSections.has(sec)) { obs.observe(sec); observedSections.add(sec); } });
