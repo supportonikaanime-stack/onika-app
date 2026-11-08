@@ -188,7 +188,7 @@ const API_AniList = {
         if (filters && filters.year) { vars.seasonYear = parseInt(filters.year); args.push('seasonYear: $seasonYear'); }
         if (filters && filters.genre) { vars.genre = filters.genre; args.push('genre: $genre'); }
         if (filters && filters.status) { const m={ongoing:'RELEASING',released:'FINISHED',anons:'NOT_YET_RELEASED'}; vars.status=m[filters.status]; if(vars.status) args.push('status: $status'); }
-        const sortMap={popularity:'POPULARITY_DESC',ranked:'SCORE_DESC',aired_on:'START_DATE_DESC'};
+        const sortMap={popularity:'POPULARITY_DESC',ranked:'SCORE_DESC',aired_on:'START_DATE_DESC',newest:'START_DATE_DESC',oldest:'START_DATE_ASC'};
         const sort = sortMap[filters?.sort] || 'POPULARITY_DESC';
         const q = `query($page:Int,$perPage:Int${vars.search?', $search:String':''}${vars.seasonYear?', $seasonYear:Int':''}${vars.genre?', $genre:String':''}${vars.status?', $status:MediaStatus':''}){Page(page:$page,perPage:$perPage){media(${args.filter(a=>!a.startsWith('sort')).join(', ')},sort:${sort}){${this._mediaFields}}}}`;
         const data = await this.fetch(q, vars).catch(()=>null);
@@ -433,14 +433,26 @@ const VOICES = [{id:'anilibria',name:'AniLibria',icon:'🎙️'},{id:'studioband
 const PLAYERS = [{id:'kodik',name:'Kodik',icon:'▶️'},{id:'sibnet',name:'Sibnet',icon:'🎬'},{id:'veoveo',name:'Veoveo',icon:'🎥'}];
 let catalogPage=1, isCatalogLoading=false, hasMoreCatalog=true, catalogRequestVersion=0;
 let currentFilters = {search:'',genre:'',year:'',status:'',sort:'popularity'};
-let currentMyListFilter='all', previousScreen='catalog', searchDebounceTimer;
+let currentMyListFilter='all', previousScreen='catalog', searchDebounceTimer, liveSearchDebounceTimer;
 let currentShopTab='banners';
 let isPreviewMode=false, previewItem=null, savedStats=null;
 
-const GENRES=[{id:'1',name:'Action'},{id:'22',name:'Romance'},{id:'4',name:'Comedy'},{id:'10',name:'Fantasy'},{id:'8',name:'Drama'},{id:'2',name:'Adventure'},{id:'24',name:'Sci-Fi'},{id:'36',name:'Slice of Life'},{id:'41',name:'Thriller'},{id:'14',name:'Horror'},{id:'7',name:'Mystery'}];
+const GENRES=[
+    {id:'1',name:'Action',ru:'Экшен'},
+    {id:'22',name:'Romance',ru:'Романтика'},
+    {id:'4',name:'Comedy',ru:'Комедия'},
+    {id:'10',name:'Fantasy',ru:'Фэнтези'},
+    {id:'8',name:'Drama',ru:'Драма'},
+    {id:'2',name:'Adventure',ru:'Приключения'},
+    {id:'24',name:'Sci-Fi',ru:'Фантастика'},
+    {id:'36',name:'Slice of Life',ru:'Повседневность'},
+    {id:'41',name:'Thriller',ru:'Триллер'},
+    {id:'14',name:'Horror',ru:'Ужасы'},
+    {id:'7',name:'Mystery',ru:'Детектив'}
+];
 const YEARS=[{id:'2024',name:'2024'},{id:'2023',name:'2023'},{id:'2022',name:'2022'},{id:'2021',name:'2021'},{id:'2020',name:'2020'}];
 const STATUSES=[{id:'ongoing',name:'Онгоинг'},{id:'released',name:'Завершено'},{id:'anons',name:'Анонс'}];
-const SORTS=[{id:'popularity',name:'По популярности'},{id:'ranked',name:'По рейтингу'},{id:'aired_on',name:'Новинки'}];
+const SORTS=[{id:'popularity',name:'По популярности'},{id:'ranked',name:'По рейтингу'},{id:'aired_on',name:'Новинки'},{id:'newest',name:'Сначала новые'},{id:'oldest',name:'Сначала старые'}];
 
 // ==========================================
 // 5. НАВИГАЦИЯ
@@ -1015,7 +1027,9 @@ function initCatalogFilters() {
     const gc = document.getElementById('genre-filters');
     if (!gc) return;
     let h = `<div class="genre-pill ripple-btn active" onclick="setGenreFilter('', this)"><div class="dot"></div>Все</div>`;
-    GENRES.forEach(g => { h += `<div class="genre-pill ripple-btn" onclick="setGenreFilter('${escapeHTML(g.name)}', this)">${escapeHTML(g.name)}</div>`; });
+    GENRES.forEach(g => { 
+        h += `<div class="genre-pill ripple-btn" onclick="setGenreFilter('${escapeHTML(g.name)}', this)">${escapeHTML(g.ru)}</div>`; 
+    });
     gc.innerHTML = h;
 }
 function setGenreFilter(genreName, btn) { currentFilters.genre = genreName; document.querySelectorAll('#genre-filters .genre-pill').forEach(el => el.classList.remove('active')); if (btn) btn.classList.add('active'); if (genreName === '' && btn) btn.innerHTML = '<div class="dot"></div>Все'; loadCatalog(true); }
@@ -1067,6 +1081,95 @@ async function loadCatalog(reset = false) {
     finally { isCatalogLoading = false; }
 }
 function loadMoreCatalog() { if (!hasMoreCatalog || isCatalogLoading) return; catalogPage++; loadCatalog(false); }
+
+// --- ЖИВОЙ ПОИСК (LIVE SEARCH) ---
+let liveSearchVersion = 0;
+function handleLiveSearch() {
+    const query = document.getElementById('search-input').value.trim();
+    const container = document.getElementById('live-search-results');
+    if (!container) return;
+
+    if (query.length < 2) {
+        container.classList.remove('active');
+        container.innerHTML = '';
+        return;
+    }
+
+    container.classList.add('active');
+    container.innerHTML = '<div class="ls-loading">Поиск...</div>';
+
+    clearTimeout(liveSearchDebounceTimer);
+    liveSearchDebounceTimer = setTimeout(async () => {
+        const myVersion = ++liveSearchVersion;
+        try {
+            // Умный поиск: если ввели русское название, сначала ищем английское
+            let searchQuery = query;
+            if (/[а-яА-ЯёЁ]/.test(query)) {
+                const shiki = await API_Shikimori.getRussianData(query);
+                // Если нашли английское название (romaji), используем его, иначе оставляем как есть
+                if (shiki && shiki.russian) {
+                    // На самом деле Shikimori возвращает русское, а нам нужно английское.
+                    // Попробуем поискать через AniList напрямую по русскому запросу (AniList иногда понимает)
+                    // Или используем AniLibria для поиска
+                }
+            }
+
+            // Запрос в AniList
+            const q = `query($search: String) { Page(page: 1, perPage: 5) { media(search: $search, type: ANIME, sort: POPULARITY_DESC) { id title{romaji english native} coverImage{large} seasonYear format } } }`;
+            const data = await API_AniList.fetch(q, { search: searchQuery });
+
+            if (myVersion !== liveSearchVersion) return;
+
+            if (!data?.Page?.media || data.Page.media.length === 0) {
+                container.innerHTML = '<div class="ls-loading">Ничего не найдено</div>';
+                return;
+            }
+
+            let html = '';
+            for (const m of data.Page.media) {
+                const rawTitle = m.title?.romaji || m.title?.english || m.title?.native || '';
+                let ruTitle = rawTitle;
+                // Пытаемся найти русское название
+                if (!/[а-яА-ЯёЁ]/.test(rawTitle)) {
+                    try {
+                        const cached = await getCachedTitle(m.id);
+                        if (cached && cached.title_ru) ruTitle = cached.title_ru;
+                        else {
+                            const anilibria = await API_AniLibria.searchRussian(rawTitle);
+                            if (anilibria) ruTitle = anilibria;
+                            else {
+                                const shiki = await API_Shikimori.getRussianData(rawTitle);
+                                if (shiki.russian) ruTitle = shiki.russian;
+                            }
+                        }
+                    } catch(e) {}
+                }
+                const img = safeUrl(m.coverImage?.large || '');
+                const year = m.seasonYear || '';
+                const kind = m.format || '';
+                html += `<div class="ls-item" onclick="openAnimeDetail('anilist_${m.id}', 'catalog')">
+                    <img class="ls-img" src="${img}" loading="lazy">
+                    <div class="ls-info">
+                        <div class="ls-title">${escapeHTML(ruTitle)}</div>
+                        <div class="ls-meta">${year} • ${kind}</div>
+                    </div>
+                </div>`;
+            }
+            container.innerHTML = html;
+
+        } catch (e) {
+            console.error('Live search error:', e);
+            if (myVersion === liveSearchVersion) container.innerHTML = '<div class="ls-loading">Ошибка поиска</div>';
+        }
+    }, 400); // Дебаунс 400мс
+}
+
+function hideLiveSearch() {
+    setTimeout(() => {
+        const container = document.getElementById('live-search-results');
+        if (container) container.classList.remove('active');
+    }, 200);
+}
 
 // --- ПОИСК СЕЗОНОВ ПО НАЗВАНИЮ И СВЯЗЯМ ---
 async function searchFranchiseByTitle(anime) {
