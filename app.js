@@ -1066,6 +1066,56 @@ async function loadCatalog(reset = false) {
 }
 function loadMoreCatalog() { if (!hasMoreCatalog || isCatalogLoading) return; catalogPage++; loadCatalog(false); }
 
+// --- ПОИСК СЕЗОНОВ ПО НАЗВАНИЮ ---
+async function searchFranchiseByTitle(anime) {
+    const cleanTitle = (title) => {
+        if (!title) return '';
+        return title
+            .replace(/[0-9]+/g, '')
+            .replace(/(сезон|часть|season|part|cour|фильм|movie|ova|ona|спешл|special|the final|final)/gi, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    };
+
+    const query = cleanTitle(anime.title_ru) || cleanTitle(anime.title_raw);
+    if (!query) return [];
+
+    try {
+        const searchQuery = `query($search: String) { Page(page: 1, perPage: 20) { media(search: $search, type: ANIME, sort: START_DATE) { id title{romaji english} coverImage{large} seasonYear format } } }`;
+        const data = await API_AniList.fetch(searchQuery, { search: query }).catch(() => null);
+        
+        if (!data?.Page?.media) return [];
+
+        return data.Page.media
+            .filter(m => String(m.id) !== String(anime.rawId) && m.format !== 'MANGA' && m.format !== 'NOVEL')
+            .map(m => ({
+                id: 'anilist_' + m.id,
+                title: m.title.romaji || m.title.english,
+                image: m.coverImage.large,
+                year: m.seasonYear,
+                format: m.format
+            }));
+    } catch (e) {
+        console.error('Ошибка поиска сезонов:', e);
+        return [];
+    }
+}
+
+// --- СКРИНШОТЫ ИЗ SHIKIMORI ---
+async function getShikimoriScreenshots(idMal) {
+    if (!idMal) return [];
+    try {
+        const url = `https://shikimori.io/api/animes/${idMal}/screenshots`;
+        const res = await fetch(PROXY_URL + encodeURIComponent(url));
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data || []).map(s => `https://shikimori.io${s.preview}`).filter(Boolean);
+    } catch (e) {
+        console.error('Ошибка загрузки скриншотов Shikimori:', e);
+        return [];
+    }
+}
+
 async function openAnimeDetail(id, fromScreen = 'catalog') {
     previousScreen = fromScreen; switchTab('detail');
     const container = document.getElementById('detail-content');
@@ -1074,66 +1124,37 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         const anime = await API.getDetails(id);
         if (!anime) throw new Error('Not found');
         
-        // Резервный поиск трейлера на YouTube, если AniList не дал
-        let finalTrailerId = anime.trailerId;
-        if (!finalTrailerId) {
-            const searchQuery = encodeURIComponent(`${anime.title_raw} ${anime.year} trailer`);
-            try {
-                const ytRes = await fetch(PROXY_URL + encodeURIComponent(`https://www.youtube.com/results?search_query=${searchQuery}`));
-                const ytHtml = await ytRes.text();
-                const match = ytHtml.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
-                if (match && match[1]) finalTrailerId = match[1];
-            } catch(e) {}
-        }
-
-        let userRating = 0;
-        let comments = [];
-        if (supabaseClient && MY_ID) {
-            try {
-                const { data: listItem } = await supabaseClient.from('user_lists').select('rating').eq('user_id', MY_ID).eq('anime_id', id).single();
-                if (listItem && listItem.rating) userRating = listItem.rating;
-                const { data: cmts } = await supabaseClient.from('anime_comments').select('*').eq('anime_id', id).order('created_at', { ascending: false });
-                comments = cmts || [];
-            } catch(e) { console.error(e); }
-        }
+        const franchiseItems = await searchFranchiseByTitle(anime);
+        const shikiScreenshots = await getShikimoriScreenshots(anime.idMal);
         
-        // Загрузка похожих аниме
         let similarHtml = '';
         if (anime.genres && anime.genres.length > 0) {
-            const similarItems = await API.getSimilar(anime.genres, anime.id, 6);
-            if (similarItems && similarItems.length > 0) {
-                similarHtml = `
-                <div style="margin-bottom: 30px;">
-                    <h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">Похожие аниме</h3>
-                    <div style="display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">
-                        ${similarItems.map(s => {
-                            const sTitle = escapeHTML(s.title_ru);
-                            const sImg = safeUrl(s.images.jpg.image_url);
-                            const sScore = s.score ? Number(s.score).toFixed(1) : '?';
-                            return `<div class="card" style="min-width: 130px; width: 130px; height: 195px;" onclick="openAnimeDetail('${escapeHTML(s.id)}', 'detail')"><img class="card-img" src="${sImg}" loading="lazy"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;display:flex;align-items:center;gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${sScore}</div><div class="card-title">${sTitle}</div></div>`;
-                        }).join('')}
-                    </div>
-                </div>`;
-            }
-        }
+            const genreQuery = `query($genre: String) { Page(page: 1, perPage: 10) { media(type: ANIME, genre: $genre, sort: POPULARITY_DESC) { id title{romaji english} coverImage{large} averageScore seasonYear format } } }`;
+            const genreData = await API_AniList.fetch(genreQuery, { genre: anime.genres[0] }).catch(() => null);
+            
+            if (genreData?.Page?.media) {
+                const similarItems = genreData.Page.media
+                    .filter(m => String(m.id) !== String(anime.rawId))
+                    .slice(0, 6)
+                    .map(m => ({
+                        id: 'anilist_' + m.id,
+                        title: m.title.romaji || m.title.english,
+                        image: m.coverImage.large,
+                        score: m.averageScore ? (m.averageScore/10).toFixed(1) : '?'
+                    }));
 
-        // Загрузка сезонов
-        let relationsHtml = '';
-        const relations = anime.relations?.edges || [];
-        if (relations.length > 0) {
-            relationsHtml = `
-            <div style="margin-bottom: 30px;">
-                <h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">Сезоны и связанное</h3>
-                <div style="display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">
-                    ${relations.map(r => {
-                        const node = r.node;
-                        const rTitle = escapeHTML(node.title.romaji || node.title.english || 'Без названия');
-                        const rImg = safeUrl(node.coverImage.large);
-                        const typeLabel = r.relationType === 'SEQUEL' ? 'Продолжение' : r.relationType === 'PREQUEL' ? 'Предыстория' : r.relationType === 'SIDE_STORY' ? 'Спин-офф' : r.relationType;
-                        return `<div class="card" style="min-width: 130px; width: 130px; height: 195px;" onclick="openAnimeDetail('anilist_${node.id}', 'detail')"><img class="card-img" src="${rImg}" loading="lazy"><div style="position:absolute;top:8px;left:8px;background:rgba(91,91,255,0.8);padding:2px 6px;border-radius:6px;font-size:9px;color:#fff;font-weight:bold;">${typeLabel}</div><div class="card-title">${rTitle}</div></div>`;
-                    }).join('')}
-                </div>
-            </div>`;
+                if (similarItems.length > 0) {
+                    similarHtml = `
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">Похожие по жанру (${anime.genres[0]})</h3>
+                        <div style="display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">
+                            ${similarItems.map(s => {
+                                return `<div class="card" style="min-width: 130px; width: 130px; height: 195px;" onclick="openAnimeDetail('${escapeHTML(s.id)}', 'detail')"><img class="card-img" src="${safeUrl(s.image)}" loading="lazy"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;display:flex;align-items:center;gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${s.score}</div><div class="card-title">${escapeHTML(s.title)}</div></div>`;
+                            }).join('')}
+                        </div>
+                    </div>`;
+                }
+            }
         }
 
         const title = escapeHTML(anime.title_ru);
@@ -1149,21 +1170,26 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         window._animeCache = window._animeCache || {};
         window._animeCache[anime.id] = anime;
 
-        // Генерация кадров
+        let relationsHtml = '';
+        if (franchiseItems.length > 0) {
+            relationsHtml = `
+            <div style="margin-bottom: 30px;">
+                <h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">Все сезоны</h3>
+                <div style="display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">
+                    ${franchiseItems.map(r => {
+                        return `<div class="card" style="min-width: 130px; width: 130px; height: 195px;" onclick="openAnimeDetail('${escapeHTML(r.id)}', 'detail')"><img class="card-img" src="${safeUrl(r.image)}" loading="lazy"><div style="position:absolute;top:8px;left:8px;background:rgba(91,91,255,0.8);padding:2px 6px;border-radius:6px;font-size:9px;color:#fff;font-weight:bold;">${r.year || r.format}</div><div class="card-title">${escapeHTML(r.title)}</div></div>`;
+                    }).join('')}
+                </div>
+            </div>`;
+        }
+
         let screenshotsHtml = '';
         let hasScreenshots = false;
-        if (finalTrailerId) {
-            const ytFrames = [
-                `https://img.youtube.com/vi/${finalTrailerId}/maxresdefault.jpg`,
-                `https://img.youtube.com/vi/${finalTrailerId}/sddefault.jpg`,
-                `https://img.youtube.com/vi/${finalTrailerId}/hqdefault.jpg`,
-                `https://img.youtube.com/vi/${finalTrailerId}/mqdefault.jpg`
-            ];
+        if (shikiScreenshots.length > 0) {
             hasScreenshots = true;
-            screenshotsHtml = ytFrames.map((url, i) => `
+            screenshotsHtml = shikiScreenshots.map((url, i) => `
                 <div style="scroll-snap-align: start; flex: 0 0 75%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; background: #222; border: 1px solid rgba(255,255,255,0.1); position: relative;">
-                    <img src="${url}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none'">
-                    ${i === 0 ? `<div style="position: absolute; inset: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><svg style="width: 40px; height: 40px; fill: #fff; stroke: none; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8));"><use href="#oa-play"></use></svg></div>` : ''}
+                    <img src="${safeUrl(url)}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none'">
                 </div>
             `).join('');
         }
@@ -1204,13 +1230,11 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
 
         container.innerHTML = `
         <div class="fade-in" style="position: relative;">
-            <!-- ФОН (постер на всю высоту) -->
             <div style="position: absolute; top: 0; left: -20px; width: calc(100% + 40px); height: 400px; z-index: -1; overflow: hidden;">
                 <img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; object-position: center top; opacity: 0.6; mask-image: linear-gradient(to bottom, black 30%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 30%, transparent 100%);">
                 <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(10,10,15,0.3) 0%, transparent 20%, var(--bg) 100%);"></div>
             </div>
 
-            <!-- Кнопка Назад поверх фона -->
             <div style="position: relative; z-index: 10; padding-top: 20px; margin-bottom: 20px;">
                  <button onclick="goBackFromDetail()" style="background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 14px; font-weight: bold; padding: 8px 16px; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 6px;">← Назад</button>
             </div>
@@ -1229,7 +1253,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                     </div>
                 </div>
 
-                <!-- Кнопки Смотреть и Избранное вплотную -->
                 <div style="display: flex; gap: 10px; margin-bottom: 25px; align-items: stretch; justify-content: flex-start;">
                     ${watchBtnHtml}
                     <button onclick="openStatusModal('${escapeHTML(anime.id)}')" style="background: ${isFaved ? 'rgba(91,91,255,0.2)' : 'rgba(255,255,255,0.08)'}; border: 1px solid ${isFaved ? '#5b5bff' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#5b5bff' : '#fff'}; width: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;" onpointerdown="this.style.transform='scale(0.95)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">
@@ -1248,12 +1271,10 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 </div>
 
                 ${relationsHtml}
-
                 ${hasScreenshots ? `
                 <div style="margin-bottom: 30px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <h3 style="font-size: 18px; color: #fff; margin: 0;">Кадры</h3>
-                        <a href="https://youtube.com/watch?v=${finalTrailerId}" target="_blank" style="color: #5b5bff; font-size: 13px; font-weight: 600; text-decoration: none;">Смотреть трейлер →</a>
                     </div>
                     <div style="display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">
                         ${screenshotsHtml}
