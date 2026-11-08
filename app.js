@@ -161,7 +161,7 @@ document.addEventListener('pointerdown', function(e) {
 }, { passive: true });
 
 // ==========================================
-// 3. API — AniList + AniLibria + Shikimori + Кэш БД
+// 3. API — AniList + AniLibria + Shikimori
 // ==========================================
 const PROXY_URL = 'https://onika-api.relaxdev.ru/?target=';
 const ANILIST_URL = 'https://graphql.anilist.co';
@@ -207,6 +207,20 @@ const API_AniList = {
         let season = 'WINTER'; if (month>=3&&month<6) season='SPRING'; else if (month>=6&&month<9) season='SUMMER'; else if (month>=9) season='FALL';
         const q = `query($page:Int,$perPage:Int,$season:MediaSeason,$seasonYear:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,season:$season,seasonYear:$seasonYear,sort:POPULARITY_DESC){${this._mediaFields}}}}`;
         const data = await this.fetch(q, { page:1, perPage:Math.min((limit||6)*2,50), season, seasonYear:now.getFullYear() }).catch(()=>null);
+        return (data?.Page?.media || []).slice(0, limit||6);
+    },
+    // НОВЫЙ МЕТОД: Будущие релизы (NOT_YET_RELEASED)
+    async getUpcoming(limit) {
+        const now = new Date(); const month = now.getMonth();
+        // Определяем следующий сезон
+        let season = 'WINTER', year = now.getFullYear(); 
+        if (month >= 0 && month < 3) { season = 'SPRING'; } 
+        else if (month >= 3 && month < 6) { season = 'SUMMER'; } 
+        else if (month >= 6 && month < 9) { season = 'FALL'; } 
+        else { season = 'WINTER'; year += 1; } // Если сейчас осень, ищем зиму следующего года
+        
+        const q = `query($page:Int,$perPage:Int,$season:MediaSeason,$seasonYear:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,season:$season,seasonYear:$seasonYear,status:NOT_YET_RELEASED,sort:POPULARITY_DESC){${this._mediaFields}}}}`;
+        const data = await this.fetch(q, { page:1, perPage:Math.min((limit||6)*2,50), season, seasonYear:year }).catch(()=>null);
         return (data?.Page?.media || []).slice(0, limit||6);
     },
     async searchByGenres(genreNames, limit=4, excludeIds=[]) {
@@ -266,7 +280,7 @@ const API_Shikimori = {
     }
 };
 
-// Функция для работы с кэшем БД (очень быстро)
+// Кэш в БД (для мгновенной загрузки русских названий)
 async function getCachedTitle(anilistId) {
     if (!supabaseClient) return null;
     try {
@@ -278,14 +292,13 @@ async function getCachedTitle(anilistId) {
 async function saveCachedTitle(anilistId, titleRu, description) {
     if (!supabaseClient) return;
     try {
-        // Сохраняем только если есть русский перевод (избегаем кэшировать английский)
         if (titleRu && titleRu !== 'Без названия') {
             await supabaseClient.from('anime_cache').upsert({ id: String(anilistId), title_ru: titleRu, description: description || '', updated_at: new Date().toISOString() }, { onConflict: 'id' });
         }
     } catch(e) {}
 }
 
-// Функция для параллельной обработки с ограничением (concurrency limit)
+// Ограничитель параллельности (не более 4 запросов одновременно)
 async function processWithLimit(items, limit, asyncProcessor) {
     const results = [];
     const executing = [];
@@ -305,14 +318,14 @@ async function buildAnimeObject(raw) {
     const searchTitle = raw.title?.english || raw.title?.romaji || raw.title?.native || '';
     const anilistId = String(raw.id);
     
-    // 1. Проверяем наш кэш в БД (мгновенно!)
+    // 1. Кэш в БД
     const cached = await getCachedTitle(anilistId);
     if (cached && cached.title_ru) {
         return {
             id: 'anilist_' + raw.id,
             rawId: raw.id,
             idMal: raw.idMal,
-            title_ru: cached.title_ru, // Берём из кэша
+            title_ru: cached.title_ru,
             title_raw: searchTitle,
             title: cached.title_ru,
             year: raw.seasonYear || '--',
@@ -321,13 +334,13 @@ async function buildAnimeObject(raw) {
             description: cached.description || raw.description || 'Описание отсутствует.',
             genres: raw.genres || [],
             score: raw.averageScore ? (raw.averageScore/10).toFixed(1) : 0,
-            status: raw.status==='RELEASING'?'Онгоинг':raw.status==='FINISHED'?'Завершено':'Анонс',
+            status: raw.status==='RELEASING'?'Онгоинг':raw.status==='FINISHED'?'Завершено':raw.status==='NOT_YET_RELEASED'?'Анонс':'Анонс',
             kind: raw.format || 'TV',
             trailerId: raw.trailer?.id || null
         };
     }
     
-    // 2. Если в кэше нет — ищем в AniLibria и Shikimori
+    // 2. Поиск
     let russianFromAniLibria = null;
     try { russianFromAniLibria = await API_AniLibria.searchRussian(searchTitle); } catch(e) {}
     
@@ -341,7 +354,6 @@ async function buildAnimeObject(raw) {
     let cleanDesc = shikiData.description || raw.description || 'Описание отсутствует.';
     cleanDesc = cleanDesc.replace(/\[[^\]]*\]/g,'').replace(/<[^>]*>?/gm,'').trim();
 
-    // 3. Сохраняем в БД для будущих запросов (только если есть русский)
     if (russianFromAniLibria || shikiData.russian) {
         await saveCachedTitle(anilistId, finalRussianTitle, cleanDesc);
     }
@@ -359,7 +371,7 @@ async function buildAnimeObject(raw) {
         description: cleanDesc,
         genres: raw.genres || [],
         score,
-        status: raw.status==='RELEASING'?'Онгоинг':raw.status==='FINISHED'?'Завершено':'Анонс',
+        status: raw.status==='RELEASING'?'Онгоинг':raw.status==='FINISHED'?'Завершено':raw.status==='NOT_YET_RELEASED'?'Анонс':'Анонс',
         kind: raw.format || 'TV',
         trailerId: raw.trailer?.id || null
     };
@@ -374,7 +386,6 @@ const API = {
     getCatalog(page,limit,filters) { 
         return this._cached(`c_${page}_${limit}_${JSON.stringify(filters||{})}`, async()=>{ 
             const raw=await API_AniList.getCatalog(page,limit,filters); 
-            // Параллельно по 4 запроса
             return await processWithLimit(raw, 4, buildAnimeObject); 
         }); 
     },
@@ -387,28 +398,30 @@ const API = {
     getRandom(limit) { 
         return this._cached(`r_${limit}`, async()=>{ 
             const raw=await API_AniList.getRandom(limit); 
-            // Параллельно по 4 запроса
             return await processWithLimit(raw, 4, buildAnimeObject); 
         }); 
     },
     getSeasonal(limit) { 
         return this._cached(`s_${limit}`, async()=>{ 
             const raw=await API_AniList.getSeasonal(limit); 
-            // Параллельно по 4 запроса
+            return await processWithLimit(raw, 4, buildAnimeObject); 
+        }); 
+    },
+    getUpcoming(limit) { 
+        return this._cached(`u_${limit}`, async()=>{ 
+            const raw=await API_AniList.getUpcoming(limit); 
             return await processWithLimit(raw, 4, buildAnimeObject); 
         }); 
     },
     searchByGenres(g,l,ex) { 
         return this._cached(`g_${JSON.stringify(g)}_${l}`, async()=>{ 
             const raw=await API_AniList.searchByGenres(g,l,ex); 
-            // Параллельно по 4 запроса
             return await processWithLimit(raw, 4, buildAnimeObject); 
         }); 
     },
     getTopRated(limit) { 
         return this._cached(`top_${limit}`, async()=>{ 
             const raw=await API_AniList.getTopRated(limit); 
-            // Параллельно по 4 запроса
             return await processWithLimit(raw, 4, buildAnimeObject); 
         }); 
     }
@@ -1177,28 +1190,23 @@ async function loadPopularByRating(limit = 6) {
     }
 }
 
-async function loadRecommendations(limit = 4) {
-    const list = document.getElementById('recommended-list'); if (!list) return;
+// Новая функция для «Скоро выйдет»
+async function loadUpcomingAnime(limit = 6) {
+    const list = document.getElementById('upcoming-list'); if (!list) return;
     list.innerHTML = Skeletons.cards(4);
     try {
-        let userGenres = []; let userAnimeIds = [];
-        if (supabaseClient && MY_ID) {
-            const { data: userList, error } = await supabaseClient.from('user_lists').select('anime_id, status').eq('user_id', MY_ID);
-            if (error) throw error;
-            if (userList && userList.length > 0) {
-                userAnimeIds = userList.map(x => x.anime_id);
-                const details = await Promise.all(userList.slice(0, 20).map(x => API.getDetails(x.anime_id)));
-                const genreCount = {};
-                details.filter(Boolean).forEach(anime => { (anime.genres || []).forEach(g => { genreCount[g] = (genreCount[g] || 0) + 1; }); });
-                userGenres = Object.entries(genreCount).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([g]) => g);
-            }
+        const items = await API.getUpcoming(limit);
+        if (items && items.length > 0) {
+            renderSectionCards(list, items, 'home');
+        } else {
+            list.innerHTML = '<div class="loading-text">Пока нет анонсов</div>';
         }
-        if (userGenres.length === 0) { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); return; }
-        const recs = await API.searchByGenres(userGenres, limit, userAnimeIds);
-        if (recs && recs.length > 0) renderSectionCards(list, recs, 'home');
-        else { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); }
-    } catch (e) { try { const fallback = await API.getCatalog(1, limit, { sort: 'popularity' }); renderSectionCards(list, fallback, 'home'); } catch(e2) { list.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; } }
+    } catch (e) { 
+        console.error(e);
+        list.innerHTML = '<div class="loading-text" style="color:#ff4444;">Ошибка загрузки</div>'; 
+    }
 }
+
 function renderSectionCards(container, items, fromScreen = 'home') {
     if (!container) return;
     if (!items || items.length === 0) { container.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; return; }
@@ -1236,7 +1244,7 @@ async function loadHomePage() {
     } catch(e) { if (seasonalList) seasonalList.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; }
 
     loadPopularByRating(6);
-    loadRecommendations(4);
+    loadUpcomingAnime(6); // Новый блок
 
     const obs = getSectionObserver();
     document.querySelectorAll('.content-section, .tg-banner-section').forEach(sec => { if (!observedSections.has(sec)) { obs.observe(sec); observedSections.add(sec); } });
