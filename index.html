@@ -42,25 +42,10 @@
         .skeleton-circle { border-radius: 50%; }
         .skeleton-poster { width: 100%; aspect-ratio: 2/3; border-radius: 12px; }
 
-        .skeleton-hero { position: relative; height: 62vh; min-height: 380px; max-height: 520px; background: var(--bg); overflow: hidden; display: flex; align-items: flex-end; padding: 16px 20px; padding-bottom: 28px; border-radius: 0 0 20px 20px; }
-        .skeleton-hero-bg { position: absolute; inset: 0; background: linear-gradient(135deg, #1a1a24 0%, #12121a 100%); z-index: 0; }
-        .skeleton-hero-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 40%, var(--bg) 95%); }
-        .skeleton-hero-content { position: relative; z-index: 1; width: 100%; }
-        .skeleton-hero-content .skeleton-title { height: 28px; width: 75%; margin: 14px 0; border-radius: 8px; }
-        .skeleton-hero-actions { display: flex; gap: 12px; margin-top: 18px; }
-        .skeleton-hero-actions .skeleton-btn { flex: 1; height: 48px; border-radius: 12px; }
-        .skeleton-hero-actions .skeleton-icon-btn { width: 48px; height: 48px; border-radius: 12px; }
-
         .skeleton-card { position: relative; border-radius: 12px; overflow: hidden; background: #14141f; aspect-ratio: 2/3; }
         .skeleton-card .skeleton-poster { border-radius: 0; width: 100%; height: 100%; }
         .skeleton-card .skeleton-card-title { position: absolute; bottom: 10px; left: 10px; right: 10px; height: 12px; border-radius: 6px; background: linear-gradient(90deg, #2a2a35 0%, #353542 50%, #2a2a35 100%); background-size: 400px 100%; animation: skeletonShimmer 1.4s linear infinite; }
         .horizontal-scroll .skeleton-card { min-width: 130px; width: 130px; height: 195px; flex-shrink: 0; }
-
-        .skeleton-shop-item { background: #1a1a20; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; }
-        .skeleton-shop-item .skeleton-shop-img { width: 100%; height: 100px; border-radius: 0; }
-        .skeleton-shop-item .skeleton-shop-info { padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-        .skeleton-shop-item .skeleton-shop-info .skeleton-text { width: 70%; height: 10px; margin: 0; }
-        .skeleton-shop-item .skeleton-shop-info .skeleton-text.short { width: 40%; }
 
         .skeleton-friend { display: flex; align-items: center; gap: 15px; background: #14141f; border-radius: 16px; padding: 15px; margin: 0 20px 10px; border: 1px solid rgba(255,255,255,0.05); }
         .skeleton-friend .skeleton-circle { width: 50px; height: 50px; flex-shrink: 0; }
@@ -420,9 +405,9 @@
       <symbol id="oa-dot-green" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#2ecc71" stroke="none"/></symbol>
       <symbol id="oa-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></symbol>
       <symbol id="oa-trophy" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v7a5 5 0 0 1-10 0V4z"/><path d="M7 4H4v2a3 3 0 0 0 3 3M17 4h3v2a3 3 0 0 1-3 3"/></symbol>
+      <symbol id="oa-chevron-down" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
     </svg>
 
-    <!-- ЭКРАН АВТОРИЗАЦИИ -->
     <div class="auth-screen" id="authScreen">
         <div class="auth-box">
             <div class="auth-logo">OnikaAnime</div>
@@ -465,7 +450,6 @@
         <div class="coins">+<span id="popup-coins">100</span> <svg><use href="#oa-coin"></use></svg></div>
     </div>
     
-    <!-- ЭКРАНЫ -->
     <div id="screen-home" class="screen active">
         <section class="hero-section" id="heroSection">
             <div class="hero-progress-bar" id="heroProgressBar"></div>
@@ -829,30 +813,16 @@
         <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon"><svg><use href="#oa-profile"></use></svg></span><span class="nav-text">Профиль</span></div>
     </nav>
 
-    <!-- СКРИПТ ГЕНЕРАЦИИ ФОНА -->
     <script>
         (function initNeuralBackground() {
             const canvas = document.getElementById('bg-canvas');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
-            
-            let width, height;
-            let particles = [];
-            const particleCount = 40;
-            const maxDistance = 120;
-            const speed = 0.5;
-            
+            let width, height, particles = [];
+            const particleCount = 40, maxDistance = 120, speed = 0.5;
             const dotColor = 'rgba(180, 120, 255, 0.8)';
-
             function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
-
-            function createParticles() {
-                particles = [];
-                for (let i = 0; i < particleCount; i++) {
-                    particles.push({ x: Math.random() * width, y: Math.random() * height, vx: (Math.random() - 0.5) * speed, vy: (Math.random() - 0.5) * speed });
-                }
-            }
-
+            function createParticles() { particles = []; for (let i = 0; i < particleCount; i++) { particles.push({ x: Math.random() * width, y: Math.random() * height, vx: (Math.random() - 0.5) * speed, vy: (Math.random() - 0.5) * speed }); } }
             function animate() {
                 ctx.clearRect(0, 0, width, height);
                 particles.forEach(p => {
@@ -863,8 +833,7 @@
                 });
                 for (let i = 0; i < particles.length; i++) {
                     for (let j = i + 1; j < particles.length; j++) {
-                        const dx = particles[i].x - particles[j].x;
-                        const dy = particles[i].y - particles[j].y;
+                        const dx = particles[i].x - particles[j].x, dy = particles[i].y - particles[j].y;
                         const dist = Math.sqrt(dx * dx + dy * dy);
                         if (dist < maxDistance) {
                             ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y);
@@ -874,12 +843,11 @@
                 }
                 requestAnimationFrame(animate);
             }
-
             window.addEventListener('resize', () => { resize(); createParticles(); });
             resize(); createParticles(); animate();
         })();
     </script>
 
-    <script src="app.js?v=4601"></script>
+    <script src="app.js?v=4602"></script>
 </body>
 </html>
