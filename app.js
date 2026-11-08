@@ -77,14 +77,14 @@ async function handleRegister() {
             hideAuthScreen(); 
             await loadProfileData(); 
             loadHomePage(); 
-            showToast('✅ Добро пожаловать!'); 
+            showToast('Добро пожаловать!'); 
             return; 
         } 
         PENDING_VERIFY_EMAIL = email; 
         document.getElementById('form-register').style.display='none'; 
         document.getElementById('form-verify').style.display='block'; 
         document.getElementById('authError').classList.remove('active'); 
-        showToast('📩 Код отправлен на почту!'); 
+        showToast('Код отправлен на почту!'); 
     } catch(e) { 
         showAuthError(e.message||'Ошибка регистрации'); 
     } finally { 
@@ -107,7 +107,7 @@ async function handleVerifyCode() {
             hideAuthScreen(); 
             await loadProfileData(); 
             loadHomePage(); 
-            showToast('✅ Почта подтверждена!'); 
+            showToast('Почта подтверждена!'); 
         } 
     } catch(e) { 
         showAuthError('Неверный или просроченный код'); 
@@ -209,16 +209,13 @@ const API_AniList = {
         const data = await this.fetch(q, { page:1, perPage:Math.min((limit||6)*2,50), season, seasonYear:now.getFullYear() }).catch(()=>null);
         return (data?.Page?.media || []).slice(0, limit||6);
     },
-    // НОВЫЙ МЕТОД: Будущие релизы (NOT_YET_RELEASED)
     async getUpcoming(limit) {
         const now = new Date(); const month = now.getMonth();
-        // Определяем следующий сезон
         let season = 'WINTER', year = now.getFullYear(); 
         if (month >= 0 && month < 3) { season = 'SPRING'; } 
         else if (month >= 3 && month < 6) { season = 'SUMMER'; } 
         else if (month >= 6 && month < 9) { season = 'FALL'; } 
-        else { season = 'WINTER'; year += 1; } // Если сейчас осень, ищем зиму следующего года
-        
+        else { season = 'WINTER'; year += 1; } 
         const q = `query($page:Int,$perPage:Int,$season:MediaSeason,$seasonYear:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,season:$season,seasonYear:$seasonYear,status:NOT_YET_RELEASED,sort:POPULARITY_DESC){${this._mediaFields}}}}`;
         const data = await this.fetch(q, { page:1, perPage:Math.min((limit||6)*2,50), season, seasonYear:year }).catch(()=>null);
         return (data?.Page?.media || []).slice(0, limit||6);
@@ -280,7 +277,6 @@ const API_Shikimori = {
     }
 };
 
-// Кэш в БД (для мгновенной загрузки русских названий)
 async function getCachedTitle(anilistId) {
     if (!supabaseClient) return null;
     try {
@@ -298,7 +294,6 @@ async function saveCachedTitle(anilistId, titleRu, description) {
     } catch(e) {}
 }
 
-// Ограничитель параллельности (не более 4 запросов одновременно)
 async function processWithLimit(items, limit, asyncProcessor) {
     const results = [];
     const executing = [];
@@ -318,7 +313,6 @@ async function buildAnimeObject(raw) {
     const searchTitle = raw.title?.english || raw.title?.romaji || raw.title?.native || '';
     const anilistId = String(raw.id);
     
-    // 1. Кэш в БД
     const cached = await getCachedTitle(anilistId);
     if (cached && cached.title_ru) {
         return {
@@ -340,7 +334,6 @@ async function buildAnimeObject(raw) {
         };
     }
     
-    // 2. Поиск
     let russianFromAniLibria = null;
     try { russianFromAniLibria = await API_AniLibria.searchRussian(searchTitle); } catch(e) {}
     
@@ -494,7 +487,7 @@ async function syncProfileToDB(forceLocal=false) {
         await supabaseClient.from('users').upsert(payload,{onConflict:'id'}); 
     } catch(e) {} 
 }
-function copyMyId() { if (!MY_PUBLIC_ID) return; navigator.clipboard.writeText(MY_PUBLIC_ID.toString()).then(()=>showToast('📋 ID скопирован!')).catch(()=>{}); }
+function copyMyId() { if (!MY_PUBLIC_ID) return; navigator.clipboard.writeText(MY_PUBLIC_ID.toString()).then(()=>showToast('ID скопирован!')).catch(()=>{}); }
 
 async function loadProfileData() {
     let stats = getStats();
@@ -519,7 +512,7 @@ async function loadProfileData() {
         } catch(e) {}
     }
     const today = new Date().toDateString();
-    if (stats.lastVisit !== today) { stats.daysStreak += 1; stats.lastVisit = today; stats.xp += 5; stats.coins += 10; stats.watchedToday = []; saveStats(stats); showToast('📅 Ежедневный вход! +5 XP'); }
+    if (stats.lastVisit !== today) { stats.daysStreak += 1; stats.lastVisit = today; stats.xp += 5; stats.coins += 10; stats.watchedToday = []; saveStats(stats); showToast('Ежедневный вход! +5 XP'); }
     checkAchievements(stats); saveStats(stats);
     const lvl = Math.floor(stats.xp/100)+1, rank = LEVEL_TITLES[Math.min(lvl-1,LEVEL_TITLES.length-1)]||'Легенда';
     setElText('user-level',lvl); setElText('user-level-text',lvl); setElText('user-rank',rank); setElText('user-xp-current',stats.xp%100); setElText('user-xp-next',100); setElWidth('user-xp-bar',(stats.xp%100)+'%'); setElText('user-coins',stats.coins||0);
@@ -538,9 +531,9 @@ async function loadProfileData() {
 async function uploadAvatar(event) { 
     const file = event.target.files[0]; 
     if (!file) return; 
-    if (file.size > 5 * 1024 * 1024) { showToast('❌ Файл слишком большой (макс. 5 МБ)'); event.target.value = ''; return; } 
-    if (!file.type.startsWith('image/')) { showToast('❌ Пожалуйста, выберите изображение'); return; } 
-    showToast('⏳ Загрузка...'); 
+    if (file.size > 5 * 1024 * 1024) { showToast('Файл слишком большой (макс. 5 МБ)'); event.target.value = ''; return; } 
+    if (!file.type.startsWith('image/')) { showToast('Пожалуйста, выберите изображение'); return; } 
+    showToast('Загрузка...'); 
     try { 
         const fileExt = file.name.split('.').pop(); 
         const fileName = `${MY_ID}_${Date.now()}.${fileExt}`; 
@@ -552,9 +545,9 @@ async function uploadAvatar(event) {
         let s = getStats(); s.avatar_url = publicUrl; saveStats(s); 
         const avatarEl = document.getElementById('tg-avatar'); 
         if (avatarEl) avatarEl.innerHTML = `<img src="${publicUrl}" style="width:100%; height:100%; object-fit:cover;">`; 
-        showToast('✅ Аватарка обновлена!'); 
+        showToast('Аватарка обновлена!'); 
     } catch (error) { 
-        console.error(error); showToast('❌ Ошибка загрузки: ' + error.message); 
+        console.error(error); showToast('Ошибка загрузки: ' + error.message); 
     } finally { event.target.value = ''; } 
 }
 
@@ -593,7 +586,7 @@ function startPreview(type, item) {
     renderPreviewCard(); 
     const bar = document.getElementById('previewBar'); const btn = document.getElementById('preview-btn-buy'); 
     if (!bar || !btn) return; 
-    btn.textContent = item.price === 0 ? 'Получить' : `Купить и надеть · ${item.price} 🪙`; 
+    btn.textContent = item.price === 0 ? 'Получить' : `Купить и надеть · ${item.price}`; 
     btn.style.opacity = getStats().coins < item.price ? '0.5' : '1'; 
     bar.classList.add('active'); 
 }
@@ -671,7 +664,7 @@ async function renderBannersInShop(container) {
             list.forEach(b => { 
                 const isActive = stats.active_banner === b.id; 
                 const isOwned = ownedIds.has(b.id); 
-                let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Установлен</div>` : isOwned ? `<div style="font-size:12px; color:#ffd700; font-weight:bold; margin-top:5px;">Надеть</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${b.price === 0 ? 'Получить' : b.price + ' 🪙'}</div>`; 
+                let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Установлен</div>` : isOwned ? `<div style="font-size:12px; color:#ffd700; font-weight:bold; margin-top:5px;">Надеть</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${b.price === 0 ? 'Получить' : b.price + ''}</div>`; 
                 html += `<div class="shop-item" onclick="startPreview('banner', parseJSONAttr('${safeJSONAttr(b)}'))"><div class="shop-img" style="background-image: url('${safeUrl(b.image_url)}')"></div><div class="shop-info"><div class="shop-name">${escapeHTML(b.name)}</div>${btnHtml}</div></div>`; 
             }); 
         }); 
@@ -687,9 +680,9 @@ async function renderTitlesInShop(container) {
         let html = ''; 
         (items || []).forEach(t => { 
             const isActive = stats.active_title === t.id; 
-            let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${t.price} 🪙</div>`; 
+            let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${t.price}</div>`; 
             let titleHtml = t.is_animated ? `<div class="user-title-display animated-title" data-title="${escapeHTML(t.animation_key || 'gold')}" style="position:relative; font-size:11px; padding: 3px 10px;"><span class="title-text">${escapeHTML(t.name)}</span></div>` : `<div class="user-title-display" style="color:${escapeHTML(t.color)}; border-color:${escapeHTML(t.color)}; font-size:11px; padding: 3px 10px;">${escapeHTML(t.name)}</div>`; 
-            html += `<div class="shop-item" onclick="startPreview('title', parseJSONAttr('${safeJSONAttr(t)}'))"><div class="shop-img" style="background: #111; display:flex; align-items:center; justify-content:center; padding: 10px; box-sizing: border-box; overflow: hidden;">${titleHtml}</div><div class="shop-info"><div class="shop-name">${escapeHTML(t.name)}${t.is_animated ? ' ✨' : ''}</div>${btnHtml}</div></div>`; 
+            html += `<div class="shop-item" onclick="startPreview('title', parseJSONAttr('${safeJSONAttr(t)}'))"><div class="shop-img" style="background: #111; display:flex; align-items:center; justify-content:center; padding: 10px; box-sizing: border-box; overflow: hidden;">${titleHtml}</div><div class="shop-info"><div class="shop-name">${escapeHTML(t.name)}${t.is_animated ? ' *' : ''}</div>${btnHtml}</div></div>`; 
         }); 
         container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет титулов</div>'; 
     } catch(e) { console.error(e); } 
@@ -701,7 +694,7 @@ async function renderFramesInShop(container) {
         if (currentShopTab !== 'frames') return; 
         let html = ''; 
         (items || []).forEach(f => { 
-            html += `<div class="shop-item" onclick="startPreview('frame', parseJSONAttr('${safeJSONAttr(f)}'))"><div class="shop-img" style="background-image: url('${safeUrl(f.image_url)}')"></div><div class="shop-info"><div class="shop-name">${escapeHTML(f.name)}</div><div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${f.price} 🪙</div></div></div>`; 
+            html += `<div class="shop-item" onclick="startPreview('frame', parseJSONAttr('${safeJSONAttr(f)}'))"><div class="shop-img" style="background-image: url('${safeUrl(f.image_url)}')"></div><div class="shop-info"><div class="shop-name">${escapeHTML(f.name)}</div><div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${f.price}</div></div></div>`; 
         }); 
         container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет рамок</div>'; 
     } catch(e) { console.error(e); } 
@@ -715,7 +708,7 @@ async function renderEffectsInShop(container) {
         let html = ''; 
         (items || []).forEach(e => { 
             const isActive = stats.active_effect === e.id; 
-            let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${e.price} 🪙</div>`; 
+            let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${e.price}</div>`; 
             html += `<div class="shop-item" onclick="startPreview('effect', parseJSONAttr('${safeJSONAttr(e)}'))"><div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items:center; justify-content:center;"><div class="avatar" style="width:40px; height:40px; font-size:12px; background:#333; border:1px solid #555;">AA</div></div><div class="shop-info"><div class="shop-name">${escapeHTML(e.name)}</div>${btnHtml}</div></div>`; 
         }); 
         container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет эффектов</div>'; 
@@ -735,7 +728,7 @@ async function renderBadgesInShop(container) {
             html += `<div class="shop-category-header ${rarity.class}"><span style="color: ${rarity.color};">●</span> ${rarity.name}<span class="count">${list.length}</span></div>`; 
             list.forEach(b => { 
                 const isActive = stats.active_badge === b.id; 
-                let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${b.price} 🪙</div>`; 
+                let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${b.price}</div>`; 
                 html += `<div class="shop-item" onclick="startPreview('badge', parseJSONAttr('${safeJSONAttr(b)}'))"><div class="shop-img" style="background: #222; display:flex; align-items:center; justify-content:center;"><img src="${safeUrl(b.image_url)}" style="width:50px; height:50px; object-fit:contain;"></div><div class="shop-info"><div class="shop-name">${escapeHTML(b.name)}</div>${btnHtml}</div></div>`; 
             }); 
         }); 
@@ -759,7 +752,7 @@ async function buyItem(type, itemId, price) {
         const { error } = await supabaseClient.from('user_inventory').insert({ user_id: MY_ID, item_type: type, item_id: itemId }); 
         if (error) throw error; 
         await syncProfileToDB(true); 
-        showToast('✅ Покупка успешна!'); 
+        showToast('Покупка успешна!'); 
         if (type === 'title') await applyTitle(itemId); else if (type === 'effect') await applyEffect(itemId); else if (type === 'badge') await applyBadge(itemId); else if (type === 'frame') await applyFrame(itemId); 
         else { await loadProfileData(); renderShopTab(type + 's'); } 
     } catch(e) { 
@@ -796,7 +789,7 @@ async function buyBanner(bannerId, price) {
         const { data: b } = await supabaseClient.from('banners').select('image_url').eq('id', bannerId).single(); 
         if (b) { stats.active_banner_url = safeUrl(b.image_url); ACTIVE_BANNER_URL = stats.active_banner_url; } 
         saveStats(stats); checkAchievements(stats); await syncProfileToDB(true); 
-        showToast('✅ Баннер получен!'); await loadProfileData(); renderShopTab('banners'); 
+        showToast('Баннер получен!'); await loadProfileData(); renderShopTab('banners'); 
     } catch(e) { 
         console.error(e); stats.coins += price; stats.hasPurchasedBanner = false; saveStats(stats); 
         showToast('Ошибка — монеты возвращены'); await syncProfileToDB(true); 
@@ -827,11 +820,11 @@ async function loadFriends() {
             const inIds = incoming.map(f => f.user_id);
             const { data: inUsers } = await supabaseClient.from('users').select('*').in('id', inIds);
             if (inUsers && inUsers.length > 0) {
-                html += '<h3 style="padding: 0 20px 10px; font-size: 16px; color: #ffd700;">🔔 Заявки в друзья</h3>';
+                html += '<h3 style="padding: 0 20px 10px; font-size: 16px; color: #ffd700;">Заявки в друзья</h3>';
                 inUsers.forEach(u => {
                     const nameChar = u.name && u.name[0] ? escapeHTML(u.name[0].toUpperCase()) : '?';
                     const avatarUrl = u.avatar_url ? safeUrl(u.avatar_url) : '';
-                    html += `<div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${nameChar}';">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(u.name)}</h3><p>ID: ${escapeHTML(u.public_id || '...')}</p></div><div style="display: flex; gap: 5px; margin-left: auto;"><button onclick="acceptFriend('${escapeHTML(String(u.id))}')" style="background: #2ecc71; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✓</button><button onclick="rejectFriend('${escapeHTML(String(u.id))}')" style="background: #e74c3c; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">✕</button></div></div>`;
+                    html += `<div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${nameChar}';">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(u.name)}</h3><p>ID: ${escapeHTML(u.public_id || '...')}</p></div><div style="display: flex; gap: 5px; margin-left: auto;"><button onclick="acceptFriend('${escapeHTML(String(u.id))}')" style="background: #2ecc71; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;"><svg class="icon-inline" style="stroke:#fff;width:14px;height:14px;"><use href="#oa-check"></use></svg></button><button onclick="rejectFriend('${escapeHTML(String(u.id))}')" style="background: #e74c3c; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;"><svg class="icon-inline" style="stroke:#fff;width:14px;height:14px;"><use href="#oa-close"></use></svg></button></div></div>`;
                 });
             }
         }
@@ -855,7 +848,7 @@ async function searchFriend() {
     const searchId = document.getElementById('friend-search-input').value.trim();
     const resultContainer = document.getElementById('search-result-container');
     if (!searchId) return;
-    if (String(searchId) === String(MY_PUBLIC_ID)) { resultContainer.innerHTML = '<div style="color: #ffd700; text-align: center; font-size: 14px;">Это ваш ID 🙂</div>'; return; }
+    if (String(searchId) === String(MY_PUBLIC_ID)) { resultContainer.innerHTML = '<div style="color: #ffd700; text-align: center; font-size: 14px;">Это ваш ID</div>'; return; }
     resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Поиск...</div>';
     try {
         const { data: userData } = await supabaseClient.from('users').select('*').eq('public_id', searchId).single();
@@ -873,7 +866,7 @@ async function sendFriendRequest(friendId) {
         if (error) throw error;
         document.getElementById('search-result-container').innerHTML = '';
         document.getElementById('friend-search-input').value = '';
-        showToast('📩 Заявка отправлена!'); loadFriends();
+        showToast('Заявка отправлена!'); loadFriends();
     } catch(e) { console.error(e); showToast('Ошибка отправки'); }
 }
 async function acceptFriend(userId) {
@@ -950,14 +943,14 @@ async function openFriendProfile(id, name) {
             </div>
             <div class="achievements-card" style="margin-top: 15px; cursor: default;">
                 <div class="ach-header">
-                    <div class="ach-icon-big"><img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='🏆';"></div>
+                    <div class="ach-icon-big"><img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'icon-inline\' style=\'color:#ffd700;width:60px;height:60px;\'><use href=\'#oa-achievement\'></use></svg>';"></div>
                     <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p>${achPoints} очков</p></div>
                     <div class="ach-total">${friendAchCount}/${totalAchCount}</div>
                 </div>
                 <div class="ach-progress-wrap"><div class="ach-progress-bar" style="width: ${(friendAchCount / totalAchCount) * 100}%;"></div></div>
             </div>
             ${lastWatchedHtml}
-            <button onclick="removeFriend('${escapeHTML(String(friend.id))}')" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">🗑️ Удалить из друзей</button>`;
+            <button onclick="removeFriend('${escapeHTML(String(friend.id))}')" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">Удалить из друзей</button>`;
         setTimeout(() => { renderEffectParticles(document.getElementById('friend-particle-container'), friendEffectClass); }, 100);
     } catch (e) { console.error(e); container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка</div>'; }
 }
@@ -984,7 +977,7 @@ function playEpisode(epNum) {
     let stats = getStats();
     stats.episodesWatched += 1; stats.minutesWatched += 24;
     saveStats(stats); checkAchievements(stats); addXP(5); syncProfileToDB(true);
-    if (tg) tg.showAlert(`🎬 Просмотр:\n${currentAnimeForPlayer.title_ru}\n${selectedVoice}\n${selectedPlayer}\nСерия: ${epNum}`);
+    if (tg) tg.showAlert(`Просмотр:\n${currentAnimeForPlayer.title_ru}\n${selectedVoice}\n${selectedPlayer}\nСерия: ${epNum}`);
     currentAnimeForPlayer = null; switchTab('home');
 }
 
@@ -1039,7 +1032,7 @@ async function loadCatalog(reset = false) {
             const title = escapeHTML(anime.title_ru); 
             const img = safeUrl(anime.images.jpg.image_url); 
             const score = anime.score ? Number(anime.score).toFixed(1) : '?';
-            grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`);
+            grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;display:flex;align-items:center;gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${score}</div><div class="catalog-card-title">${title}</div></div>`);
         });
         hasMoreCatalog = items.length >= 30;
         if (lm) lm.style.display = hasMoreCatalog ? 'inline-block' : 'none';
@@ -1088,7 +1081,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 commentsHtml += `<div style="display: flex; gap: 10px; margin-bottom: 15px;"><div class="friend-avatar" style="width: 36px; height: 36px; flex-shrink: 0; font-size: 14px;">${av}</div><div style="flex: 1; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px;"><div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-size: 13px; font-weight: bold; color: #fff;">${escapeHTML(c.user_name)}</span><span style="font-size: 11px; color: #888;">${date}</span></div><p style="font-size: 13px; color: #ccc;">${escapeHTML(c.text)}</p></div></div>`;
             });
         } else commentsHtml = '<div style="font-size: 13px; color: #888; text-align: center; padding: 10px;">Пока нет комментариев</div>';
-        container.innerHTML = `<div class="fade-in"><div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;"><img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"></div><div style="padding-top: 30px;"><div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;"><img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; border: 2px solid rgba(255,255,255,0.1);"><div style="flex: 1;"><h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff;">${title}</h1><div style="display: flex; flex-wrap: wrap; gap: 6px;"><span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800;">⭐ ${score}</span><span style="background: rgba(255,255,255,0.15); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px;">📺 ${anime.episodes || '?'} эп.</span><span style="background: ${statusColor}; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px;">${escapeHTML(anime.status)}</span></div></div></div><div style="display: flex; gap: 10px; margin-bottom: 20px;"><button class="btn-primary ripple-btn" onclick="startWatching(window._animeCache['${escapeHTML(anime.id)}'])" style="flex: 1; padding: 16px;">▶ Смотреть</button><button onclick="openStatusModal('${escapeHTML(anime.id)}')" class="btn-icon-heart ${isFaved ? 'faved' : ''}" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'};">${heartSvg}</button></div><div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px;">${escapeHTML(g)}</span>`).join('')}</div><div style="margin-bottom: 25px;"><p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p><button id="desc-btn" onclick="toggleDescription()" style="display: none; background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button></div><div style="background: #14141f; border-radius: 16px; padding: 15px; margin-bottom: 20px; text-align: center;"><h3 style="font-size: 15px; color: #fff; margin-bottom: 10px;">Ваша оценка:</h3><div style="display: flex; justify-content: center; gap: 5px;">${starsHtml}</div></div><div style="margin-bottom: 40px;"><h3 style="font-size: 16px; margin-bottom: 15px; color: #fff;">💬 Комментарии</h3><div style="display: flex; gap: 10px; margin-bottom: 20px;"><input type="text" id="comment-input" placeholder="Написать отзыв..." style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;"><button onclick="sendComment('${escapeHTML(anime.id)}')" class="ripple-btn" style="background: #5b5bff; border: none; border-radius: 12px; padding: 0 15px; color: #fff; font-weight: bold; cursor: pointer;">➤</button></div><div>${commentsHtml}</div></div></div></div>`;
+        container.innerHTML = `<div class="fade-in"><div style="position: absolute; top: 0; left: 0; width: 100%; height: 50vh; z-index: -1;"><img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"></div><div style="padding-top: 30px;"><div style="display: flex; gap: 20px; margin-bottom: 25px; align-items: flex-end;"><img class="detail-poster" src="${poster}" style="width: 140px; border-radius: 16px; border: 2px solid rgba(255,255,255,0.1);"><div style="flex: 1;"><h1 style="font-size: 24px; font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: #fff;">${title}</h1><div style="display: flex; flex-wrap: wrap; gap: 6px;"><span style="background: #ffd700; color: #000; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800; display:flex;align-items:center;gap:4px;"><svg class="icon-star" style="width:14px;height:14px;"><use href="#oa-star"></use></svg> ${score}</span><span style="background: rgba(255,255,255,0.15); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; display:flex;align-items:center;gap:4px;"><svg class="icon-inline" style="width:14px;height:14px;"><use href="#oa-tv"></use></svg> ${anime.episodes || '?'} эп.</span><span style="background: ${statusColor}; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px;">${escapeHTML(anime.status)}</span></div></div></div><div style="display: flex; gap: 10px; margin-bottom: 20px;"><button class="btn-primary ripple-btn" onclick="startWatching(window._animeCache['${escapeHTML(anime.id)}'])" style="flex: 1; padding: 16px; display:flex;align-items:center;gap:8px;"><svg class="icon-inline" style="stroke:#fff;fill:#fff;width:18px;height:18px;"><use href="#oa-play"></use></svg> Смотреть</button><button onclick="openStatusModal('${escapeHTML(anime.id)}')" class="btn-icon-heart ${isFaved ? 'faved' : ''}" style="background: ${isFaved ? 'rgba(255,45,120,0.2)' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#ff2d78' : '#fff'};">${heartSvg}</button></div><div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 13px;">${escapeHTML(g)}</span>`).join('')}</div><div style="margin-bottom: 25px;"><p id="desc-text" style="color: #aaa; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p><button id="desc-btn" onclick="toggleDescription()" style="display: none; background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 14px; margin-top: 8px; cursor: pointer; padding: 0;">Читать полностью ▼</button></div><div style="background: #14141f; border-radius: 16px; padding: 15px; margin-bottom: 20px; text-align: center;"><h3 style="font-size: 15px; color: #fff; margin-bottom: 10px;">Ваша оценка:</h3><div style="display: flex; justify-content: center; gap: 5px;">${starsHtml}</div></div><div style="margin-bottom: 40px;"><h3 style="font-size: 16px; margin-bottom: 15px; color: #fff; display:flex;align-items:center;gap:6px;"><svg class="icon-inline"><use href="#oa-message"></use></svg> Комментарии</h3><div style="display: flex; gap: 10px; margin-bottom: 20px;"><input type="text" id="comment-input" placeholder="Написать отзыв..." style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;"><button onclick="sendComment('${escapeHTML(anime.id)}')" class="ripple-btn" style="background: #5b5bff; border: none; border-radius: 12px; padding: 0 15px; color: #fff; font-weight: bold; cursor: pointer;"><svg class="icon-inline" style="stroke:#fff;width:16px;height:16px;"><use href="#oa-send"></use></svg></button></div><div>${commentsHtml}</div></div></div></div>`;
         setTimeout(() => { const d = document.getElementById('desc-text'); const b = document.getElementById('desc-btn'); if (d && b && d.scrollHeight > d.clientHeight) b.style.display = 'block'; }, 50);
     } catch (e) { console.error(e); container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки</div>'; }
 }
@@ -1100,7 +1093,7 @@ async function rateAnime(animeId, rating) {
         else await supabaseClient.from('user_lists').insert({ user_id: MY_ID, anime_id: animeId, status: 'planned', rating });
         const starDiv = document.querySelector('#detail-content div[style*="justify-content: center; gap: 5px"]');
         if (starDiv) { starDiv.querySelectorAll('span').forEach((sp, i) => { sp.style.color = (i + 1) <= rating ? '#ffd700' : '#444'; }); }
-        showToast(`⭐ Оценка ${rating}`);
+        showToast(`Оценка ${rating}`);
     } catch(e) { showToast('Ошибка'); }
 }
 async function sendComment(animeId) {
@@ -1111,7 +1104,7 @@ async function sendComment(animeId) {
     try {
         const { error } = await supabaseClient.from('anime_comments').insert({ anime_id: animeId, user_id: MY_ID, user_name: MY_NAME, user_avatar: getStats().avatar_url || MY_PHOTO_URL, text });
         if (error) throw error;
-        input.value = ''; showToast('✅ Отправлено!'); openAnimeDetail(animeId, previousScreen);
+        input.value = ''; showToast('Отправлено!'); openAnimeDetail(animeId, previousScreen);
     } catch(e) { console.error(e); showToast('Ошибка'); }
 }
 function openStatusModal(id) { const t = window._animeCache && window._animeCache[id] ? window._animeCache[id].title_ru : 'Аниме'; document.getElementById('status-anime-title').textContent = t; document.getElementById('statusModal').classList.add('active'); window._currentAnimeForStatus = id; }
@@ -1136,7 +1129,7 @@ async function setAnimeStatus(status) {
     } catch(e) { console.error(e); showToast('Ошибка'); }
 }
 function toggleDescription() { const d = document.getElementById('desc-text'); const b = document.getElementById('desc-btn'); if (d.style.webkitLineClamp === '4' || d.style.webkitLineClamp === '') { d.style.webkitLineClamp = 'unset'; b.innerHTML = 'Свернуть ▲'; } else { d.style.webkitLineClamp = '4'; b.innerHTML = 'Читать полностью ▼'; } }
-async function openRandomAnime() { if (tg) tg.HapticFeedback.impactOccurred('medium'); showToast('🎲 Ищем...'); try { const items = await API.getRandom(1); if (items && items.length > 0) openAnimeDetail(items[0].id, 'catalog'); } catch (e) {} }
+async function openRandomAnime() { if (tg) tg.HapticFeedback.impactOccurred('medium'); showToast('Ищем...'); try { const items = await API.getRandom(1); if (items && items.length > 0) openAnimeDetail(items[0].id, 'catalog'); } catch (e) {} }
 
 // ==========================================
 // 11. МОЁ
@@ -1168,7 +1161,7 @@ function renderMyListCard(anime, grid) {
     const title = escapeHTML(anime.title_ru); 
     const img = safeUrl(anime.images.jpg.image_url); 
     const score = anime.score ? Number(anime.score).toFixed(1) : '?';
-    grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'my')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold;">⭐ ${score}</div><div class="catalog-card-title">${title}</div></div>`);
+    grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'my')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold; display:flex;align-items:center;gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${score}</div><div class="catalog-card-title">${title}</div></div>`);
 }
 
 // ==========================================
@@ -1190,7 +1183,6 @@ async function loadPopularByRating(limit = 6) {
     }
 }
 
-// Новая функция для «Скоро выйдет»
 async function loadUpcomingAnime(limit = 6) {
     const list = document.getElementById('upcoming-list'); if (!list) return;
     list.innerHTML = Skeletons.cards(4);
@@ -1244,10 +1236,10 @@ async function loadHomePage() {
     } catch(e) { if (seasonalList) seasonalList.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; }
 
     loadPopularByRating(6);
-    loadUpcomingAnime(6); // Новый блок
+    loadUpcomingAnime(6);
 
     const obs = getSectionObserver();
-    document.querySelectorAll('.content-section, .tg-banner-section').forEach(sec => { if (!observedSections.has(sec)) { obs.observe(sec); observedSections.add(sec); } });
+    document.querySelectorAll('.content-section').forEach(sec => { if (!observedSections.has(sec)) { obs.observe(sec); observedSections.add(sec); } });
 }
 
 function initHeroSlider() {
@@ -1263,13 +1255,13 @@ function initHeroSlider() {
                 <div class="hero-gradient"></div>
                 <div class="hero-content">
                     <div class="hero-badges">
-                        <span class="badge star">⭐ ${escapeHTML(anime.score)}</span>
+                        <span class="badge star"><svg class="icon-star"><use href="#oa-star"></use></svg> ${escapeHTML(anime.score)}</span>
                         <span class="badge">${escapeHTML(anime.type)}</span>
                         <span class="badge">${escapeHTML(anime.year)}</span>
                     </div>
                     <h1 class="hero-title">${escapeHTML(anime.title)}</h1>
                     <div class="hero-actions">
-                        <button class="btn-primary" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'home')">▶ Смотреть</button>
+                        <button class="btn-primary" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'home')"><svg class="icon-inline" style="stroke:#fff;fill:#fff;width:16px;height:16px;"><use href="#oa-play"></use></svg> Смотреть</button>
                         <button class="btn-icon-heart" onclick="openStatusModal('${escapeHTML(anime.id)}')"><svg><use href="#oa-favorite"></use></svg></button>
                     </div>
                 </div>
@@ -1361,7 +1353,7 @@ function checkAchievements(s) {
         ACHIEVEMENTS.forEach(a => {
             if (!s.unlockedAchievements.includes(a.id) && a.check(s)) {
                 s.unlockedAchievements.push(a.id); s.coins += a.coins; s.xp += a.xp; changed = true; totalChanged = true;
-                showToast(`🏆 ${a.name}! +${a.xp} XP, +${a.coins} 🪙`);
+                showToast(`${a.name}! +${a.xp} XP, +${a.coins}`);
             }
         });
         if (!changed) break;
@@ -1382,7 +1374,7 @@ function addXPForTime(min) {
     const lastAwarded = s._lastAwardedHours || 0;
     if (hoursEarned > lastAwarded) {
         const delta = hoursEarned - lastAwarded; s._lastAwardedHours = hoursEarned; saveStats(s);
-        addXP(delta * 2); showToast(`⏱️ +${delta * 2} XP за ${delta} ч`);
+        addXP(delta * 2); showToast(`+${delta * 2} XP за ${delta} ч`);
     } else saveStats(s);
 }
 function showLevelUpPopup(l, r, c) { const p = document.getElementById('levelUpPopup'); document.getElementById('popup-level').textContent = l; document.getElementById('popup-rank').textContent = r; document.getElementById('popup-coins').textContent = c; p.classList.add('show'); setTimeout(() => p.classList.remove('show'), 4000); }
@@ -1416,8 +1408,8 @@ function renderAchievementsPage() {
             const isDone = s.unlockedAchievements.includes(a.id);
             const rs = RARITY_STYLES[a.rarity];
             const pc = a.progress(s); const pp = (pc / a.max) * 100;
-            const ic = a.imgUrl ? `<img src="${safeUrl(a.imgUrl)}" alt="${escapeHTML(a.name)}" onerror="this.style.display='none'">` : '🏆';
-            html += `<div class="ach-list-item ${rs.class} ${isDone ? 'completed' : ''}"><div class="ach-list-icon" style="color: ${rs.color}">${ic}</div><div class="ach-list-info"><h4>${escapeHTML(a.name)}</h4><p>${escapeHTML(a.desc)}</p>${!isDone ? `<div class="ach-progress-mini"><div style="width: ${pp}%; background: ${rs.color}"></div></div><div style="font-size: 10px; color: #888; margin-top: 2px;">${pc} / ${a.max}</div>` : ''}</div><div class="ach-reward-badge">+${a.xp} XP, +${a.coins} 🪙</div>${isDone ? '<div class="ach-status-icon" style="color: #ffd700;">✓</div>' : ''}</div>`;
+            const ic = a.imgUrl ? `<img src="${safeUrl(a.imgUrl)}" alt="${escapeHTML(a.name)}" onerror="this.style.display='none'">` : '<svg class="icon-inline" style="color:#ffd700;"><use href="#oa-achievement"></use></svg>';
+            html += `<div class="ach-list-item ${rs.class} ${isDone ? 'completed' : ''}"><div class="ach-list-icon" style="color: ${rs.color}">${ic}</div><div class="ach-list-info"><h4>${escapeHTML(a.name)}</h4><p>${escapeHTML(a.desc)}</p>${!isDone ? `<div class="ach-progress-mini"><div style="width: ${pp}%; background: ${rs.color}"></div></div><div style="font-size: 10px; color: #888; margin-top: 2px;">${pc} / ${a.max}</div>` : ''}</div><div class="ach-reward-badge">+${a.xp} XP, +${a.coins}</div>${isDone ? '<div class="ach-status-icon" style="color: #ffd700;"><svg class="icon-inline" style="width:20px;height:20px;"><use href="#oa-check"></use></svg></div>' : ''}</div>`;
         });
     });
     c.innerHTML = html;
