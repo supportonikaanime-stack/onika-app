@@ -183,13 +183,18 @@ const API_AniList = {
     async getCatalog(page, limit, filters) {
         const perPage = Math.min(limit || 30, 50);
         const vars = { page: page || 1, perPage };
-        let args = ['type: ANIME', 'sort: POPULARITY_DESC'];
+        
+        // Базовые аргументы: только аниме и исключаем взрослые жанры
+        let args = ['type: ANIME', 'sort: POPULARITY_DESC', 'genre_not_in: ["Hentai", "Ecchi", "Erotica"]'];
+        
         if (filters && filters.search) { vars.search = filters.search; args.push('search: $search'); }
         if (filters && filters.year) { vars.seasonYear = parseInt(filters.year); args.push('seasonYear: $seasonYear'); }
         if (filters && filters.genre) { vars.genre = filters.genre; args.push('genre: $genre'); }
         if (filters && filters.status) { const m={ongoing:'RELEASING',released:'FINISHED',anons:'NOT_YET_RELEASED'}; vars.status=m[filters.status]; if(vars.status) args.push('status: $status'); }
+        
         const sortMap={popularity:'POPULARITY_DESC',ranked:'SCORE_DESC',aired_on:'START_DATE_DESC',newest:'START_DATE_DESC',oldest:'START_DATE_ASC'};
         const sort = sortMap[filters?.sort] || 'POPULARITY_DESC';
+        
         const q = `query($page:Int,$perPage:Int${vars.search?', $search:String':''}${vars.seasonYear?', $seasonYear:Int':''}${vars.genre?', $genre:String':''}${vars.status?', $status:MediaStatus':''}){Page(page:$page,perPage:$perPage){media(${args.filter(a=>!a.startsWith('sort')).join(', ')},sort:${sort}){${this._mediaFields}}}}`;
         const data = await this.fetch(q, vars).catch(()=>null);
         return data?.Page?.media || [];
@@ -203,20 +208,21 @@ const API_AniList = {
     async getSimilarByGenre(genres, excludeId, limit = 6) {
         if (!genres || genres.length === 0) return [];
         const vars = { page: 1, perPage: 15, genre: genres[0] };
-        const q = `query($page:Int,$perPage:Int,$genre:String){Page(page:$page,perPage:$perPage){media(type:ANIME,genre:$genre,sort:POPULARITY_DESC){${this._mediaFields}}}}`;
+        // Исключаем взрослые жанры и в похожих
+        const q = `query($page:Int,$perPage:Int,$genre:String){Page(page:$page,perPage:$perPage){media(type:ANIME,genre:$genre,sort:POPULARITY_DESC,genre_not_in:["Hentai","Ecchi","Erotica"]){${this._mediaFields}}}}`;
         const data = await this.fetch(q, vars).catch(()=>null);
         if (!data?.Page?.media) return [];
         return data.Page.media.filter(m => String(m.id) !== String(excludeId).replace('anilist_','')).slice(0, limit);
     },
     async getRandom(limit) {
-        const q = `query($page:Int,$perPage:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,sort:POPULARITY_DESC){${this._mediaFields}}}}`;
+        const q = `query($page:Int,$perPage:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,sort:POPULARITY_DESC,genre_not_in:["Hentai","Ecchi","Erotica"]){${this._mediaFields}}}}`;
         const data = await this.fetch(q, { page: 1, perPage: Math.min((limit||5)*6,50) }).catch(()=>null);
         return (data?.Page?.media || []).sort(()=>Math.random()-0.5).slice(0, limit||5);
     },
     async getSeasonal(limit) {
         const now = new Date(); const month = now.getMonth();
         let season = 'WINTER'; if (month>=3&&month<6) season='SPRING'; else if (month>=6&&month<9) season='SUMMER'; else if (month>=9) season='FALL';
-        const q = `query($page:Int,$perPage:Int,$season:MediaSeason,$seasonYear:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,season:$season,seasonYear:$seasonYear,sort:POPULARITY_DESC){${this._mediaFields}}}}`;
+        const q = `query($page:Int,$perPage:Int,$season:MediaSeason,$seasonYear:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,season:$season,seasonYear:$seasonYear,sort:POPULARITY_DESC,genre_not_in:["Hentai","Ecchi","Erotica"]){${this._mediaFields}}}}`;
         const data = await this.fetch(q, { page:1, perPage:Math.min((limit||6)*2,50), season, seasonYear:now.getFullYear() }).catch(()=>null);
         return (data?.Page?.media || []).slice(0, limit||6);
     },
@@ -227,12 +233,12 @@ const API_AniList = {
         else if (month >= 3 && month < 6) { season = 'SUMMER'; }
         else if (month >= 6 && month < 9) { season = 'FALL'; }
         else { season = 'WINTER'; year += 1; }
-        const q = `query($page:Int,$perPage:Int,$season:MediaSeason,$seasonYear:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,season:$season,seasonYear:$seasonYear,status:NOT_YET_RELEASED,sort:POPULARITY_DESC){${this._mediaFields}}}}`;
+        const q = `query($page:Int,$perPage:Int,$season:MediaSeason,$seasonYear:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,season:$season,seasonYear:$seasonYear,status:NOT_YET_RELEASED,sort:POPULARITY_DESC,genre_not_in:["Hentai","Ecchi","Erotica"]){${this._mediaFields}}}}`;
         const data = await this.fetch(q, { page:1, perPage:Math.min((limit||6)*2,50), season, seasonYear:year }).catch(()=>null);
         return (data?.Page?.media || []).slice(0, limit||6);
     },
     async getTopRated(limit = 6) {
-        const q = `query($page:Int,$perPage:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,sort:SCORE_DESC){${this._mediaFields}}}}`;
+        const q = `query($page:Int,$perPage:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,sort:SCORE_DESC,genre_not_in:["Hentai","Ecchi","Erotica"]){${this._mediaFields}}}}`;
         const data = await this.fetch(q, { page: 1, perPage: Math.min(limit, 50) }).catch(()=>null);
         return data?.Page?.media || [];
     }
@@ -1128,7 +1134,7 @@ async function searchFranchiseByTitle(anime) {
 
     // 1. Ищем по названию (с фильтром по формату)
     try {
-        const searchQuery = `query($search: String) { Page(page: 1, perPage: 20) { media(search: $search, type: ANIME, sort: START_DATE) { id idMal title{romaji english native} coverImage{large} seasonYear format } } }`;
+        const searchQuery = `query($search: String) { Page(page: 1, perPage: 20) { media(search: $search, type: ANIME, sort: START_DATE, genre_not_in:["Hentai","Ecchi","Erotica"]) { id idMal title{romaji english native} coverImage{large} seasonYear format } } }`;
         const data = await API_AniList.fetch(searchQuery, { search: query }).catch(() => null);
         
         if (data?.Page?.media) {
@@ -1231,7 +1237,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         
         try {
             if (anime.genres && anime.genres.length > 0) {
-                const genreQuery = `query($genre: String) { Page(page: 1, perPage: 10) { media(type: ANIME, genre: $genre, sort: POPULARITY_DESC) { id title{romaji english native} coverImage{large} averageScore seasonYear format } } }`;
+                const genreQuery = `query($genre: String) { Page(page: 1, perPage: 10) { media(type: ANIME, genre: $genre, sort: POPULARITY_DESC, genre_not_in:["Hentai","Ecchi","Erotica"]) { id title{romaji english native} coverImage{large} averageScore seasonYear format } } }`;
                 const genreData = await API_AniList.fetch(genreQuery, { genre: anime.genres[0] });
                 if (genreData?.Page?.media) {
                     similarItems = await processWithLimit(
