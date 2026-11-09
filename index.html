@@ -697,19 +697,27 @@
             <div class="level-row" onclick="openLevelModal()" style="background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 15px 20px; display: flex; align-items: center; gap: 15px; cursor: pointer;">
                 
                 <!-- SVG Щит с уровнем -->
-                <div style="position: relative; width: 70px; height: 70px; flex-shrink: 0;">
-                    <svg viewBox="0 0 100 100" style="width: 100%; height: 100%; animation: shieldShimmer 3s infinite;">
+                <div style="position: relative; width: 70px; height: 70px; flex-shrink: 0; animation: shieldShimmer 3s infinite;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="70" height="70">
+                        <!-- Белый фон (убираем, чтобы был прозрачный) -->
+                        <rect width="1024" height="1024" fill="transparent"/>
+                        
+                        <!-- Чёрный внешний контур щита -->
+                        <path fill="#000000" d="M150 120 Q150 92 180 92 H844 Q874 92 874 120 V475 C874 690 752 846 512 934 C272 846 150 690 150 475 Z"/>
+                        
+                        <!-- Белая внутренняя окантовка (сюда подставляем градиент) -->
                         <defs>
-                            <!-- Градиент будет меняться через JS -->
                             <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                                 <stop offset="0%" stop-color="#5b5bff" id="shield-stop-1" />
                                 <stop offset="100%" stop-color="#b44aff" id="shield-stop-2" />
                             </linearGradient>
                         </defs>
-                        <!-- Форма щита (из твоего скриншота) -->
-                        <path d="M 20 10 L 80 10 L 80 60 Q 80 85 50 95 Q 20 85 20 60 Z" fill="url(#shieldGradient)" stroke="#fff" stroke-width="2"/>
+                        <path fill="url(#shieldGradient)" d="M177 145 Q177 122 202 122 H822 Q847 122 847 145 V470 C847 668 733 804 512 890 C291 804 177 668 177 470 Z"/>
+                        
+                        <!-- Тёмная внутренняя часть щита -->
+                        <path fill="#111111" d="M198 165 Q198 150 216 150 H808 Q826 150 826 165 V468 C826 646 720 776 512 858 C304 776 198 646 198 468 Z"/>
                     </svg>
-                    <div id="shield-level-text" style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 900; color: #000; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(255,255,255,0.5);">1</div>
+                    <div id="shield-level-text" style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
                 </div>
 
                 <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
@@ -779,51 +787,75 @@
         </div>
     </div>
 
-    <div id="screen-preview" class="screen">
-        <header class="profile-header">
+    <!-- ЭКРАН ПРЕДПРОСМОТРА (ТЕПЕРЬ В НОВОМ ДИЗАЙНЕ) -->
+    <div id="screen-preview" class="screen" style="background: var(--bg);">
+        <header class="profile-header" style="padding-bottom: 10px;">
             <h1>Примерка</h1>
             <button onclick="cancelPreview()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
                 <svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-close"></use></svg>
             </button>
         </header>
-        <div class="profile-container">
-            <div class="user-card-wrapper">
-                <div class="user-card-top" id="preview-banner">
-                    <div class="effect-container" id="preview-particle-container"></div>
-                    <div class="user-card-top-content">
-                        <div class="avatar-container">
-                            <div class="avatar" id="preview-avatar"><span>?</span></div>
-                        </div>
-                        <div class="user-details">
-                            <div class="user-name-row">
-                                <h2 id="preview-name">Гость</h2>
-                                <img id="preview-badge-img" class="user-badge-icon" style="display: none;" alt="badge">
-                            </div>
-                            <div id="preview-title-container" style="display: none;">
-                                <div class="user-title-display" id="preview-active-title"></div>
-                            </div>
-                            <div class="coin-balance">
-                                <svg><use href="#oa-coin"></use></svg>
-                                <span id="preview-coins">0</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="user-card-bottom">
-                    <div class="level-row">
-                        <div class="level-badge">
-                            <img src="level_icon.png" class="level-badge-img" alt="level" onerror="this.style.display='none'">
-                            <span id="preview-level" class="level-number">1</span>
-                        </div>
-                        <div class="level-info">
-                            <div class="level-title">УРОВЕНЬ <span id="preview-level-text">1</span> <span class="rank" id="preview-rank">Первый эпизод</span></div>
-                            <div class="xp-bar-container"><div class="xp-bar-fill" id="preview-xp-bar" style="width: 20%;"></div></div>
-                            <div class="xp-text"><span id="preview-xp-current">0</span> / <span id="preview-xp-next">100</span> XP</div>
+        
+        <div style="padding: 0;">
+            <!-- Верхняя часть с фоном -->
+            <div id="preview-banner" style="position: relative; width: 100%; height: 220px; background: linear-gradient(180deg, #2a2a3e 0%, #14141f 100%); background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
+                <div class="effect-container" id="preview-particle-container" style="border-radius: 0 0 24px 24px;"></div>
+                <div style="position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); z-index: 10;">
+                    <div class="avatar-container" style="position: relative; width: 110px; height: 110px; margin: 0;">
+                        <div style="position: absolute; inset: -4px; border-radius: 50%; background: linear-gradient(135deg, #5b5bff, #b44aff); z-index: 1;"></div>
+                        <div class="avatar" id="preview-avatar" style="width: 100%; height: 100%; border-radius: 50%; background: #222; border: 4px solid #14141f; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; overflow: hidden; position: relative; z-index: 2;">
+                            <span>?</span>
                         </div>
                     </div>
                 </div>
             </div>
-            <div style="height: 100px;"></div>
+
+            <div style="padding: 55px 20px 20px 20px; text-align: center; position: relative; z-index: 5;">
+                <h1 id="preview-name" style="font-size: 28px; font-weight: 900; color: #fff; margin-bottom: 8px; line-height: 1.1; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    Гость
+                    <img id="preview-badge-img" class="user-badge-icon" style="display: none; width: 24px; height: 24px; object-fit: contain;" alt="badge">
+                </h1>
+                
+                <div id="preview-title-container" style="display: none; margin-bottom: 15px;">
+                    <div class="user-title-display" id="preview-active-title"></div>
+                </div>
+
+                <div class="coin-balance" style="display: inline-flex; margin-bottom: 15px;">
+                    <svg><use href="#oa-coin"></use></svg>
+                    <span id="preview-coins">0</span>
+                </div>
+            </div>
+
+            <!-- Карточка уровня (XP) с SVG Щитом -->
+            <div style="padding: 0 20px 100px 20px;">
+                <div class="level-row" style="background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 15px 20px; display: flex; align-items: center; gap: 15px;">
+                    <div style="position: relative; width: 70px; height: 70px; flex-shrink: 0; animation: shieldShimmer 3s infinite;">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="70" height="70">
+                            <rect width="1024" height="1024" fill="transparent"/>
+                            <path fill="#000000" d="M150 120 Q150 92 180 92 H844 Q874 92 874 120 V475 C874 690 752 846 512 934 C272 846 150 690 150 475 Z"/>
+                            <defs>
+                                <linearGradient id="previewShieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#5b5bff" id="preview-shield-stop-1" />
+                                    <stop offset="100%" stop-color="#b44aff" id="preview-shield-stop-2" />
+                                </linearGradient>
+                            </defs>
+                            <path fill="url(#previewShieldGradient)" d="M177 145 Q177 122 202 122 H822 Q847 122 847 145 V470 C847 668 733 804 512 890 C291 804 177 668 177 470 Z"/>
+                            <path fill="#111111" d="M198 165 Q198 150 216 150 H808 Q826 150 826 165 V468 C826 646 720 776 512 858 C304 776 198 646 198 468 Z"/>
+                        </svg>
+                        <div id="preview-shield-level-text" style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
+                    </div>
+
+                    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 8px;">
+                            <div style="font-size: 16px; font-weight: 800; color: #fff;">УРОВЕНЬ <span id="preview-level">1</span></div>
+                            <div style="font-size: 13px; font-weight: 600; color: #888;"><span id="preview-xp-current">0</span> / 100 XP</div>
+                        </div>
+                        <div class="xp-bar-container" style="width: 100%; height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; overflow: hidden; margin: 0;">
+                            <div class="xp-bar-fill" id="preview-xp-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 5px; transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -831,9 +863,20 @@
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('levelModal')"><svg><use href="#oa-close"></use></svg></button>
             <div class="modal-icon-large">
-                <div class="level-badge modal-level-badge" id="modal-level-badge-container">
-                    <img src="level_icon.png" class="level-badge-img" alt="level" onerror="this.style.display='none'">
-                    <span id="modal-icon-level" class="level-number">1</span>
+                <div style="position: relative; width: 120px; height: 120px; animation: shieldShimmer 3s infinite;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="120" height="120">
+                        <rect width="1024" height="1024" fill="transparent"/>
+                        <path fill="#000000" d="M150 120 Q150 92 180 92 H844 Q874 92 874 120 V475 C874 690 752 846 512 934 C272 846 150 690 150 475 Z"/>
+                        <defs>
+                            <linearGradient id="modalShieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#5b5bff" id="modal-shield-stop-1" />
+                                <stop offset="100%" stop-color="#b44aff" id="modal-shield-stop-2" />
+                            </linearGradient>
+                        </defs>
+                        <path fill="url(#modalShieldGradient)" d="M177 145 Q177 122 202 122 H822 Q847 122 847 145 V470 C847 668 733 804 512 890 C291 804 177 668 177 470 Z"/>
+                        <path fill="#111111" d="M198 165 Q198 150 216 150 H808 Q826 150 826 165 V468 C826 646 720 776 512 858 C304 776 198 646 198 468 Z"/>
+                    </svg>
+                    <div id="modal-icon-level" style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 40px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
                 </div>
             </div>
             <div class="modal-title">Уровень <span id="modal-level-num">1</span></div>
@@ -921,6 +964,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4616"></script>
+    <script src="app.js?v=4617"></script>
 </body>
 </html>
