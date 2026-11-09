@@ -419,6 +419,7 @@
       <symbol id="oa-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></symbol>
       <symbol id="oa-trophy" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v7a5 5 0 0 1-10 0V4z"/><path d="M7 4H4v2a3 3 0 0 0 3 3M17 4h3v2a3 3 0 0 1-3 3"/></symbol>
       <symbol id="oa-chevron-down" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
+      <symbol id="oa-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></symbol>
     </svg>
 
     <div class="auth-screen" id="authScreen">
@@ -642,65 +643,87 @@
         <div id="achievements-list-container" style="margin-top: 15px;"></div>
     </div>
 
-    <div id="screen-profile" class="screen">
-        <header class="profile-header">
-            <h1>Профиль</h1>
-            <button onclick="signOut()" class="settings-btn ripple-btn" style="width: auto; margin: 0; padding: 8px 16px; font-size: 14px; color: #ff2d78; border-color: rgba(255,45,120,0.3);">Выйти</button>
-        </header>
-        <div class="profile-container">
-            <div class="user-card-wrapper">
-                <div class="user-card-top" id="profile-banner">
-                    <div class="effect-container" id="particle-effect-container"></div>
-                    <div class="user-card-top-content">
-                        <div class="avatar-container" onclick="document.getElementById('avatar-upload').click()" style="cursor: pointer; position: relative;">
-                            <div class="avatar" id="tg-avatar"><span id="avatar-letter">?</span></div>
-                            <div style="position: absolute; bottom: 0; right: 0; background: #5b5bff; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #14141f; z-index: 10;">
-                                <svg style="width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 2;"><use href="#oa-edit"></use></svg>
-                            </div>
-                        </div>
-                        <input type="file" id="avatar-upload" accept="image/*" style="display: none;" onchange="uploadAvatar(event)">
-
-                        <div class="user-details">
-                            <div class="user-name-row">
-                                <h2 id="tg-name">Гость</h2>
-                                <img id="user-badge-img" class="user-badge-icon" style="display: none;" alt="badge">
-                            </div>
-                            <div id="user-title-container" style="display: none;">
-                                <div class="user-title-display" id="user-active-title"></div>
-                            </div>
-                            <br>
-                            <div onclick="copyMyId()" class="id-container">
-                                <span style="color: #ccc; font-size: 12px;">Мой ID:</span>
-                                <span id="my-tg-id" style="color: #fff; font-weight: bold; font-size: 14px;">...</span>
-                                <svg class="icon-inline" style="color: #5b5bff; width: 16px; height: 16px;"><use href="#oa-copy"></use></svg>
-                            </div>
-                        </div>
+    <!-- НОВЫЙ ДИЗАЙН ПРОФИЛЯ -->
+    <div id="screen-profile" class="screen" style="background: var(--bg);">
+        
+        <!-- Верхняя часть с фоном -->
+        <div id="profile-banner" style="position: relative; width: 100%; height: 220px; background: linear-gradient(180deg, #2a2a3e 0%, #14141f 100%); background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
+            <!-- Кнопка смены фона -->
+            <button onclick="document.getElementById('banner-upload').click()" class="ripple-btn" style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; z-index: 20;">
+                <svg style="width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#oa-image"></use></svg> Сменить фон
+            </button>
+            <input type="file" id="banner-upload" accept="image/*" style="display: none;" onchange="uploadBanner(event)">
+            
+            <!-- Эффекты и аватарка -->
+            <div class="effect-container" id="particle-effect-container" style="border-radius: 0 0 24px 24px;"></div>
+            <div style="position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); z-index: 10;">
+                <div class="avatar-container" onclick="document.getElementById('avatar-upload').click()" style="position: relative; width: 110px; height: 110px; margin: 0;">
+                    <!-- Обводка аватарки -->
+                    <div style="position: absolute; inset: -4px; border-radius: 50%; background: linear-gradient(135deg, #5b5bff, #b44aff); z-index: 1;"></div>
+                    <div class="avatar" id="tg-avatar" style="width: 100%; height: 100%; border-radius: 50%; background: #222; border: 4px solid #14141f; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; overflow: hidden; position: relative; z-index: 2;">
+                        <span id="avatar-letter">?</span>
+                    </div>
+                    <div style="position: absolute; bottom: 5px; right: 5px; background: #5b5bff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #14141f; z-index: 10;">
+                        <svg style="width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 2;"><use href="#oa-edit"></use></svg>
                     </div>
                 </div>
+                <input type="file" id="avatar-upload" accept="image/*" style="display: none;" onchange="uploadAvatar(event)">
+            </div>
+        </div>
 
-                <div class="user-card-bottom">
-                    <div class="level-row" onclick="openLevelModal()">
-                        <div class="level-badge" id="profile-level-badge-container">
-                            <img src="level_icon.png" class="level-badge-img" alt="level" onerror="this.style.display='none'">
-                            <span id="user-level" class="level-number">1</span>
-                        </div>
-                        <div class="level-info">
-                            <div class="level-title">УРОВЕНЬ <span id="user-level-text">1</span> <span class="rank" id="user-rank">Первый эпизод</span></div>
-                            <div class="xp-bar-container"><div class="xp-bar-fill" id="user-xp-bar" style="width: 20%;"></div></div>
-                            <div class="xp-text"><span id="user-xp-current">0</span> / <span id="user-xp-next">100</span> XP</div>
-                        </div>
-                    </div>
-                </div>
+        <!-- Информация о пользователе (Имя, Тег, ID) -->
+        <div style="padding: 55px 20px 20px 20px; text-align: center; position: relative; z-index: 5;">
+            
+            <h1 id="tg-name" style="font-size: 28px; font-weight: 900; color: #fff; margin-bottom: 4px; line-height: 1.1; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                Гость
+                <img id="user-badge-img" class="user-badge-icon" style="display: none; width: 24px; height: 24px; object-fit: contain;" alt="badge">
+            </h1>
+            
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 15px;">
+                <span id="user-tag" style="font-size: 14px; color: #888; font-weight: 500;">@nickname</span>
+                <span style="background: rgba(91,91,255,0.2); color: #a29bfe; border: 1px solid rgba(91,91,255,0.3); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700;">
+                    УР. <span id="user-level-text">1</span> • <span id="user-xp-current">0</span>%
+                </span>
             </div>
 
-            <div class="profile-tabs">
+            <!-- Титул (если надет) -->
+            <div id="user-title-container" style="display: none; margin-bottom: 15px;">
+                <div class="user-title-display" id="user-active-title"></div>
+            </div>
+
+            <!-- Кнопка ID -->
+            <div onclick="copyMyId()" class="id-container" style="background: transparent; border: 1px solid rgba(255,255,255,0.15); padding: 10px 20px; border-radius: 16px; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; margin: 0 auto; transition: background 0.2s;" onpointerdown="this.style.background='rgba(255,255,255,0.05)'" onpointerup="this.style.background='transparent'">
+                <span style="color: #888; font-size: 13px; font-weight: 500;">Мой ID:</span>
+                <span id="my-tg-id" style="color: #fff; font-weight: 700; font-size: 16px; letter-spacing: 1px;">...</span>
+                <svg class="icon-inline" style="color: #5b5bff; width: 18px; height: 18px; margin-left: 4px;"><use href="#oa-copy"></use></svg>
+            </div>
+        </div>
+
+        <!-- Карточка уровня (XP) -->
+        <div style="padding: 0 20px;">
+            <div class="level-row" onclick="openLevelModal()" style="background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 12px; cursor: pointer;">
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div style="font-size: 16px; font-weight: 800; color: #fff;">УРОВЕНЬ <span id="user-level">1</span></div>
+                    <div style="font-size: 13px; font-weight: 600; color: #888;"><span id="user-xp-current-top">0</span> / 100 XP</div>
+                </div>
+                <div class="xp-bar-container" style="width: 100%; height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; overflow: hidden;">
+                    <div class="xp-bar-fill" id="user-xp-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 5px; transition: width 0.5s ease;"></div>
+                </div>
+                <div style="font-size: 12px; color: #b44aff; font-weight: 700; text-align: center; margin-top: 4px;" id="user-rank">Первый эпизод</div>
+            </div>
+        </div>
+
+        <!-- Вкладки -->
+        <div style="padding: 20px;">
+            <div class="profile-tabs" style="margin-top: 0;">
                 <button class="tab-btn ripple-btn active" id="tab-btn-profile" onclick="switchProfileTab('profile')"><svg><use href="#oa-profile"></use></svg> Профиль</button>
                 <button class="tab-btn ripple-btn" id="tab-btn-shop" onclick="switchProfileTab('shop')"><svg><use href="#oa-shop"></use></svg> Магазин</button>
                 <button class="tab-btn ripple-btn" id="tab-btn-settings" onclick="switchProfileTab('settings')"><svg><use href="#oa-settings"></use></svg> Настройки</button>
             </div>
 
+            <!-- Контент вкладки Профиль -->
             <div id="profile-content-tab">
-                <div class="achievements-card" onclick="openAchievementsPage()">
+                <div class="achievements-card" onclick="openAchievementsPage()" style="margin-top: 15px;">
                     <div class="ach-header">
                         <div class="ach-icon-big">
                             <img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'icon-inline\' style=\'color:#ffd700;width:60px;height:60px;\'><use href=\'#oa-achievement\'></use></svg>';">
@@ -717,6 +740,7 @@
                 </div>
             </div>
 
+            <!-- Контент вкладки Магазин -->
             <div id="shop-content-tab" style="display: none;">
                 <div class="shop-tabs">
                     <div class="shop-tab active" onclick="switchShopTab('banners', this)">Баннеры</div>
@@ -728,6 +752,7 @@
                 <div id="shop-items-container" class="shop-grid"></div>
             </div>
 
+            <!-- Контент вкладки Настройки -->
             <div class="settings-card" id="settings-content-tab" style="display: none;">
                 <div style="padding: 20px;">
                     <h3 style="margin-bottom: 15px; color: #fff;">Настройки</h3>
@@ -735,10 +760,11 @@
                     <button class="settings-btn" onclick="resetTitle()"><span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять титул</span><span style="color: #888;">›</span></button>
                     <button class="settings-btn" onclick="resetEffect()"><span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять эффект</span><span style="color: #888;">›</span></button>
                     <button class="settings-btn" onclick="resetBadge()"><span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять значок</span><span style="color: #888;">›</span></button>
+                    
+                    <!-- Кнопка Выйти перенесена сюда -->
+                    <button onclick="signOut()" class="settings-btn" style="margin-top: 30px; color: #ff2d78; border-color: rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); justify-content: center;"><svg style="margin-right: 8px;"><use href="#oa-logout"></use></svg> Выйти из аккаунта</button>
                 </div>
             </div>
-
-            <div style="height: 20px;"></div>
         </div>
     </div>
 
@@ -884,6 +910,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4614"></script>
+    <script src="app.js?v=4615"></script>
 </body>
 </html>
