@@ -475,7 +475,6 @@ function switchTab(tabName, element) {
     if (tabName==='player') { document.getElementById('player-title').textContent='Выбор плеера'; renderPlayerSelection(); }
     if (tabName==='episodes') { document.getElementById('eps-title').textContent='Выбор серии'; renderEpisodesSelection(); }
     if (tabName==='friends') { 
-        // Обновляем ID на странице друзей
         const friendIdEl = document.getElementById('my-friend-id');
         if (friendIdEl) friendIdEl.textContent = MY_PUBLIC_ID || '...';
         loadFriends(); 
@@ -516,7 +515,10 @@ async function syncProfileToDB(forceLocal=false) {
         if (!remote||forceLocal) { payload.coins=stats.coins; payload.xp=stats.xp; }
         else { payload.coins=Math.max(remote.coins||0,stats.coins||0); payload.xp=Math.max(remote.xp||0,stats.xp||0); }
         await supabaseClient.from('users').upsert(payload,{onConflict:'id'});
-    } catch(e) {}
+    } catch(e) {
+        console.error('Ошибка синхронизации профиля:', e);
+        // Вместо огромного тоста, просто игнорируем или выводим в консоль
+    }
 }
 function copyMyId() { 
     if (!MY_PUBLIC_ID) { showToast('ID еще не загружен'); return; }
@@ -538,6 +540,12 @@ function shareMyId() {
 async function loadProfileData() {
     let stats = getStats();
     if (stats.active_banner_url) ACTIVE_BANNER_URL = stats.active_banner_url;
+    
+    // Загружаем кастомный баннер, если он есть
+    if (stats.custom_banner_url) {
+        ACTIVE_BANNER_URL = stats.custom_banner_url;
+    }
+
     if (MY_ID && supabaseClient) {
         try {
             const { data: dbUser } = await supabaseClient.from('users').select('*').eq('id', MY_ID).single();
@@ -545,38 +553,112 @@ async function loadProfileData() {
                 MY_PUBLIC_ID = dbUser.public_id;
                 stats.coins = Math.max(stats.coins||0, dbUser.coins||0);
                 stats.xp = Math.max(stats.xp||0, dbUser.xp||0);
+                
+                // Если в БД есть кастомный баннер, используем его
+                if (dbUser.custom_banner_url) {
+                    stats.custom_banner_url = dbUser.custom_banner_url;
+                    ACTIVE_BANNER_URL = dbUser.custom_banner_url;
+                }
+
                 setElText('my-tg-id', MY_PUBLIC_ID||'...');
                 setElText('tg-name', dbUser.name||MY_NAME);
+                
+                // Генерируем тег
+                const tagEl = document.getElementById('user-tag');
+                if (tagEl) {
+                    const safeName = (dbUser.name || 'guest').replace(/\s+/g, '_').toLowerCase();
+                    tagEl.textContent = '@' + safeName;
+                }
+
                 const avEl = document.getElementById('tg-avatar');
                 if (avEl) { const u = dbUser.avatar_url||MY_PHOTO_URL; avEl.innerHTML = u ? `<img src="${safeUrl(u)}" style="width:100%;height:100%;object-fit:cover;">` : `<span>${escapeHTML((dbUser.name||'?')[0].toUpperCase())}</span>`; }
-                if (dbUser.active_banner) { stats.active_banner = dbUser.active_banner; const {data:b}=await supabaseClient.from('banners').select('image_url').eq('id',dbUser.active_banner).single(); if(b){ACTIVE_BANNER_URL=safeUrl(b.image_url);stats.active_banner_url=ACTIVE_BANNER_URL;} }
+                
+                // Баннер (если куплен в магазине)
+                if (dbUser.active_banner) { 
+                    stats.active_banner = dbUser.active_banner; 
+                    const {data:b}=await supabaseClient.from('banners').select('image_url').eq('id',dbUser.active_banner).single(); 
+                    if(b){ ACTIVE_BANNER_URL=safeUrl(b.image_url); stats.active_banner_url=ACTIVE_BANNER_URL; } 
+                } 
+                
                 if (dbUser.active_title) { const {data:t}=await supabaseClient.from('titles').select('*').eq('id',dbUser.active_title).single(); if(t){ACTIVE_TITLE_DATA=t;stats.active_title=t.id;} } else {ACTIVE_TITLE_DATA=null;stats.active_title=null;}
                 if (dbUser.active_effect) { const {data:e}=await supabaseClient.from('effects').select('*').eq('id',dbUser.active_effect).single(); if(e){ACTIVE_EFFECT_CSS=e.css_class;stats.active_effect=e.id;} } else {ACTIVE_EFFECT_CSS='';stats.active_effect=null;}
                 if (dbUser.active_badge) { const {data:bd}=await supabaseClient.from('badges').select('image_url').eq('id',dbUser.active_badge).single(); if(bd){ACTIVE_BADGE_URL=safeUrl(bd.image_url);stats.active_badge=dbUser.active_badge;} } else {ACTIVE_BADGE_URL='';stats.active_badge=null;}
                 saveStats(stats);
             }
-        } catch(e) {}
+        } catch(e) { console.error(e); }
     }
+    
     const today = new Date().toDateString();
     if (stats.lastVisit !== today) { stats.daysStreak += 1; stats.lastVisit = today; stats.xp += 5; stats.coins += 10; stats.watchedToday = []; saveStats(stats); showToast('Ежедневный вход! +5 XP'); }
     checkAchievements(stats); saveStats(stats);
+    
     const lvl = Math.floor(stats.xp/100)+1, rank = LEVEL_TITLES[Math.min(lvl-1,LEVEL_TITLES.length-1)]||'Легенда';
-    setElText('user-level',lvl); setElText('user-level-text',lvl); setElText('user-rank',rank); setElText('user-xp-current',stats.xp%100); setElText('user-xp-next',100); setElWidth('user-xp-bar',(stats.xp%100)+'%'); setElText('user-coins',stats.coins||0);
+    const xpPercent = Math.floor(stats.xp % 100);
+
+    setElText('user-level',lvl); 
+    setElText('user-level-text',lvl); 
+    setElText('user-xp-current',xpPercent); 
+    setElText('user-xp-current-top',stats.xp%100); 
+    setElText('user-rank',rank); 
+    setElText('user-xp-next',100); 
+    setElWidth('user-xp-bar',(stats.xp%100)+'%'); 
+    setElText('user-coins',stats.coins||0);
+    
     const total = ACHIEVEMENTS.length;
-    setElText('ach-points',stats.unlockedAchievements.length*10); setElText('ach-earned',stats.unlockedAchievements.length); setElText('ach-total-count',total); setElWidth('ach-bar',(stats.unlockedAchievements.length/total)*100+'%');
+    setElText('ach-points',stats.unlockedAchievements.length*10); 
+    setElText('ach-earned',stats.unlockedAchievements.length); 
+    setElText('ach-total-count',total); 
+    setElWidth('ach-bar',(stats.unlockedAchievements.length/total)*100+'%');
+    
     const next = ACHIEVEMENTS.find(a=>!stats.unlockedAchievements.includes(a.id));
     if (next) { setElText('next-ach-name',next.name); setElText('next-ach-reward',next.coins); } else { setElText('next-ach-name','Все выполнено!'); setElText('next-ach-reward','0'); }
 
-    const bEl = document.getElementById('profile-banner'); if (bEl) bEl.style.backgroundImage = ACTIVE_BANNER_URL ? `url('${ACTIVE_BANNER_URL}')` : 'none';
-    renderEffectParticles(document.getElementById('particle-effect-container'), ACTIVE_EFFECT_CSS);
-    const badgeEl = document.getElementById('user-badge-img'); if (badgeEl) { if (ACTIVE_BADGE_URL) { badgeEl.src=ACTIVE_BADGE_URL; badgeEl.style.display='block'; } else badgeEl.style.display='none'; }
-    const tCont = document.getElementById('user-title-container'), tEl = document.getElementById('user-active-title'); if (ACTIVE_TITLE_DATA) { tCont.style.display='block'; applyTitleToElement(tEl, ACTIVE_TITLE_DATA); } else tCont.style.display='none';
+    // Применяем фон
+    const bEl = document.getElementById('profile-banner'); 
+    if (bEl) bEl.style.backgroundImage = ACTIVE_BANNER_URL ? `url('${ACTIVE_BANNER_URL}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)';
     
-    // Обновляем ID на странице друзей, если мы там
+    renderEffectParticles(document.getElementById('particle-effect-container'), ACTIVE_EFFECT_CSS);
+    
+    const badgeEl = document.getElementById('user-badge-img'); 
+    if (badgeEl) { if (ACTIVE_BADGE_URL) { badgeEl.src=ACTIVE_BADGE_URL; badgeEl.style.display='block'; } else badgeEl.style.display='none'; }
+    
+    const tCont = document.getElementById('user-title-container'), tEl = document.getElementById('user-active-title'); 
+    if (ACTIVE_TITLE_DATA) { tCont.style.display='block'; applyTitleToElement(tEl, ACTIVE_TITLE_DATA); } else tCont.style.display='none';
+    
     const friendIdEl = document.getElementById('my-friend-id');
     if (friendIdEl && MY_PUBLIC_ID) friendIdEl.textContent = MY_PUBLIC_ID;
 
     await syncProfileToDB();
+}
+
+async function uploadBanner(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (!supabaseClient) { showToast('Сервис недоступен'); return; }
+    if (file.size > 8 * 1024 * 1024) { showToast('Файл слишком большой (макс. 8 МБ)'); event.target.value = ''; return; }
+    if (!file.type.startsWith('image/')) { showToast('Выберите картинку'); return; }
+    
+    showToast('Загрузка фона...');
+    try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `banner_${MY_ID}_${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabaseClient.storage.from('avatars').upload(fileName, file, { upsert: true });
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
+        
+        const { error: dbError } = await supabaseClient.from('users').update({ custom_banner_url: publicUrl }).eq('id', MY_ID);
+        if (dbError) throw dbError;
+        
+        ACTIVE_BANNER_URL = publicUrl;
+        const bEl = document.getElementById('profile-banner'); 
+        if (bEl) bEl.style.backgroundImage = `url('${publicUrl}')`;
+        
+        let s = getStats(); s.custom_banner_url = publicUrl; saveStats(s);
+        showToast('Фон обновлен!');
+    } catch (error) {
+        console.error(error); showToast('Ошибка загрузки фона');
+    } finally { event.target.value = ''; }
 }
 
 async function uploadAvatar(event) {
@@ -599,7 +681,7 @@ async function uploadAvatar(event) {
         if (avatarEl) avatarEl.innerHTML = `<img src="${publicUrl}" style="width:100%; height:100%; object-fit:cover;">`;
         showToast('Аватарка обновлена!');
     } catch (error) {
-        console.error(error); showToast('Ошибка загрузки: ' + error.message);
+        console.error(error); showToast('Ошибка загрузки');
     } finally { event.target.value = ''; }
 }
 
@@ -887,7 +969,6 @@ async function loadFriends() {
     if (!listContainer || !supabaseClient || !MY_ID) return;
     listContainer.innerHTML = Skeletons.friends(3);
     
-    // Обновляем мой ID
     const friendIdEl = document.getElementById('my-friend-id');
     if (friendIdEl) friendIdEl.textContent = MY_PUBLIC_ID || '...';
 
@@ -895,7 +976,6 @@ async function loadFriends() {
         const { data: accepted } = await supabaseClient.from('friends').select('friend_id').eq('user_id', MY_ID).eq('status', 'accepted');
         
         if (!accepted || accepted.length === 0) {
-            // Красивый пустой экран
             listContainer.innerHTML = `
             <div style="padding: 40px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
                 <div style="width: 80px; height: 80px; background: rgba(91,91,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
@@ -937,14 +1017,11 @@ async function loadFriendRequests() {
     container.innerHTML = Skeletons.friends(2);
 
     try {
-        // Входящие заявки (кто-то хочет добавить меня)
         const { data: incoming } = await supabaseClient.from('friends').select('user_id').eq('friend_id', MY_ID).eq('status', 'pending');
-        // Исходящие заявки (я хочу добавить кого-то)
         const { data: outgoing } = await supabaseClient.from('friends').select('friend_id').eq('user_id', MY_ID).eq('status', 'pending');
 
         let html = '';
 
-        // Блок входящих
         if (incoming && incoming.length > 0) {
             html += '<h3 style="padding: 0 20px 10px; font-size: 16px; color: #ffd700;">Входящие заявки</h3>';
             const inIds = incoming.map(f => f.user_id);
@@ -967,7 +1044,6 @@ async function loadFriendRequests() {
             }
         }
 
-        // Блок исходящих
         if (outgoing && outgoing.length > 0) {
             html += '<h3 style="padding: 20px 20px 10px; font-size: 16px; color: #00d2ff;">Исходящие заявки</h3>';
             const outIds = outgoing.map(f => f.friend_id);
@@ -1030,7 +1106,6 @@ async function sendFriendRequest(friendId) {
         const { data: existing } = await supabaseClient.from('friends').select('id').eq('user_id', MY_ID).eq('friend_id', friendId).limit(1);
         if (existing && existing.length > 0) { showToast('Заявка уже отправлена'); return; }
         
-        // Проверяем, не друзья ли мы уже
         const { data: alreadyFriends } = await supabaseClient.from('friends').select('id').eq('user_id', MY_ID).eq('friend_id', friendId).eq('status', 'accepted').limit(1);
         if (alreadyFriends && alreadyFriends.length > 0) { showToast('Вы уже друзья!'); return; }
 
@@ -1041,7 +1116,6 @@ async function sendFriendRequest(friendId) {
         document.getElementById('friend-search-input').value = '';
         showToast('Заявка отправлена!'); 
         
-        // Переключаемся на заявки, чтобы показать исходящую
         switchFriendsTab('requests', document.querySelector('.my-list-tabs .my-list-tab:nth-child(2)'));
         loadFriendRequests();
     } catch(e) { console.error(e); showToast('Ошибка отправки'); }
@@ -1053,8 +1127,8 @@ async function acceptFriend(userId) {
         await supabaseClient.from('friends').update({ status: 'accepted' }).eq('user_id', userId).eq('friend_id', MY_ID);
         await supabaseClient.from('friends').insert({ user_id: MY_ID, friend_id: userId, status: 'accepted' });
         showToast('Заявка принята!');
-        loadFriendRequests(); // Обновляем вкладку заявок
-        loadFriends(); // Обновляем список друзей (на всякий случай)
+        loadFriendRequests();
+        loadFriends();
     } catch(e) { console.error(e); showToast('Ошибка'); }
 }
 
@@ -1112,6 +1186,8 @@ async function openFriendProfile(id, name = '') {
         const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : nameChar;
         let friendBanner = '';
         if (friend.active_banner) { const { data: b } = await supabaseClient.from('banners').select('image_url').eq('id', friend.active_banner).single(); if (b) friendBanner = `style="background-image: url('${safeUrl(b.image_url)}');"`; }
+        else if (friend.custom_banner_url) { friendBanner = `style="background-image: url('${safeUrl(friend.custom_banner_url)}');"`; }
+        
         let friendTitleHtml = '';
         if (friend.active_title) { const { data: t } = await supabaseClient.from('titles').select('*').eq('id', friend.active_title).single(); if (t) { if (t.is_animated) friendTitleHtml = `<div class="user-title-display animated-title" data-title="${escapeHTML(t.animation_key || 'gold')}"><span class="title-text">${escapeHTML(t.name)}</span></div>`; else friendTitleHtml = `<div class="user-title-display" style="color: ${escapeHTML(t.color)}; border-color: ${escapeHTML(t.color)};">${escapeHTML(t.name)}</div>`; } }
         let friendEffectClass = '';
@@ -2096,7 +2172,7 @@ function trimCachedAnime(s) {
 
 function getStats() {
     let s = JSON.parse(localStorage.getItem('onika_stats'));
-    if (!s) { s = { episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0, active_banner: null, active_banner_url: '', active_title: null, active_effect: null, active_badge: null, active_frame: null, lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [], cachedAnime: {}, totalMinutesOnSite: 0, hasPurchasedBanner: false, _lastAwardedHours: 0, avatar_url: '' }; localStorage.setItem('onika_stats', JSON.stringify(s)); }
+    if (!s) { s = { episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0, active_banner: null, active_banner_url: '', custom_banner_url: '', active_title: null, active_effect: null, active_badge: null, active_frame: null, lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [], watchedToday: [], cachedAnime: {}, totalMinutesOnSite: 0, hasPurchasedBanner: false, _lastAwardedHours: 0, avatar_url: '' }; localStorage.setItem('onika_stats', JSON.stringify(s)); }
     if (!s.unlockedAchievements) s.unlockedAchievements = [];
     if (!s.favedAnime) s.favedAnime = [];
     if (!s.watchedToday) s.watchedToday = [];
@@ -2105,6 +2181,7 @@ function getStats() {
     if (s.totalMinutesOnSite === undefined) s.totalMinutesOnSite = 0;
     if (s.hasPurchasedBanner === undefined) s.hasPurchasedBanner = false;
     if (s._lastAwardedHours === undefined) s._lastAwardedHours = 0;
+    if (s.custom_banner_url === undefined) s.custom_banner_url = '';
     return s;
 }
 function saveStats(s) { trimCachedAnime(s); localStorage.setItem('onika_stats', JSON.stringify(s)); }
