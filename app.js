@@ -431,7 +431,7 @@ const API = {
 };
 
 // ==========================================
-// 4. ИГРА
+// 4. ИГРА (ЩИТ И УРОВНИ)
 // ==========================================
 let currentAnimeForPlayer = null, selectedVoice = '', selectedPlayer = '';
 const VOICES = [{id:'anilibria',name:'AniLibria',icon:'🎙️'},{id:'studioband',name:'StudioBand',icon:'🎙️'},{id:'jamclub',name:'JAM Club',icon:'🎙️'},{id:'original',name:'Оригинал (Субтитры)',icon:'📝'}];
@@ -459,9 +459,30 @@ const YEARS=[{id:'2024',name:'2024'},{id:'2023',name:'2023'},{id:'2022',name:'20
 const STATUSES=[{id:'ongoing',name:'Онгоинг'},{id:'released',name:'Завершено'},{id:'anons',name:'Анонс'}];
 const SORTS=[{id:'popularity',name:'По популярности'},{id:'ranked',name:'По рейтингу'},{id:'aired_on',name:'Новинки'},{id:'newest',name:'Сначала новые'},{id:'oldest',name:'Сначала старые'}];
 
-// ==========================================
-// 5. НАВИГАЦИЯ
-// ==========================================
+// Функция обновления цвета щита в зависимости от уровня
+function updateShieldColor(level) {
+    // Уровень от 1 до 999
+    // Меняем цвета от синего (1) -> фиолетовый (300) -> красный (600) -> золотой (999)
+    let color1 = '#5b5bff'; // Синий
+    let color2 = '#b44aff'; // Фиолетовый
+    
+    if (level > 300 && level <= 600) {
+        color1 = '#b44aff'; // Фиолетовый
+        color2 = '#ff2d78'; // Розовый
+    } else if (level > 600 && level <= 900) {
+        color1 = '#ff2d78'; // Розовый
+        color2 = '#ff4500'; // Оранжевый
+    } else if (level > 900) {
+        color1 = '#ffd700'; // Золотой
+        color2 = '#ff8c00'; // Оранжевый
+    }
+
+    const stop1 = document.getElementById('shield-stop-1');
+    const stop2 = document.getElementById('shield-stop-2');
+    if (stop1) stop1.setAttribute('stop-color', color1);
+    if (stop2) stop2.setAttribute('stop-color', color2);
+}
+
 function switchTab(tabName, element) {
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     const scr = document.getElementById(`screen-${tabName}`); if(scr) scr.classList.add('active');
@@ -516,8 +537,7 @@ async function syncProfileToDB(forceLocal=false) {
         else { payload.coins=Math.max(remote.coins||0,stats.coins||0); payload.xp=Math.max(remote.xp||0,stats.xp||0); }
         await supabaseClient.from('users').upsert(payload,{onConflict:'id'});
     } catch(e) {
-        console.error('Ошибка синхронизации профиля:', e);
-        // Вместо огромного тоста, просто игнорируем или выводим в консоль
+        // Ошибки синхронизации не показываем пользователю
     }
 }
 function copyMyId() { 
@@ -540,11 +560,6 @@ function shareMyId() {
 async function loadProfileData() {
     let stats = getStats();
     if (stats.active_banner_url) ACTIVE_BANNER_URL = stats.active_banner_url;
-    
-    // Загружаем кастомный баннер, если он есть
-    if (stats.custom_banner_url) {
-        ACTIVE_BANNER_URL = stats.custom_banner_url;
-    }
 
     if (MY_ID && supabaseClient) {
         try {
@@ -553,22 +568,9 @@ async function loadProfileData() {
                 MY_PUBLIC_ID = dbUser.public_id;
                 stats.coins = Math.max(stats.coins||0, dbUser.coins||0);
                 stats.xp = Math.max(stats.xp||0, dbUser.xp||0);
-                
-                // Если в БД есть кастомный баннер, используем его
-                if (dbUser.custom_banner_url) {
-                    stats.custom_banner_url = dbUser.custom_banner_url;
-                    ACTIVE_BANNER_URL = dbUser.custom_banner_url;
-                }
 
                 setElText('my-tg-id', MY_PUBLIC_ID||'...');
                 setElText('tg-name', dbUser.name||MY_NAME);
-                
-                // Генерируем тег
-                const tagEl = document.getElementById('user-tag');
-                if (tagEl) {
-                    const safeName = (dbUser.name || 'guest').replace(/\s+/g, '_').toLowerCase();
-                    tagEl.textContent = '@' + safeName;
-                }
 
                 const avEl = document.getElementById('tg-avatar');
                 if (avEl) { const u = dbUser.avatar_url||MY_PHOTO_URL; avEl.innerHTML = u ? `<img src="${safeUrl(u)}" style="width:100%;height:100%;object-fit:cover;">` : `<span>${escapeHTML((dbUser.name||'?')[0].toUpperCase())}</span>`; }
@@ -592,18 +594,23 @@ async function loadProfileData() {
     if (stats.lastVisit !== today) { stats.daysStreak += 1; stats.lastVisit = today; stats.xp += 5; stats.coins += 10; stats.watchedToday = []; saveStats(stats); showToast('Ежедневный вход! +5 XP'); }
     checkAchievements(stats); saveStats(stats);
     
-    const lvl = Math.floor(stats.xp/100)+1, rank = LEVEL_TITLES[Math.min(lvl-1,LEVEL_TITLES.length-1)]||'Легенда';
-    const xpPercent = Math.floor(stats.xp % 100);
+    // Формула: 1 уровень = 100 XP (макс. 999 уровень)
+    const lvl = Math.min(Math.floor(stats.xp/100) + 1, 999);
+    const xpForCurrentLevel = (lvl - 1) * 100;
+    const currentLevelXP = stats.xp - xpForCurrentLevel;
 
     setElText('user-level',lvl); 
-    setElText('user-level-text',lvl); 
-    setElText('user-xp-current',xpPercent); 
-    setElText('user-xp-current-top',stats.xp%100); 
-    setElText('user-rank',rank); 
-    setElText('user-xp-next',100); 
-    setElWidth('user-xp-bar',(stats.xp%100)+'%'); 
-    setElText('user-coins',stats.coins||0);
+    setElText('user-xp-current',currentLevelXP); 
+    setElText('user-xp-current-top',currentLevelXP); 
+    setElWidth('user-xp-bar',currentLevelXP + '%'); 
     
+    // Обновляем цифру внутри SVG-щита
+    const shieldText = document.getElementById('shield-level-text');
+    if (shieldText) shieldText.textContent = lvl;
+    
+    // Обновляем цвет щита
+    updateShieldColor(lvl);
+
     const total = ACHIEVEMENTS.length;
     setElText('ach-points',stats.unlockedAchievements.length*10); 
     setElText('ach-earned',stats.unlockedAchievements.length); 
@@ -629,36 +636,6 @@ async function loadProfileData() {
     if (friendIdEl && MY_PUBLIC_ID) friendIdEl.textContent = MY_PUBLIC_ID;
 
     await syncProfileToDB();
-}
-
-async function uploadBanner(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    if (!supabaseClient) { showToast('Сервис недоступен'); return; }
-    if (file.size > 8 * 1024 * 1024) { showToast('Файл слишком большой (макс. 8 МБ)'); event.target.value = ''; return; }
-    if (!file.type.startsWith('image/')) { showToast('Выберите картинку'); return; }
-    
-    showToast('Загрузка фона...');
-    try {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `banner_${MY_ID}_${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabaseClient.storage.from('avatars').upload(fileName, file, { upsert: true });
-        if (uploadError) throw uploadError;
-        
-        const { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
-        
-        const { error: dbError } = await supabaseClient.from('users').update({ custom_banner_url: publicUrl }).eq('id', MY_ID);
-        if (dbError) throw dbError;
-        
-        ACTIVE_BANNER_URL = publicUrl;
-        const bEl = document.getElementById('profile-banner'); 
-        if (bEl) bEl.style.backgroundImage = `url('${publicUrl}')`;
-        
-        let s = getStats(); s.custom_banner_url = publicUrl; saveStats(s);
-        showToast('Фон обновлен!');
-    } catch (error) {
-        console.error(error); showToast('Ошибка загрузки фона');
-    } finally { event.target.value = ''; }
 }
 
 async function uploadAvatar(event) {
@@ -2202,7 +2179,7 @@ function checkAchievements(s) {
     return totalChanged;
 }
 function addXP(amount) {
-    let s = getStats(); const oldL = Math.floor(s.xp/100)+1; s.xp += amount; const newL = Math.floor(s.xp/100)+1;
+    let s = getStats(); const oldL = Math.floor(s.xp/100)+1; s.xp += amount; const newL = Math.min(Math.floor(s.xp/100)+1, 999);
     if (newL > oldL) { const rc = Math.floor(100 + Math.pow(newL, 2.5) * 2); s.coins += rc; showLevelUpPopup(newL, LEVEL_TITLES[Math.min(newL-1, LEVEL_TITLES.length-1)] || 'Легенда', rc); if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); } else showToast(`+${amount} XP`);
     saveStats(s); checkAchievements(s);
 }
