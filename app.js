@@ -461,8 +461,6 @@ const SORTS=[{id:'popularity',name:'По популярности'},{id:'ranked'
 
 // Функция обновления цвета щита в зависимости от уровня
 function updateShieldColor(level) {
-    // Уровень от 1 до 999
-    // Меняем цвета от синего (1) -> фиолетовый (300) -> красный (600) -> золотой (999)
     let color1 = '#5b5bff'; // Синий
     let color2 = '#b44aff'; // Фиолетовый
     
@@ -481,6 +479,16 @@ function updateShieldColor(level) {
     const stop2 = document.getElementById('shield-stop-2');
     if (stop1) stop1.setAttribute('stop-color', color1);
     if (stop2) stop2.setAttribute('stop-color', color2);
+
+    const pStop1 = document.getElementById('preview-shield-stop-1');
+    const pStop2 = document.getElementById('preview-shield-stop-2');
+    if (pStop1) pStop1.setAttribute('stop-color', color1);
+    if (pStop2) pStop2.setAttribute('stop-color', color2);
+
+    const mStop1 = document.getElementById('modal-shield-stop-1');
+    const mStop2 = document.getElementById('modal-shield-stop-2');
+    if (mStop1) mStop1.setAttribute('stop-color', color1);
+    if (mStop2) mStop2.setAttribute('stop-color', color2);
 }
 
 function switchTab(tabName, element) {
@@ -709,7 +717,7 @@ function startPreviewById(type, cacheKey) {
 function renderPreviewCard() {
     const stats = getStats();
     const bannerEl = document.getElementById('preview-banner');
-    if (bannerEl) bannerEl.style.backgroundImage = ACTIVE_BANNER_URL ? `url('${ACTIVE_BANNER_URL}')` : 'none';
+    if (bannerEl) bannerEl.style.backgroundImage = ACTIVE_BANNER_URL ? `url('${ACTIVE_BANNER_URL}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)';
     const avatarEl = document.getElementById('preview-avatar');
     if (avatarEl) { if (stats.avatar_url || MY_PHOTO_URL) avatarEl.innerHTML = `<img src="${safeUrl(stats.avatar_url || MY_PHOTO_URL)}" style="width:100%; height:100%; object-fit:cover;">`; else avatarEl.innerHTML = `<span>${escapeHTML((MY_NAME || '?')[0].toUpperCase())}</span>`; }
     setElText('preview-name', MY_NAME || 'Гость');
@@ -718,9 +726,20 @@ function renderPreviewCard() {
     const titleContainer = document.getElementById('preview-title-container'); const titleEl = document.getElementById('preview-active-title');
     if (titleContainer && titleEl) { if (ACTIVE_TITLE_DATA) { titleContainer.style.display = 'block'; applyTitleToElement(titleEl, ACTIVE_TITLE_DATA); } else { titleContainer.style.display = 'none'; } }
     setElText('preview-coins', stats.coins || 0);
-    const currentLevel = Math.floor(stats.xp / 100) + 1;
-    setElText('preview-level', currentLevel); setElText('preview-level-text', currentLevel); setElText('preview-rank', LEVEL_TITLES[Math.min(currentLevel - 1, LEVEL_TITLES.length - 1)] || 'Легенда'); setElText('preview-xp-current', stats.xp % 100); setElText('preview-xp-next', 100);
-    setElWidth('preview-xp-bar', (stats.xp % 100) + '%');
+    
+    // Обновляем щит и уровень в предпросмотре
+    const currentLevel = Math.min(Math.floor(stats.xp / 100) + 1, 999);
+    const currentLevelXP = stats.xp - ((currentLevel - 1) * 100);
+
+    setElText('preview-level', currentLevel); 
+    setElText('preview-xp-current', currentLevelXP); 
+    setElWidth('preview-xp-bar', currentLevelXP + '%');
+    
+    const previewShieldText = document.getElementById('preview-shield-level-text');
+    if (previewShieldText) previewShieldText.textContent = currentLevel;
+    
+    updateShieldColor(currentLevel);
+    
     renderEffectParticles(document.getElementById('preview-particle-container'), ACTIVE_EFFECT_CSS);
 }
 function cancelPreview() {
