@@ -160,8 +160,8 @@
         .detail-poster { width: 140px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .detail-title { font-size: 24px; font-weight: 800; margin-bottom: 10px; line-height: 1.2; }
 
-        .my-list-tabs { display: flex; gap: 10px; padding: 0 20px 15px; overflow-x: auto; scrollbar-width: none; }
-        .my-list-tab { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #888; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: transform 0.1s ease; }
+        .my-list-tabs { display: flex; gap: 10px; padding: 0 20px 15px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .my-list-tab { background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #888; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: transform 0.1s ease; flex-shrink: 0; }
         .my-list-tab.active { background: #5b5bff; color: #fff; border-color: #5b5bff; }
 
         .friends-search { display: flex; gap: 10px; padding: 0 20px 20px; }
@@ -806,7 +806,7 @@
                 <button class="filter-option-btn" onclick="setAnimeStatus('completed')"><svg style="color: #2ecc71;"><use href="#oa-check"></use></svg> Просмотрено</button>
                 <button class="filter-option-btn" onclick="setAnimeStatus('dropped')"><svg style="color: #e74c3c;"><use href="#oa-close"></use></svg> Заброшено</button>
                 <button class="filter-option-btn" onclick="setAnimeStatus('favorite')" style="color: #5b5bff;"><svg><use href="#oa-bookmark"></use></svg> Избранное</button>
-                <button class="filter-option-btn" onclick="setAnimeStatus('')" style="color: #888;"><svg><use href="#oa-trash"></use></svg> Удалить</button>
+                <button class="filter-option-btn" onclick="setAnimeStatus('')" style="color: #888;"><svg><use href="#oa-trash"></use></svg> Удалить из списка</button>
             </div>
         </div>
     </div>
@@ -860,6 +860,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4612"></script>
+    <script src="app.js?v=4613"></script>
 </body>
 </html>
