@@ -35,6 +35,7 @@
         @keyframes textPulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
         @keyframes heroProgress { from { width: 0%; } to { width: 100%; } }
         @keyframes sectionFadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shieldShimmer { 0% { filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); } 50% { filter: drop-shadow(0 0 15px rgba(255,255,255,0.6)); } 100% { filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); } }
 
         .skeleton { background: linear-gradient(90deg, #1a1a20 0%, #25252e 40%, #2e2e3a 50%, #25252e 60%, #1a1a20 100%); background-size: 800px 100%; animation: skeletonShimmer 1.4s linear infinite; border-radius: 8px; position: relative; overflow: hidden; }
         .skeleton-text { height: 12px; margin-bottom: 8px; border-radius: 6px; }
@@ -643,16 +644,15 @@
         <div id="achievements-list-container" style="margin-top: 15px;"></div>
     </div>
 
-    <!-- НОВЫЙ ДИЗАЙН ПРОФИЛЯ -->
+    <!-- НОВЫЙ ДИЗАЙН ПРОФИЛЯ С ЩИТОМ -->
     <div id="screen-profile" class="screen" style="background: var(--bg);">
         
         <!-- Верхняя часть с фоном -->
         <div id="profile-banner" style="position: relative; width: 100%; height: 220px; background: linear-gradient(180deg, #2a2a3e 0%, #14141f 100%); background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
-            <!-- Кнопка смены фона -->
-            <button onclick="document.getElementById('banner-upload').click()" class="ripple-btn" style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; z-index: 20;">
+            <!-- Кнопка смены фона ведет в магазин -->
+            <button onclick="switchTab('profile'); switchProfileTab('shop'); switchShopTab('banners');" class="ripple-btn" style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; z-index: 20;">
                 <svg style="width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#oa-image"></use></svg> Сменить фон
             </button>
-            <input type="file" id="banner-upload" accept="image/*" style="display: none;" onchange="uploadBanner(event)">
             
             <!-- Эффекты и аватарка -->
             <div class="effect-container" id="particle-effect-container" style="border-radius: 0 0 24px 24px;"></div>
@@ -671,21 +671,14 @@
             </div>
         </div>
 
-        <!-- Информация о пользователе (Имя, Тег, ID) -->
+        <!-- Информация о пользователе (Имя, ID) -->
         <div style="padding: 55px 20px 20px 20px; text-align: center; position: relative; z-index: 5;">
             
-            <h1 id="tg-name" style="font-size: 28px; font-weight: 900; color: #fff; margin-bottom: 4px; line-height: 1.1; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <h1 id="tg-name" style="font-size: 28px; font-weight: 900; color: #fff; margin-bottom: 8px; line-height: 1.1; display: flex; align-items: center; justify-content: center; gap: 8px;">
                 Гость
                 <img id="user-badge-img" class="user-badge-icon" style="display: none; width: 24px; height: 24px; object-fit: contain;" alt="badge">
             </h1>
             
-            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 15px;">
-                <span id="user-tag" style="font-size: 14px; color: #888; font-weight: 500;">@nickname</span>
-                <span style="background: rgba(91,91,255,0.2); color: #a29bfe; border: 1px solid rgba(91,91,255,0.3); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700;">
-                    УР. <span id="user-level-text">1</span> • <span id="user-xp-current">0</span>%
-                </span>
-            </div>
-
             <!-- Титул (если надет) -->
             <div id="user-title-container" style="display: none; margin-bottom: 15px;">
                 <div class="user-title-display" id="user-active-title"></div>
@@ -699,17 +692,35 @@
             </div>
         </div>
 
-        <!-- Карточка уровня (XP) -->
+        <!-- Карточка уровня (XP) с SVG Щитом -->
         <div style="padding: 0 20px;">
-            <div class="level-row" onclick="openLevelModal()" style="background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 12px; cursor: pointer;">
-                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <div style="font-size: 16px; font-weight: 800; color: #fff;">УРОВЕНЬ <span id="user-level">1</span></div>
-                    <div style="font-size: 13px; font-weight: 600; color: #888;"><span id="user-xp-current-top">0</span> / 100 XP</div>
+            <div class="level-row" onclick="openLevelModal()" style="background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 15px 20px; display: flex; align-items: center; gap: 15px; cursor: pointer;">
+                
+                <!-- SVG Щит с уровнем -->
+                <div style="position: relative; width: 70px; height: 70px; flex-shrink: 0;">
+                    <svg viewBox="0 0 100 100" style="width: 100%; height: 100%; animation: shieldShimmer 3s infinite;">
+                        <defs>
+                            <!-- Градиент будет меняться через JS -->
+                            <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#5b5bff" id="shield-stop-1" />
+                                <stop offset="100%" stop-color="#b44aff" id="shield-stop-2" />
+                            </linearGradient>
+                        </defs>
+                        <!-- Форма щита (из твоего скриншота) -->
+                        <path d="M 20 10 L 80 10 L 80 60 Q 80 85 50 95 Q 20 85 20 60 Z" fill="url(#shieldGradient)" stroke="#fff" stroke-width="2"/>
+                    </svg>
+                    <div id="shield-level-text" style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 900; color: #000; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(255,255,255,0.5);">1</div>
                 </div>
-                <div class="xp-bar-container" style="width: 100%; height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; overflow: hidden;">
-                    <div class="xp-bar-fill" id="user-xp-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 5px; transition: width 0.5s ease;"></div>
+
+                <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 8px;">
+                        <div style="font-size: 16px; font-weight: 800; color: #fff;">УРОВЕНЬ <span id="user-level">1</span></div>
+                        <div style="font-size: 13px; font-weight: 600; color: #888;"><span id="user-xp-current-top">0</span> / 100 XP</div>
+                    </div>
+                    <div class="xp-bar-container" style="width: 100%; height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; overflow: hidden; margin: 0;">
+                        <div class="xp-bar-fill" id="user-xp-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 5px; transition: width 0.5s ease;"></div>
+                    </div>
                 </div>
-                <div style="font-size: 12px; color: #b44aff; font-weight: 700; text-align: center; margin-top: 4px;" id="user-rank">Первый эпизод</div>
             </div>
         </div>
 
@@ -910,6 +921,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4615"></script>
+    <script src="app.js?v=4616"></script>
 </body>
 </html>
