@@ -11,6 +11,7 @@ const tg = window.Telegram?.WebApp;
 let MY_ID = null, MY_PUBLIC_ID = null, MY_NAME = 'Гость', MY_PHOTO_URL = '';
 let ACTIVE_BANNER_URL = '', ACTIVE_TITLE_DATA = null, ACTIVE_EFFECT_CSS = '', ACTIVE_BADGE_URL = '';
 let PENDING_VERIFY_EMAIL = '';
+let currentFriendsTab = 'friends';
 
 if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
     try { tg.expand(); tg.setHeaderColor('#0a0a0f'); tg.setBackgroundColor('#0a0a0f'); } catch(e) {}
@@ -184,7 +185,6 @@ const API_AniList = {
         const perPage = Math.min(limit || 30, 50);
         const vars = { page: page || 1, perPage };
         
-        // Базовые аргументы: только аниме и исключаем взрослые жанры
         let args = ['type: ANIME', 'sort: POPULARITY_DESC', 'genre_not_in: ["Hentai", "Ecchi", "Erotica"]'];
         
         if (filters && filters.search) { vars.search = filters.search; args.push('search: $search'); }
@@ -208,7 +208,6 @@ const API_AniList = {
     async getSimilarByGenre(genres, excludeId, limit = 6) {
         if (!genres || genres.length === 0) return [];
         const vars = { page: 1, perPage: 15, genre: genres[0] };
-        // Исключаем взрослые жанры и в похожих
         const q = `query($page:Int,$perPage:Int,$genre:String){Page(page:$page,perPage:$perPage){media(type:ANIME,genre:$genre,sort:POPULARITY_DESC,genre_not_in:["Hentai","Ecchi","Erotica"]){${this._mediaFields}}}}`;
         const data = await this.fetch(q, vars).catch(()=>null);
         if (!data?.Page?.media) return [];
@@ -406,7 +405,6 @@ const API = {
         });
     },
     getRandom(limit) {
-        // Убрано кэширование, чтобы каждый раз было новое аниме
         return (async () => {
             const raw=await API_AniList.getRandom(limit);
             return await processWithLimit(raw, 4, buildAnimeObject);
@@ -476,7 +474,12 @@ function switchTab(tabName, element) {
     if (tabName==='voice') { document.getElementById('voice-title').textContent='Выбор озвучки'; renderVoiceSelection(); }
     if (tabName==='player') { document.getElementById('player-title').textContent='Выбор плеера'; renderPlayerSelection(); }
     if (tabName==='episodes') { document.getElementById('eps-title').textContent='Выбор серии'; renderEpisodesSelection(); }
-    if (tabName==='friends') loadFriends();
+    if (tabName==='friends') { 
+        // Обновляем ID на странице друзей
+        const friendIdEl = document.getElementById('my-friend-id');
+        if (friendIdEl) friendIdEl.textContent = MY_PUBLIC_ID || '...';
+        loadFriends(); 
+    }
     if (tabName==='achievements') renderAchievementsPage();
 }
 function goBackFromDetail() { if (previousScreen==='my') switchTab('my'); else if (previousScreen==='home') switchTab('home'); else if (previousScreen==='friends') switchTab('friends'); else switchTab('catalog'); }
@@ -515,7 +518,22 @@ async function syncProfileToDB(forceLocal=false) {
         await supabaseClient.from('users').upsert(payload,{onConflict:'id'});
     } catch(e) {}
 }
-function copyMyId() { if (!MY_PUBLIC_ID) return; navigator.clipboard.writeText(MY_PUBLIC_ID.toString()).then(()=>showToast('ID скопирован!')).catch(()=>{}); }
+function copyMyId() { 
+    if (!MY_PUBLIC_ID) { showToast('ID еще не загружен'); return; }
+    navigator.clipboard.writeText(MY_PUBLIC_ID.toString()).then(()=>showToast('ID скопирован!')).catch(()=>{ showToast('Ошибка копирования'); });
+}
+function shareMyId() {
+    if (!MY_PUBLIC_ID) { showToast('ID еще не загружен'); return; }
+    const text = `Добавь меня в друзья на OnikaAnime! Мой ID: ${MY_PUBLIC_ID}`;
+    const url = window.location.href;
+    if (tg && tg.openTelegramLink) {
+        tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);
+    } else if (navigator.share) {
+        navigator.share({ title: 'OnikaAnime', text: text, url: url }).catch(()=>{});
+    } else {
+        navigator.clipboard.writeText(text).then(()=>showToast('Текст скопирован!')).catch(()=>{});
+    }
+}
 
 async function loadProfileData() {
     let stats = getStats();
@@ -553,6 +571,11 @@ async function loadProfileData() {
     renderEffectParticles(document.getElementById('particle-effect-container'), ACTIVE_EFFECT_CSS);
     const badgeEl = document.getElementById('user-badge-img'); if (badgeEl) { if (ACTIVE_BADGE_URL) { badgeEl.src=ACTIVE_BADGE_URL; badgeEl.style.display='block'; } else badgeEl.style.display='none'; }
     const tCont = document.getElementById('user-title-container'), tEl = document.getElementById('user-active-title'); if (ACTIVE_TITLE_DATA) { tCont.style.display='block'; applyTitleToElement(tEl, ACTIVE_TITLE_DATA); } else tCont.style.display='none';
+    
+    // Обновляем ID на странице друзей, если мы там
+    const friendIdEl = document.getElementById('my-friend-id');
+    if (friendIdEl && MY_PUBLIC_ID) friendIdEl.textContent = MY_PUBLIC_ID;
+
     await syncProfileToDB();
 }
 
@@ -847,89 +870,222 @@ async function resetBanner() {
 // ==========================================
 // 8. ДРУЗЬЯ
 // ==========================================
+function switchFriendsTab(tab, element) {
+    currentFriendsTab = tab;
+    document.querySelectorAll('.my-list-tabs .my-list-tab').forEach(el => el.classList.remove('active'));
+    if (element) element.classList.add('active');
+    
+    document.getElementById('friends-list-container').style.display = tab === 'friends' ? 'block' : 'none';
+    document.getElementById('requests-list-container').style.display = tab === 'requests' ? 'block' : 'none';
+    
+    if (tab === 'friends') loadFriends();
+    else loadFriendRequests();
+}
+
 async function loadFriends() {
     const listContainer = document.getElementById('friends-list-container');
     if (!listContainer || !supabaseClient || !MY_ID) return;
     listContainer.innerHTML = Skeletons.friends(3);
+    
+    // Обновляем мой ID
+    const friendIdEl = document.getElementById('my-friend-id');
+    if (friendIdEl) friendIdEl.textContent = MY_PUBLIC_ID || '...';
+
     try {
-        const { data: incoming } = await supabaseClient.from('friends').select('user_id').eq('friend_id', MY_ID).eq('status', 'pending');
         const { data: accepted } = await supabaseClient.from('friends').select('friend_id').eq('user_id', MY_ID).eq('status', 'accepted');
+        
+        if (!accepted || accepted.length === 0) {
+            // Красивый пустой экран
+            listContainer.innerHTML = `
+            <div style="padding: 40px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div style="width: 80px; height: 80px; background: rgba(91,91,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                    <svg style="width: 40px; height: 40px; fill: none; stroke: #5b5bff; stroke-width: 1.5;"><use href="#oa-friends"></use></svg>
+                </div>
+                <h3 style="color: #fff; font-size: 18px; margin-bottom: 8px;">Пока никого нет</h3>
+                <p style="color: #888; font-size: 14px; line-height: 1.5; margin-bottom: 20px;">Здесь будут твои друзья. Попроси друга зайти в профиль, скопировать свой ID и отправь его сюда!</p>
+                <button onclick="shareMyId()" class="ripple-btn" style="background: linear-gradient(90deg, #5b5bff, #7d7dff); color: #fff; border: none; padding: 14px 24px; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); display: flex; align-items: center; gap: 8px;">
+                    <svg style="width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#oa-send"></use></svg> Пригласить друга
+                </button>
+            </div>`;
+            return;
+        }
+
+        const accIds = accepted.map(f => f.friend_id);
+        const { data: accUsers } = await supabaseClient.from('users').select('*').in('id', accIds);
+        
+        if (!accUsers || accUsers.length === 0) {
+            listContainer.innerHTML = '<div style="padding: 20px; color: #888; text-align: center;">Ошибка загрузки друзей</div>';
+            return;
+        }
+
         let html = '';
+        accUsers.forEach(friend => {
+            const nameChar = friend.name && friend.name[0] ? escapeHTML(friend.name[0].toUpperCase()) : '?';
+            const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
+            html += `<div class="friend-card" onclick="openFriendProfile('${escapeHTML(String(friend.id))}', '${escapeHTML(friend.name).replace(/'/g, "\\'")}')"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${nameChar}';">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(friend.name)}</h3><p>ID: ${escapeHTML(friend.public_id || '...')} • Ур. ${Math.floor((friend.xp||0) / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
+        });
+        listContainer.innerHTML = html;
+    } catch (e) { 
+        console.error(e);
+        listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка</div>'; 
+    }
+}
+
+async function loadFriendRequests() {
+    const container = document.getElementById('requests-list-container');
+    if (!container || !supabaseClient || !MY_ID) return;
+    container.innerHTML = Skeletons.friends(2);
+
+    try {
+        // Входящие заявки (кто-то хочет добавить меня)
+        const { data: incoming } = await supabaseClient.from('friends').select('user_id').eq('friend_id', MY_ID).eq('status', 'pending');
+        // Исходящие заявки (я хочу добавить кого-то)
+        const { data: outgoing } = await supabaseClient.from('friends').select('friend_id').eq('user_id', MY_ID).eq('status', 'pending');
+
+        let html = '';
+
+        // Блок входящих
         if (incoming && incoming.length > 0) {
+            html += '<h3 style="padding: 0 20px 10px; font-size: 16px; color: #ffd700;">Входящие заявки</h3>';
             const inIds = incoming.map(f => f.user_id);
             const { data: inUsers } = await supabaseClient.from('users').select('*').in('id', inIds);
+            
             if (inUsers && inUsers.length > 0) {
-                html += '<h3 style="padding: 0 20px 10px; font-size: 16px; color: #ffd700;">Заявки в друзья</h3>';
                 inUsers.forEach(u => {
                     const nameChar = u.name && u.name[0] ? escapeHTML(u.name[0].toUpperCase()) : '?';
                     const avatarUrl = u.avatar_url ? safeUrl(u.avatar_url) : '';
-                    html += `<div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${nameChar}';">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(u.name)}</h3><p>ID: ${escapeHTML(u.public_id || '...')}</p></div><div style="display: flex; gap: 5px; margin-left: auto;"><button onclick="acceptFriend('${escapeHTML(String(u.id))}')" style="background: #2ecc71; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;"><svg class="icon-inline" style="stroke:#fff;width:14px;height:14px;"><use href="#oa-check"></use></svg></button><button onclick="rejectFriend('${escapeHTML(String(u.id))}')" style="background: #e74c3c; color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer;"><svg class="icon-inline" style="stroke:#fff;width:14px;height:14px;"><use href="#oa-close"></use></svg></button></div></div>`;
+                    html += `
+                    <div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);">
+                        <div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${nameChar}';">` : nameChar}</div>
+                        <div class="friend-info"><h3>${escapeHTML(u.name)}</h3><p>ID: ${escapeHTML(u.public_id || '...')}</p></div>
+                        <div style="display: flex; gap: 8px; margin-left: auto;">
+                            <button onclick="acceptFriend('${escapeHTML(String(u.id))}')" class="ripple-btn" style="background: #2ecc71; color: #fff; border: none; padding: 8px 12px; border-radius: 10px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(46,204,113,0.3);"><svg style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;"><use href="#oa-check"></use></svg></button>
+                            <button onclick="rejectFriend('${escapeHTML(String(u.id))}')" class="ripple-btn" style="background: rgba(255,45,120,0.15); color: #ff2d78; border: 1px solid rgba(255,45,120,0.3); padding: 8px 12px; border-radius: 10px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;"><svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;"><use href="#oa-close"></use></svg></button>
+                        </div>
+                    </div>`;
                 });
             }
         }
-        html += '<h3 style="padding: 10px 20px 10px; font-size: 16px; color: #fff;">Мои друзья</h3>';
-        if (!accepted || accepted.length === 0) html += '<div style="padding: 0 20px; color: #888; font-size: 14px;">Пока никого нет</div>';
-        else {
-            const accIds = accepted.map(f => f.friend_id);
-            const { data: accUsers } = await supabaseClient.from('users').select('*').in('id', accIds);
-            if (accUsers && accUsers.length > 0) {
-                accUsers.forEach(friend => {
-                    const nameChar = friend.name && friend.name[0] ? escapeHTML(friend.name[0].toUpperCase()) : '?';
-                    const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
-                    html += `<div class="friend-card" onclick="openFriendProfile('${escapeHTML(String(friend.id))}', '${escapeHTML(friend.name).replace(/'/g, "\\'")}')"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${nameChar}';">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(friend.name)}</h3><p>ID: ${escapeHTML(friend.public_id || '...')} • Ур. ${Math.floor((friend.xp||0) / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
+
+        // Блок исходящих
+        if (outgoing && outgoing.length > 0) {
+            html += '<h3 style="padding: 20px 20px 10px; font-size: 16px; color: #00d2ff;">Исходящие заявки</h3>';
+            const outIds = outgoing.map(f => f.friend_id);
+            const { data: outUsers } = await supabaseClient.from('users').select('*').in('id', outIds);
+            
+            if (outUsers && outUsers.length > 0) {
+                outUsers.forEach(u => {
+                    const nameChar = u.name && u.name[0] ? escapeHTML(u.name[0].toUpperCase()) : '?';
+                    const avatarUrl = u.avatar_url ? safeUrl(u.avatar_url) : '';
+                    html += `
+                    <div class="friend-card" style="opacity: 0.8;">
+                        <div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${nameChar}';">` : nameChar}</div>
+                        <div class="friend-info"><h3>${escapeHTML(u.name)}</h3><p>ID: ${escapeHTML(u.public_id || '...')}</p></div>
+                        <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 12px; color: #888;">Ожидает...</span>
+                            <button onclick="cancelFriendRequest('${escapeHTML(String(u.id))}')" class="ripple-btn" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #ccc; padding: 8px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer;">Отменить</button>
+                        </div>
+                    </div>`;
                 });
             }
         }
-        listContainer.innerHTML = html;
-    } catch (e) { listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка</div>'; }
+
+        if (!html) {
+            html = `
+            <div style="padding: 40px 20px; text-align: center;">
+                <div style="width: 60px; height: 60px; background: rgba(91,91,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <svg style="width: 30px; height: 30px; fill: none; stroke: #5b5bff; stroke-width: 1.5;"><use href="#oa-message"></use></svg>
+                </div>
+                <h3 style="color: #fff; font-size: 16px; margin-bottom: 5px;">Заявок нет</h3>
+                <p style="color: #888; font-size: 13px;">Входящие и исходящие заявки будут здесь</p>
+            </div>`;
+        }
+
+        container.innerHTML = html;
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка загрузки</div>';
+    }
 }
+
 async function searchFriend() {
     const searchId = document.getElementById('friend-search-input').value.trim();
     const resultContainer = document.getElementById('search-result-container');
     if (!searchId) return;
     if (!supabaseClient) return;
-    if (String(searchId) === String(MY_PUBLIC_ID)) { resultContainer.innerHTML = '<div style="color: #ffd700; text-align: center; font-size: 14px;">Это ваш ID</div>'; return; }
-    resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px;">Поиск...</div>';
+    if (String(searchId) === String(MY_PUBLIC_ID)) { resultContainer.innerHTML = '<div style="color: #ffd700; text-align: center; font-size: 14px; padding: 10px;">Это ваш ID</div>'; return; }
+    resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px; padding: 10px;">Поиск...</div>';
     try {
         const { data: userData } = await supabaseClient.from('users').select('*').eq('public_id', searchId).single();
-        if (!userData) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Не найден</div>'; return; }
+        if (!userData) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px; padding: 10px;">Игрок с таким ID не найден</div>'; return; }
         const nameChar = userData.name && userData.name[0] ? escapeHTML(userData.name[0].toUpperCase()) : '?';
         const avatarUrl = userData.avatar_url ? safeUrl(userData.avatar_url) : '';
         resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(userData.name)}</h3><p>ID: ${escapeHTML(userData.public_id || '...')}</p></div><button onclick="sendFriendRequest('${escapeHTML(String(userData.id))}')" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Заявка</button></div>`;
-    } catch (e) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px;">Ошибка</div>'; }
+    } catch (e) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px; padding: 10px;">Ошибка поиска</div>'; }
 }
+
 async function sendFriendRequest(friendId) {
     if (!supabaseClient) return;
     try {
         const { data: existing } = await supabaseClient.from('friends').select('id').eq('user_id', MY_ID).eq('friend_id', friendId).limit(1);
         if (existing && existing.length > 0) { showToast('Заявка уже отправлена'); return; }
+        
+        // Проверяем, не друзья ли мы уже
+        const { data: alreadyFriends } = await supabaseClient.from('friends').select('id').eq('user_id', MY_ID).eq('friend_id', friendId).eq('status', 'accepted').limit(1);
+        if (alreadyFriends && alreadyFriends.length > 0) { showToast('Вы уже друзья!'); return; }
+
         const { error } = await supabaseClient.from('friends').insert({ user_id: MY_ID, friend_id: friendId, status: 'pending' });
         if (error) throw error;
+        
         document.getElementById('search-result-container').innerHTML = '';
         document.getElementById('friend-search-input').value = '';
-        showToast('Заявка отправлена!'); loadFriends();
+        showToast('Заявка отправлена!'); 
+        
+        // Переключаемся на заявки, чтобы показать исходящую
+        switchFriendsTab('requests', document.querySelector('.my-list-tabs .my-list-tab:nth-child(2)'));
+        loadFriendRequests();
     } catch(e) { console.error(e); showToast('Ошибка отправки'); }
 }
+
 async function acceptFriend(userId) {
     if (!supabaseClient) return;
     try {
         await supabaseClient.from('friends').update({ status: 'accepted' }).eq('user_id', userId).eq('friend_id', MY_ID);
         await supabaseClient.from('friends').insert({ user_id: MY_ID, friend_id: userId, status: 'accepted' });
-        loadFriends();
+        showToast('Заявка принята!');
+        loadFriendRequests(); // Обновляем вкладку заявок
+        loadFriends(); // Обновляем список друзей (на всякий случай)
     } catch(e) { console.error(e); showToast('Ошибка'); }
 }
+
 async function rejectFriend(userId) {
     if (!supabaseClient) return;
-    try { await supabaseClient.from('friends').delete().eq('user_id', userId).eq('friend_id', MY_ID); loadFriends(); } catch(e) { console.error(e); }
+    try { 
+        await supabaseClient.from('friends').delete().eq('user_id', userId).eq('friend_id', MY_ID); 
+        showToast('Заявка отклонена');
+        loadFriendRequests(); 
+    } catch(e) { console.error(e); }
 }
+
+async function cancelFriendRequest(friendId) {
+    if (!supabaseClient) return;
+    try {
+        await supabaseClient.from('friends').delete().eq('user_id', MY_ID).eq('friend_id', friendId).eq('status', 'pending');
+        showToast('Заявка отменена');
+        loadFriendRequests();
+    } catch(e) { console.error(e); showToast('Ошибка'); }
+}
+
 async function removeFriend(friendId) {
     if (!supabaseClient) return;
     try {
         const { error } = await supabaseClient.from('friends').delete().or(`and(user_id.eq.${MY_ID},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${MY_ID})`);
         if (error) throw error;
+        showToast('Удален из друзей');
         switchTab('friends');
     } catch(e) { console.error(e); showToast('Ошибка удаления'); }
 }
+
 async function openFriendProfile(id, name = '') {
     if (!supabaseClient) return;
     switchTab('friend-profile');
@@ -1132,20 +1288,17 @@ async function searchFranchiseByTitle(anime) {
 
     let foundItems = [];
 
-    // 1. Ищем по названию (с фильтром по формату)
     try {
         const searchQuery = `query($search: String) { Page(page: 1, perPage: 20) { media(search: $search, type: ANIME, sort: START_DATE, genre_not_in:["Hentai","Ecchi","Erotica"]) { id idMal title{romaji english native} coverImage{large} seasonYear format } } }`;
         const data = await API_AniList.fetch(searchQuery, { search: query }).catch(() => null);
         
         if (data?.Page?.media) {
-            // Берем только аниме (TV, Movie, OVA, ONA, Special)
             foundItems = data.Page.media.filter(m => ['TV', 'TV_SHORT', 'MOVIE', 'OVA', 'ONA', 'SPECIAL'].includes(m.format));
         }
     } catch (e) {
         console.error('Ошибка поиска по названию:', e);
     }
 
-    // 2. Если по названию ничего не нашли (или нашли мало), берем связи (relations)
     if (foundItems.length < 2 && anime.relations?.edges) {
         const relations = anime.relations.edges
             .map(e => e.node)
@@ -1166,10 +1319,8 @@ async function searchFranchiseByTitle(anime) {
         });
     }
 
-    // Фильтруем: убираем текущее аниме (если оно попало в список)
     const filtered = foundItems.filter(m => String(m.id) !== String(anime.rawId));
 
-    // 3. Переводим названия на русский через наш кэш
     const translatedItems = await processWithLimit(filtered, 3, async (item) => {
         const rawTitle = item.title?.romaji || item.title?.english || item.title?.native || '';
         if (/[а-яА-ЯёЁ]/.test(rawTitle)) {
@@ -1195,7 +1346,6 @@ async function searchFranchiseByTitle(anime) {
         return { id: 'anilist_' + item.id, title: ruTitle, image: item.coverImage.large, year: item.seasonYear, format: item.format };
     });
 
-    // Сортируем по году выхода
     return translatedItems.sort((a, b) => (a.year || 0) - (b.year || 0));
 }
 
@@ -1219,7 +1369,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
     const container = document.getElementById('detail-content');
     container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
     
-    // Инициализируем переменные заранее, чтобы они точно были доступны
     let userRating = 0;
     let comments = [];
     let franchiseItems = [];
@@ -1227,11 +1376,9 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
     let similarItems = [];
 
     try {
-        // 1. Получаем данные об аниме
         const anime = await API.getDetails(id);
         if (!anime) throw new Error('Anime not found');
 
-        // 2. Безопасно грузим всё остальное (если что-то упадет, страница всё равно отрисуется)
         try { franchiseItems = await searchFranchiseByTitle(anime); } catch(e) { console.error('Franchise error:', e); }
         try { shikiScreenshots = await getShikimoriScreenshots(anime.idMal); } catch(e) { console.error('Shiki error:', e); }
         
@@ -1246,7 +1393,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                         async (m) => {
                             const rawTitle = m.title?.romaji || m.title?.english || m.title?.native || '';
                             let ruTitle = rawTitle;
-                            // Пытаемся найти русское название
                             if (!/[а-яА-ЯёЁ]/.test(rawTitle)) {
                                 try {
                                     const cached = await getCachedTitle(m.id);
@@ -1274,7 +1420,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             }
         } catch(e) { console.error('Similar error:', e); }
 
-        // 3. Безопасно грузим оценки и комментарии
         if (supabaseClient && MY_ID) {
             try {
                 const { data: listItem } = await supabaseClient.from('user_lists').select('rating').eq('user_id', MY_ID).eq('anime_id', id).single();
@@ -1284,7 +1429,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             } catch(e) { console.error('DB error:', e); }
         }
 
-        // 4. Формируем переменные для отрисовки
         const title = escapeHTML(anime.title_ru);
         const titleRaw = escapeHTML(anime.title_raw || anime.title_ru);
         const desc = escapeHTML(anime.description);
@@ -1298,7 +1442,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         window._animeCache = window._animeCache || {};
         window._animeCache[anime.id] = anime;
 
-        // Блок сезонов
         let relationsHtml = '';
         if (franchiseItems && franchiseItems.length > 0) {
             relationsHtml = `
@@ -1316,7 +1459,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             </div>`;
         }
 
-        // Блок "Следующая серия"
         let nextEpisodeHtml = '';
         if (anime.nextAiringEpisode && anime.nextAiringEpisode.airingAt) {
             const airingAt = anime.nextAiringEpisode.airingAt * 1000;
@@ -1359,7 +1501,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             </div>`;
         }
 
-        // Блок кадров
         let screenshotsHtml = '';
         let hasScreenshots = false;
         if (shikiScreenshots && shikiScreenshots.length > 0) {
@@ -1371,7 +1512,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             `).join('');
         }
 
-        // Блок похожих
         let similarHtml = '';
         if (similarItems && similarItems.length > 0) {
             similarHtml = `
@@ -1389,7 +1529,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             </div>`;
         }
 
-        // Формируем кнопку Трейлер (только если есть trailerId)
         const trailerBtnHtml = anime.trailerId 
             ? `<button onclick="window.open('https://youtube.com/watch?v=${anime.trailerId}', '_blank')" class="ripple-btn" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #fff; width: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;" onpointerdown="this.style.transform='scale(0.95)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">
                 <svg style="width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-tv-retro"></use></svg>
@@ -1431,7 +1570,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             commentsHtml = '<div style="font-size: 13px; color: #888; text-align: center; padding: 10px;">Пока нет комментариев</div>';
         }
 
-        // 5. Собираем весь HTML
         container.innerHTML = `
         <div class="fade-in" style="position: relative;">
             <div style="position: absolute; top: 0; left: -20px; width: calc(100% + 40px); height: 400px; z-index: -1; overflow: hidden;">
@@ -1563,7 +1701,6 @@ async function setAnimeStatus(status) {
         if (hb) { if (status !== '') { hb.style.background = 'rgba(91,91,255,0.2)'; hb.style.borderColor = '#5b5bff'; hb.style.color = '#5b5bff'; hb.classList.add('faved'); } else { hb.style.background = 'rgba(255,255,255,0.1)'; hb.style.color = '#fff'; hb.classList.remove('faved'); } }
         checkAchievements(stats); await syncProfileToDB(true);
         
-        // Если мы в разделе "Моё", обновляем список после изменения
         if (document.getElementById('screen-my').classList.contains('active')) renderMyList();
         
     } catch(e) { console.error(e); showToast('Ошибка'); }
@@ -1574,7 +1711,6 @@ async function openRandomAnime() {
     if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium'); 
     showToast('Ищем...'); 
     try { 
-        // Очищаем кэш, чтобы получить новое случайное аниме
         API._cache.delete('r_1'); 
         const items = await API.getRandom(1); 
         if (items && items.length > 0) openAnimeDetail(items[0].id, 'catalog'); 
@@ -1600,7 +1736,6 @@ async function renderMyList() {
         const ca = getStats().cachedAnime || {};
         const items = await Promise.all(list.map(async f => {
             let a = ca[f.anime_id];
-            // Если в кэше нет названия на русском, заново запрашиваем детали
             if (a && (!a.title_ru || a.title_ru === 'Без названия' || /^[a-zA-Z]/.test(a.title_ru))) {
                 try {
                     const fresh = await API.getDetails(f.anime_id);
@@ -1612,7 +1747,6 @@ async function renderMyList() {
             }
             if (a) return a;
             
-            // Если в кэше вообще нет — грузим
             try { const d = await API.getDetails(f.anime_id); if (d) { let s = getStats(); s.cachedAnime = s.cachedAnime || {}; s.cachedAnime[f.anime_id] = d; saveStats(s); return d; } } catch(e) { console.error(e); }
             return null;
         }));
@@ -1626,7 +1760,6 @@ function renderMyListCard(anime, grid) {
     const img = safeUrl(anime.images.jpg.image_url);
     const score = anime.score ? Number(anime.score).toFixed(1) : '?';
     
-    // Проверяем, есть ли следующая серия
     let nextEpHtml = '';
     if (anime.nextAiringEpisode && anime.nextAiringEpisode.airingAt) {
         const airingAt = anime.nextAiringEpisode.airingAt * 1000;
@@ -1645,7 +1778,6 @@ function renderMyListCard(anime, grid) {
         }
     }
 
-    // Долгое нажатие (контекстное меню) для быстрого управления
     grid.insertAdjacentHTML('beforeend', `
     <div class="catalog-card fade-in" 
          onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'my')"
