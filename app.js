@@ -1562,6 +1562,10 @@ async function setAnimeStatus(status) {
         const hb = document.querySelector(`#detail-content button[onclick^="openStatusModal('${id}')"]`);
         if (hb) { if (status !== '') { hb.style.background = 'rgba(91,91,255,0.2)'; hb.style.borderColor = '#5b5bff'; hb.style.color = '#5b5bff'; hb.classList.add('faved'); } else { hb.style.background = 'rgba(255,255,255,0.1)'; hb.style.color = '#fff'; hb.classList.remove('faved'); } }
         checkAchievements(stats); await syncProfileToDB(true);
+        
+        // Если мы в разделе "Моё", обновляем список после изменения
+        if (document.getElementById('screen-my').classList.contains('active')) renderMyList();
+        
     } catch(e) { console.error(e); showToast('Ошибка'); }
 }
 function toggleDescription() { const d = document.getElementById('desc-text'); const b = document.getElementById('desc-btn'); if (d.style.webkitLineClamp === '4' || d.style.webkitLineClamp === '') { d.style.webkitLineClamp = 'unset'; b.innerHTML = 'Свернуть ▲'; } else { d.style.webkitLineClamp = '4'; b.innerHTML = 'Читать дальше ▼'; } }
@@ -1596,7 +1600,19 @@ async function renderMyList() {
         const ca = getStats().cachedAnime || {};
         const items = await Promise.all(list.map(async f => {
             let a = ca[f.anime_id];
+            // Если в кэше нет названия на русском, заново запрашиваем детали
+            if (a && (!a.title_ru || a.title_ru === 'Без названия' || /^[a-zA-Z]/.test(a.title_ru))) {
+                try {
+                    const fresh = await API.getDetails(f.anime_id);
+                    if (fresh) {
+                        let s = getStats(); s.cachedAnime = s.cachedAnime || {}; s.cachedAnime[f.anime_id] = fresh; saveStats(s);
+                        return fresh;
+                    }
+                } catch(e) {}
+            }
             if (a) return a;
+            
+            // Если в кэше вообще нет — грузим
             try { const d = await API.getDetails(f.anime_id); if (d) { let s = getStats(); s.cachedAnime = s.cachedAnime || {}; s.cachedAnime[f.anime_id] = d; saveStats(s); return d; } } catch(e) { console.error(e); }
             return null;
         }));
@@ -1609,7 +1625,45 @@ function renderMyListCard(anime, grid) {
     const title = escapeHTML(anime.title_ru);
     const img = safeUrl(anime.images.jpg.image_url);
     const score = anime.score ? Number(anime.score).toFixed(1) : '?';
-    grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'my')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold; display:flex;align-items:center;gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${score}</div><div class="catalog-card-title">${title}</div></div>`);
+    
+    // Проверяем, есть ли следующая серия
+    let nextEpHtml = '';
+    if (anime.nextAiringEpisode && anime.nextAiringEpisode.airingAt) {
+        const airingAt = anime.nextAiringEpisode.airingAt * 1000;
+        const diffMs = airingAt - Date.now();
+        
+        if (diffMs > 0) {
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const diffHours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
+            let timeText = diffDays > 0 ? `через ${diffDays} д.` : `через ${diffHours} ч.`;
+            
+            nextEpHtml = `
+            <div style="position:absolute; top: 8px; left: 8px; background: rgba(91,91,255,0.9); padding: 3px 6px; border-radius: 6px; font-size: 9px; color: #fff; font-weight: bold; display:flex; align-items:center; gap:4px; backdrop-filter: blur(4px);">
+                <svg style="width:10px; height:10px; fill:none; stroke:currentColor; stroke-width:2;"><use href="#oa-clock"></use></svg>
+                ${timeText}
+            </div>`;
+        }
+    }
+
+    // Долгое нажатие (контекстное меню) для быстрого управления
+    grid.insertAdjacentHTML('beforeend', `
+    <div class="catalog-card fade-in" 
+         onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'my')"
+         oncontextmenu="event.preventDefault(); openStatusModal('${escapeHTML(anime.id)}'); return false;"
+         ontouchstart="window._touchTimer = setTimeout(() => { openStatusModal('${escapeHTML(anime.id)}'); window._touchTimer = null; }, 600);"
+         ontouchend="if(window._touchTimer) { clearTimeout(window._touchTimer); window._touchTimer = null; }"
+         ontouchmove="if(window._touchTimer) { clearTimeout(window._touchTimer); window._touchTimer = null; }">
+        
+        <img class="catalog-card-img" src="${img}" loading="lazy">
+        
+        ${nextEpHtml}
+        
+        <div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold; display:flex; align-items:center; gap:2px;">
+            <svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${score}
+        </div>
+        
+        <div class="catalog-card-title">${title}</div>
+    </div>`);
 }
 
 // ==========================================
