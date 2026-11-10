@@ -644,7 +644,7 @@
         <div id="achievements-list-container" style="margin-top: 15px;"></div>
     </div>
 
-    <!-- НОВЫЙ ДИЗАЙН ПРОФИЛЯ С ЩИТОМ -->
+    <!-- НОВЫЙ ДИЗАЙН ПРОФИЛЯ С ЩИТОМ И СТАТИСТИКОЙ -->
     <div id="screen-profile" class="screen" style="background: var(--bg);">
         
         <!-- Верхняя часть с фоном -->
@@ -699,13 +699,8 @@
                 <!-- SVG Щит с уровнем -->
                 <div style="position: relative; width: 70px; height: 70px; flex-shrink: 0; animation: shieldShimmer 3s infinite;">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="70" height="70">
-                        <!-- Белый фон (убираем, чтобы был прозрачный) -->
                         <rect width="1024" height="1024" fill="transparent"/>
-                        
-                        <!-- Чёрный внешний контур щита -->
                         <path fill="#000000" d="M150 120 Q150 92 180 92 H844 Q874 92 874 120 V475 C874 690 752 846 512 934 C272 846 150 690 150 475 Z"/>
-                        
-                        <!-- Белая внутренняя окантовка (сюда подставляем градиент) -->
                         <defs>
                             <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                                 <stop offset="0%" stop-color="#5b5bff" id="shield-stop-1" />
@@ -713,8 +708,6 @@
                             </linearGradient>
                         </defs>
                         <path fill="url(#shieldGradient)" d="M177 145 Q177 122 202 122 H822 Q847 122 847 145 V470 C847 668 733 804 512 890 C291 804 177 668 177 470 Z"/>
-                        
-                        <!-- Тёмная внутренняя часть щита -->
                         <path fill="#111111" d="M198 165 Q198 150 216 150 H808 Q826 150 826 165 V468 C826 646 720 776 512 858 C304 776 198 646 198 468 Z"/>
                     </svg>
                     <div id="shield-level-text" style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
@@ -732,8 +725,34 @@
             </div>
         </div>
 
+        <!-- БЛОК СТАТИСТИКИ -->
+        <div style="padding: 15px 20px;">
+            <div style="display: flex; gap: 10px; justify-content: space-between;">
+                <!-- Серии -->
+                <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
+                    <div style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 2px;" id="stat-episodes">0</div>
+                    <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Серий</div>
+                </div>
+                <!-- Часы -->
+                <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
+                    <div style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 2px;" id="stat-hours">0</div>
+                    <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Часов</div>
+                </div>
+                <!-- Стрик -->
+                <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
+                    <div style="font-size: 20px; font-weight: 900; color: #ff4500; margin-bottom: 2px;" id="stat-streak">1</div>
+                    <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Дней</div>
+                </div>
+                <!-- Ачивки -->
+                <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
+                    <div style="font-size: 20px; font-weight: 900; color: #ffd700; margin-bottom: 2px;" id="stat-achievements">0</div>
+                    <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Ачивок</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Вкладки -->
-        <div style="padding: 20px;">
+        <div style="padding: 0 20px 20px 20px;">
             <div class="profile-tabs" style="margin-top: 0;">
                 <button class="tab-btn ripple-btn active" id="tab-btn-profile" onclick="switchProfileTab('profile')"><svg><use href="#oa-profile"></use></svg> Профиль</button>
                 <button class="tab-btn ripple-btn" id="tab-btn-shop" onclick="switchProfileTab('shop')"><svg><use href="#oa-shop"></use></svg> Магазин</button>
@@ -964,6 +983,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4617"></script>
+    <script src="app.js?v=4618"></script>
 </body>
 </html>
