@@ -35,7 +35,7 @@
         @keyframes textPulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
         @keyframes heroProgress { from { width: 0%; } to { width: 100%; } }
         @keyframes sectionFadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes shieldShimmer { 0% { filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); } 50% { filter: drop-shadow(0 0 15px rgba(255,255,255,0.6)); } 100% { filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); } }
+        @keyframes hexShimmer { 0% { filter: drop-shadow(0 0 5px rgba(140,80,255,0.4)); } 50% { filter: drop-shadow(0 0 15px rgba(140,80,255,0.8)); } 100% { filter: drop-shadow(0 0 5px rgba(140,80,255,0.4)); } }
 
         .skeleton { background: linear-gradient(90deg, #1a1a20 0%, #25252e 40%, #2e2e3a 50%, #25252e 60%, #1a1a20 100%); background-size: 800px 100%; animation: skeletonShimmer 1.4s linear infinite; border-radius: 8px; position: relative; overflow: hidden; }
         .skeleton-text { height: 12px; margin-bottom: 8px; border-radius: 6px; }
@@ -651,7 +651,7 @@
         <div id="achievements-list-container" style="margin-top: 15px;"></div>
     </div>
 
-    <!-- НОВЫЙ ДИЗАЙН ПРОФИЛЯ С ЩИТОМ И СТАТИСТИКОЙ -->
+    <!-- НОВЫЙ ДИЗАЙН ПРОФИЛЯ С ГЕКСАГОНОМ -->
     <div id="screen-profile" class="screen" style="background: var(--bg);">
         
         <!-- Верхняя часть с фоном -->
@@ -699,22 +699,35 @@
             </div>
         </div>
 
-        <!-- Карточка уровня (XP) с SVG Щитом -->
+        <!-- Карточка уровня (XP) с Гексагоном -->
         <div style="padding: 0 20px;">
             <div class="level-row" onclick="openLevelModal()" style="background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 15px 20px; display: flex; align-items: center; gap: 15px; cursor: pointer;">
                 
-                <!-- SVG Щит с уровнем -->
-                <div style="position: relative; width: 70px; height: 70px; flex-shrink: 0; animation: shieldShimmer 3s infinite;">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="70" height="70">
-                        <rect width="1024" height="1024" fill="transparent"/>
+                <!-- SVG Гексагон с уровнем -->
+                <div style="position: relative; width: 70px; height: 70px; flex-shrink: 0; animation: hexShimmer 3s infinite;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="70" height="70">
+                        <rect width="512" height="512" fill="transparent"/>
                         <defs>
-                            <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stop-color="#5b5bff" id="shield-stop-1" />
-                                <stop offset="100%" stop-color="#b44aff" id="shield-stop-2" />
+                            <linearGradient id="hexGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#5b5bff" id="hex-stop-1" />
+                                <stop offset="100%" stop-color="#b44aff" id="hex-stop-2" />
                             </linearGradient>
+                            <filter id="hexGlow">
+                                <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
                         </defs>
-                        <!-- Залитый щит -->
-                        <path fill="url(#shieldGradient)" stroke="#000" stroke-width="12" d="M150 120 Q150 92 180 92 H844 Q874 92 874 120 V475 C874 690 752 846 512 934 C272 846 150 690 150 475 Z"/>
+                        <!-- Внешний контур (неоновый) -->
+                        <path d="M256 30 L440 130 L440 382 L256 482 L72 382 L72 130 Z" fill="none" stroke="url(#hexGradient)" stroke-width="12" filter="url(#hexGlow)"/>
+                        <!-- Внутренняя заливка -->
+                        <path d="M256 60 L415 145 L415 367 L256 452 L97 367 L97 145 Z" fill="#14141f" stroke="url(#hexGradient)" stroke-width="4"/>
+                        <!-- Еще один внутренний контур -->
+                        <path d="M256 90 L390 160 L390 352 L256 422 L122 352 L122 160 Z" fill="none" stroke="rgba(91,91,255,0.3)" stroke-width="2"/>
+                        <!-- Иконка внизу (синяя стрелка/галочка) -->
+                        <path d="M256 400 L276 430 L256 450 L236 430 Z" fill="#00f5ff" filter="url(#hexGlow)"/>
                     </svg>
                     <div id="shield-level-text" style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
                 </div>
@@ -851,19 +864,29 @@
                 </div>
             </div>
 
-            <!-- Карточка уровня (XP) с SVG Щитом -->
+            <!-- Карточка уровня (XP) с Гексагоном -->
             <div style="padding: 0 20px 100px 20px;">
                 <div class="level-row" style="background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 15px 20px; display: flex; align-items: center; gap: 15px;">
-                    <div style="position: relative; width: 70px; height: 70px; flex-shrink: 0; animation: shieldShimmer 3s infinite;">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="70" height="70">
-                            <rect width="1024" height="1024" fill="transparent"/>
+                    <div style="position: relative; width: 70px; height: 70px; flex-shrink: 0; animation: hexShimmer 3s infinite;">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="70" height="70">
+                            <rect width="512" height="512" fill="transparent"/>
                             <defs>
-                                <linearGradient id="previewShieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stop-color="#5b5bff" id="preview-shield-stop-1" />
-                                    <stop offset="100%" stop-color="#b44aff" id="preview-shield-stop-2" />
+                                <linearGradient id="previewHexGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#5b5bff" id="preview-hex-stop-1" />
+                                    <stop offset="100%" stop-color="#b44aff" id="preview-hex-stop-2" />
                                 </linearGradient>
+                                <filter id="previewHexGlow">
+                                    <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+                                    <feMerge>
+                                        <feMergeNode in="coloredBlur"/>
+                                        <feMergeNode in="SourceGraphic"/>
+                                    </feMerge>
+                                </filter>
                             </defs>
-                            <path fill="url(#previewShieldGradient)" stroke="#000" stroke-width="12" d="M150 120 Q150 92 180 92 H844 Q874 92 874 120 V475 C874 690 752 846 512 934 C272 846 150 690 150 475 Z"/>
+                            <path d="M256 30 L440 130 L440 382 L256 482 L72 382 L72 130 Z" fill="none" stroke="url(#previewHexGradient)" stroke-width="12" filter="url(#previewHexGlow)"/>
+                            <path d="M256 60 L415 145 L415 367 L256 452 L97 367 L97 145 Z" fill="#14141f" stroke="url(#previewHexGradient)" stroke-width="4"/>
+                            <path d="M256 90 L390 160 L390 352 L256 422 L122 352 L122 160 Z" fill="none" stroke="rgba(91,91,255,0.3)" stroke-width="2"/>
+                            <path d="M256 400 L276 430 L256 450 L236 430 Z" fill="#00f5ff" filter="url(#previewHexGlow)"/>
                         </svg>
                         <div id="preview-shield-level-text" style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
                     </div>
@@ -886,16 +909,26 @@
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('levelModal')"><svg><use href="#oa-close"></use></svg></button>
             <div class="modal-icon-large">
-                <div style="position: relative; width: 120px; height: 120px; animation: shieldShimmer 3s infinite;">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="120" height="120">
-                        <rect width="1024" height="1024" fill="transparent"/>
+                <div style="position: relative; width: 120px; height: 120px; animation: hexShimmer 3s infinite;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="120" height="120">
+                        <rect width="512" height="512" fill="transparent"/>
                         <defs>
-                            <linearGradient id="modalShieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stop-color="#5b5bff" id="modal-shield-stop-1" />
-                                <stop offset="100%" stop-color="#b44aff" id="modal-shield-stop-2" />
+                            <linearGradient id="modalHexGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#5b5bff" id="modal-hex-stop-1" />
+                                <stop offset="100%" stop-color="#b44aff" id="modal-hex-stop-2" />
                             </linearGradient>
+                            <filter id="modalHexGlow">
+                                <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
                         </defs>
-                        <path fill="url(#modalShieldGradient)" stroke="#000" stroke-width="12" d="M150 120 Q150 92 180 92 H844 Q874 92 874 120 V475 C874 690 752 846 512 934 C272 846 150 690 150 475 Z"/>
+                        <path d="M256 30 L440 130 L440 382 L256 482 L72 382 L72 130 Z" fill="none" stroke="url(#modalHexGradient)" stroke-width="12" filter="url(#modalHexGlow)"/>
+                        <path d="M256 60 L415 145 L415 367 L256 452 L97 367 L97 145 Z" fill="#14141f" stroke="url(#modalHexGradient)" stroke-width="4"/>
+                        <path d="M256 90 L390 160 L390 352 L256 422 L122 352 L122 160 Z" fill="none" stroke="rgba(91,91,255,0.3)" stroke-width="2"/>
+                        <path d="M256 400 L276 430 L256 450 L236 430 Z" fill="#00f5ff" filter="url(#modalHexGlow)"/>
                     </svg>
                     <div id="modal-icon-level" style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 40px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
                 </div>
@@ -985,6 +1018,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4619"></script>
+    <script src="app.js?v=4620"></script>
 </body>
 </html>
