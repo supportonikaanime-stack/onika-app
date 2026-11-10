@@ -650,7 +650,7 @@
         <div id="achievements-list-container" style="margin-top: 15px;"></div>
     </div>
 
-    <!-- НОВЫЙ ДИЗАЙН ПРОФИЛЯ С КАРТИНКОЙ ГЕКСАГОНА -->
+    <!-- НОВЫЙ ДИЗАЙН ПРОФИЛЯ С УВЕЛИЧЕННОЙ КАРТИНКОЙ -->
     <div id="screen-profile" class="screen" style="background: var(--bg);">
         
         <!-- Верхняя часть с фоном -->
@@ -698,14 +698,14 @@
             </div>
         </div>
 
-        <!-- Карточка уровня (XP) с КАРТИНКОЙ -->
+        <!-- Карточка уровня (XP) с УВЕЛИЧЕННОЙ КАРТИНКОЙ (140px) -->
         <div style="padding: 0 20px;">
             <div class="level-row" onclick="openLevelModal()" style="background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 15px 20px; display: flex; align-items: center; gap: 15px; cursor: pointer;">
                 
-                <!-- Картинка уровня -->
-                <div style="position: relative; width: 70px; height: 70px; flex-shrink: 0;">
+                <!-- Картинка уровня (Увеличена в 2 раза) -->
+                <div style="position: relative; width: 140px; height: 140px; flex-shrink: 0; margin: -20px 0;">
                     <img src="level_hex.png" style="width: 100%; height: 100%; object-fit: contain;" alt="level hex">
-                    <div id="shield-level-text" style="position: absolute; top: 48%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
+                    <div id="shield-level-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 36px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
                 </div>
 
                 <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
@@ -840,12 +840,12 @@
                 </div>
             </div>
 
-            <!-- Карточка уровня (XP) с КАРТИНКОЙ -->
+            <!-- Карточка уровня (XP) с УВЕЛИЧЕННОЙ КАРТИНКОЙ (140px) -->
             <div style="padding: 0 20px 100px 20px;">
                 <div class="level-row" style="background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 15px 20px; display: flex; align-items: center; gap: 15px;">
-                    <div style="position: relative; width: 70px; height: 70px; flex-shrink: 0;">
+                    <div style="position: relative; width: 140px; height: 140px; flex-shrink: 0; margin: -20px 0;">
                         <img src="level_hex.png" style="width: 100%; height: 100%; object-fit: contain;" alt="level hex">
-                        <div id="preview-shield-level-text" style="position: absolute; top: 48%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
+                        <div id="preview-shield-level-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 36px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
                     </div>
 
                     <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
@@ -868,7 +868,7 @@
             <div class="modal-icon-large">
                 <div style="position: relative; width: 120px; height: 120px;">
                     <img src="level_hex.png" style="width: 100%; height: 100%; object-fit: contain;" alt="level hex">
-                    <div id="modal-icon-level" style="position: absolute; top: 48%; left: 50%; transform: translate(-50%, -50%); font-size: 40px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
+                    <div id="modal-icon-level" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 40px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
                 </div>
             </div>
             <div class="modal-title">Уровень <span id="modal-level-num">1</span></div>
@@ -956,6 +956,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4621"></script>
+    <script src="app.js?v=4622"></script>
 </body>
 </html>
