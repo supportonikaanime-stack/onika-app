@@ -509,6 +509,7 @@ function switchTab(tabName, element) {
         loadFriends(); 
     }
     if (tabName==='achievements') renderAchievementsPage();
+    if (tabName==='history') renderWatchHistory(); // Новая вкладка истории
 }
 function goBackFromDetail() { if (previousScreen==='my') switchTab('my'); else if (previousScreen==='home') switchTab('home'); else if (previousScreen==='friends') switchTab('friends'); else switchTab('catalog'); }
 function toggleFilters() { const w=document.getElementById('filters-wrapper'); const c=document.getElementById('filter-chevron'); if(!w)return; if(w.classList.contains('filters-collapsed')){w.classList.remove('filters-collapsed');if(c)c.style.transform='rotate(180deg)';}else{w.classList.add('filters-collapsed');if(c)c.style.transform='rotate(0deg)';} }
@@ -1874,6 +1875,31 @@ function renderMyListCard(anime, grid) {
         
         <div class="catalog-card-title">${title}</div>
     </div>`);
+}
+
+// ==========================================
+// 11.5 ИСТОРИЯ ПРОСМОТРОВ
+// ==========================================
+async function renderWatchHistory() {
+    const grid = document.getElementById('history-grid'); if (!grid) return;
+    grid.innerHTML = Skeletons.cards(4);
+    if (!supabaseClient || !MY_ID) { grid.innerHTML = '<div class="loading-text">Войдите, чтобы увидеть историю</div>'; return; }
+    try {
+        const { data: list, error } = await supabaseClient.from('user_lists').select('*').eq('user_id', MY_ID).eq('status', 'completed').order('created_at', { ascending: false });
+        if (error) throw error;
+        if (!list || list.length === 0) { grid.innerHTML = '<div class="loading-text">Вы еще ничего не посмотрели</div>'; return; }
+        
+        const ca = getStats().cachedAnime || {};
+        const items = await Promise.all(list.map(async f => {
+            let a = ca[f.anime_id];
+            if (a) return a;
+            try { const d = await API.getDetails(f.anime_id); if (d) { let s = getStats(); s.cachedAnime = s.cachedAnime || {}; s.cachedAnime[f.anime_id] = d; saveStats(s); return d; } } catch(e) { console.error(e); }
+            return null;
+        }));
+        grid.innerHTML = '';
+        items.filter(Boolean).forEach(anime => renderMyListCard(anime, grid));
+        if (items.filter(Boolean).length === 0) grid.innerHTML = '<div class="loading-text">Не удалось загрузить</div>';
+    } catch(e) { console.error(e); grid.innerHTML = '<div class="loading-text" style="color:#ff4444;">Ошибка</div>'; }
 }
 
 // ==========================================
