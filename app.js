@@ -581,7 +581,7 @@ async function loadProfileData() {
     setElText('user-xp-current-top',currentLevelXP); 
     setElWidth('user-xp-bar',currentLevelXP + '%'); 
     
-    // Обновляем цифру внутри гексагона
+    // Обновляем цифру внутри картинки
     const shieldText = document.getElementById('shield-level-text');
     if (shieldText) shieldText.textContent = lvl;
 
