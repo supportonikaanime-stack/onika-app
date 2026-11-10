@@ -569,6 +569,13 @@
         <div class="grid-catalog" id="my-grid" style="margin-top: 10px;"></div>
     </div>
 
+    <!-- СТРАНИЦА ИСТОРИИ ПРОСМОТРОВ -->
+    <div id="screen-history" class="screen">
+        <button onclick="switchTab('profile')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; padding: 20px; cursor: pointer;">← Назад в профиль</button>
+        <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 20px; padding: 0 20px;">История просмотров</h1>
+        <div class="grid-catalog" id="history-grid" style="margin-top: 10px;"></div>
+    </div>
+
     <div id="screen-friends" class="screen">
         <header class="profile-header" style="padding-bottom: 10px;"><h1>Друзья</h1></header>
         
@@ -700,15 +707,14 @@
                 <div style="position: relative; width: 70px; height: 70px; flex-shrink: 0; animation: shieldShimmer 3s infinite;">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="70" height="70">
                         <rect width="1024" height="1024" fill="transparent"/>
-                        <path fill="#000000" d="M150 120 Q150 92 180 92 H844 Q874 92 874 120 V475 C874 690 752 846 512 934 C272 846 150 690 150 475 Z"/>
                         <defs>
                             <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                                 <stop offset="0%" stop-color="#5b5bff" id="shield-stop-1" />
                                 <stop offset="100%" stop-color="#b44aff" id="shield-stop-2" />
                             </linearGradient>
                         </defs>
-                        <path fill="url(#shieldGradient)" d="M177 145 Q177 122 202 122 H822 Q847 122 847 145 V470 C847 668 733 804 512 890 C291 804 177 668 177 470 Z"/>
-                        <path fill="#111111" d="M198 165 Q198 150 216 150 H808 Q826 150 826 165 V468 C826 646 720 776 512 858 C304 776 198 646 198 468 Z"/>
+                        <!-- Залитый щит -->
+                        <path fill="url(#shieldGradient)" stroke="#000" stroke-width="12" d="M150 120 Q150 92 180 92 H844 Q874 92 874 120 V475 C874 690 752 846 512 934 C272 846 150 690 150 475 Z"/>
                     </svg>
                     <div id="shield-level-text" style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
                 </div>
@@ -728,8 +734,8 @@
         <!-- БЛОК СТАТИСТИКИ -->
         <div style="padding: 15px 20px;">
             <div style="display: flex; gap: 10px; justify-content: space-between;">
-                <!-- Серии -->
-                <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
+                <!-- Серии (клик -> История) -->
+                <div onclick="switchTab('history')" class="ripple-btn" style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center; cursor: pointer;">
                     <div style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 2px;" id="stat-episodes">0</div>
                     <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Серий</div>
                 </div>
@@ -743,8 +749,8 @@
                     <div style="font-size: 20px; font-weight: 900; color: #ff4500; margin-bottom: 2px;" id="stat-streak">1</div>
                     <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Дней</div>
                 </div>
-                <!-- Ачивки -->
-                <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
+                <!-- Ачивки (клик -> Достижения) -->
+                <div onclick="switchTab('achievements')" class="ripple-btn" style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center; cursor: pointer;">
                     <div style="font-size: 20px; font-weight: 900; color: #ffd700; margin-bottom: 2px;" id="stat-achievements">0</div>
                     <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Ачивок</div>
                 </div>
@@ -851,15 +857,13 @@
                     <div style="position: relative; width: 70px; height: 70px; flex-shrink: 0; animation: shieldShimmer 3s infinite;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="70" height="70">
                             <rect width="1024" height="1024" fill="transparent"/>
-                            <path fill="#000000" d="M150 120 Q150 92 180 92 H844 Q874 92 874 120 V475 C874 690 752 846 512 934 C272 846 150 690 150 475 Z"/>
                             <defs>
                                 <linearGradient id="previewShieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                                     <stop offset="0%" stop-color="#5b5bff" id="preview-shield-stop-1" />
                                     <stop offset="100%" stop-color="#b44aff" id="preview-shield-stop-2" />
                                 </linearGradient>
                             </defs>
-                            <path fill="url(#previewShieldGradient)" d="M177 145 Q177 122 202 122 H822 Q847 122 847 145 V470 C847 668 733 804 512 890 C291 804 177 668 177 470 Z"/>
-                            <path fill="#111111" d="M198 165 Q198 150 216 150 H808 Q826 150 826 165 V468 C826 646 720 776 512 858 C304 776 198 646 198 468 Z"/>
+                            <path fill="url(#previewShieldGradient)" stroke="#000" stroke-width="12" d="M150 120 Q150 92 180 92 H844 Q874 92 874 120 V475 C874 690 752 846 512 934 C272 846 150 690 150 475 Z"/>
                         </svg>
                         <div id="preview-shield-level-text" style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
                     </div>
@@ -885,15 +889,13 @@
                 <div style="position: relative; width: 120px; height: 120px; animation: shieldShimmer 3s infinite;">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="120" height="120">
                         <rect width="1024" height="1024" fill="transparent"/>
-                        <path fill="#000000" d="M150 120 Q150 92 180 92 H844 Q874 92 874 120 V475 C874 690 752 846 512 934 C272 846 150 690 150 475 Z"/>
                         <defs>
                             <linearGradient id="modalShieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                                 <stop offset="0%" stop-color="#5b5bff" id="modal-shield-stop-1" />
                                 <stop offset="100%" stop-color="#b44aff" id="modal-shield-stop-2" />
                             </linearGradient>
                         </defs>
-                        <path fill="url(#modalShieldGradient)" d="M177 145 Q177 122 202 122 H822 Q847 122 847 145 V470 C847 668 733 804 512 890 C291 804 177 668 177 470 Z"/>
-                        <path fill="#111111" d="M198 165 Q198 150 216 150 H808 Q826 150 826 165 V468 C826 646 720 776 512 858 C304 776 198 646 198 468 Z"/>
+                        <path fill="url(#modalShieldGradient)" stroke="#000" stroke-width="12" d="M150 120 Q150 92 180 92 H844 Q874 92 874 120 V475 C874 690 752 846 512 934 C272 846 150 690 150 475 Z"/>
                     </svg>
                     <div id="modal-icon-level" style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 40px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">1</div>
                 </div>
@@ -983,6 +985,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4618"></script>
+    <script src="app.js?v=4619"></script>
 </body>
 </html>
