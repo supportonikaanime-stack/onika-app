@@ -619,6 +619,12 @@ async function loadProfileData() {
     // Обновляем цвет щита
     updateShieldColor(lvl);
 
+    // Заполняем статистику
+    setElText('stat-episodes', stats.episodesWatched || 0);
+    setElText('stat-hours', Math.floor((stats.minutesWatched || 0) / 60));
+    setElText('stat-streak', stats.daysStreak || 1);
+    setElText('stat-achievements', (stats.unlockedAchievements || []).length);
+
     const total = ACHIEVEMENTS.length;
     setElText('ach-points',stats.unlockedAchievements.length*10); 
     setElText('ach-earned',stats.unlockedAchievements.length); 
