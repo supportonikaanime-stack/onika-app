@@ -431,7 +431,7 @@ const API = {
 };
 
 // ==========================================
-// 4. ИГРА (ГЕКСАГОН И УРОВНИ)
+// 4. ИГРА (УРОВНИ)
 // ==========================================
 let currentAnimeForPlayer = null, selectedVoice = '', selectedPlayer = '';
 const VOICES = [{id:'anilibria',name:'AniLibria',icon:'🎙️'},{id:'studioband',name:'StudioBand',icon:'🎙️'},{id:'jamclub',name:'JAM Club',icon:'🎙️'},{id:'original',name:'Оригинал (Субтитры)',icon:'📝'}];
@@ -459,38 +459,6 @@ const YEARS=[{id:'2024',name:'2024'},{id:'2023',name:'2023'},{id:'2022',name:'20
 const STATUSES=[{id:'ongoing',name:'Онгоинг'},{id:'released',name:'Завершено'},{id:'anons',name:'Анонс'}];
 const SORTS=[{id:'popularity',name:'По популярности'},{id:'ranked',name:'По рейтингу'},{id:'aired_on',name:'Новинки'},{id:'newest',name:'Сначала новые'},{id:'oldest',name:'Сначала старые'}];
 
-// Функция обновления цвета гексагона в зависимости от уровня
-function updateShieldColor(level) {
-    let color1 = '#5b5bff'; // Синий
-    let color2 = '#b44aff'; // Фиолетовый
-    
-    if (level > 300 && level <= 600) {
-        color1 = '#b44aff'; // Фиолетовый
-        color2 = '#ff2d78'; // Розовый
-    } else if (level > 600 && level <= 900) {
-        color1 = '#ff2d78'; // Розовый
-        color2 = '#ff4500'; // Оранжевый
-    } else if (level > 900) {
-        color1 = '#ffd700'; // Золотой
-        color2 = '#ff8c00'; // Оранжевый
-    }
-
-    const stop1 = document.getElementById('hex-stop-1');
-    const stop2 = document.getElementById('hex-stop-2');
-    if (stop1) stop1.setAttribute('stop-color', color1);
-    if (stop2) stop2.setAttribute('stop-color', color2);
-
-    const pStop1 = document.getElementById('preview-hex-stop-1');
-    const pStop2 = document.getElementById('preview-hex-stop-2');
-    if (pStop1) pStop1.setAttribute('stop-color', color1);
-    if (pStop2) pStop2.setAttribute('stop-color', color2);
-
-    const mStop1 = document.getElementById('modal-hex-stop-1');
-    const mStop2 = document.getElementById('modal-hex-stop-2');
-    if (mStop1) mStop1.setAttribute('stop-color', color1);
-    if (mStop2) mStop2.setAttribute('stop-color', color2);
-}
-
 function switchTab(tabName, element) {
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     const scr = document.getElementById(`screen-${tabName}`); if(scr) scr.classList.add('active');
@@ -509,7 +477,7 @@ function switchTab(tabName, element) {
         loadFriends(); 
     }
     if (tabName==='achievements') renderAchievementsPage();
-    if (tabName==='history') renderWatchHistory(); // Новая вкладка истории
+    if (tabName==='history') renderWatchHistory();
 }
 function goBackFromDetail() { if (previousScreen==='my') switchTab('my'); else if (previousScreen==='home') switchTab('home'); else if (previousScreen==='friends') switchTab('friends'); else switchTab('catalog'); }
 function toggleFilters() { const w=document.getElementById('filters-wrapper'); const c=document.getElementById('filter-chevron'); if(!w)return; if(w.classList.contains('filters-collapsed')){w.classList.remove('filters-collapsed');if(c)c.style.transform='rotate(180deg)';}else{w.classList.add('filters-collapsed');if(c)c.style.transform='rotate(0deg)';} }
@@ -613,12 +581,9 @@ async function loadProfileData() {
     setElText('user-xp-current-top',currentLevelXP); 
     setElWidth('user-xp-bar',currentLevelXP + '%'); 
     
-    // Обновляем цифру внутри SVG-гексагона
+    // Обновляем цифру внутри гексагона
     const shieldText = document.getElementById('shield-level-text');
     if (shieldText) shieldText.textContent = lvl;
-    
-    // Обновляем цвет гексагона
-    updateShieldColor(lvl);
 
     // Заполняем статистику
     setElText('stat-episodes', stats.episodesWatched || 0);
@@ -744,8 +709,6 @@ function renderPreviewCard() {
     
     const previewShieldText = document.getElementById('preview-shield-level-text');
     if (previewShieldText) previewShieldText.textContent = currentLevel;
-    
-    updateShieldColor(currentLevel);
     
     renderEffectParticles(document.getElementById('preview-particle-container'), ACTIVE_EFFECT_CSS);
 }
