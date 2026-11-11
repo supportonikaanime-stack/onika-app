@@ -700,14 +700,14 @@
 
         <!-- НОВЫЙ БЛОК УРОВНЯ (КАПСУЛА) -->
         <div style="padding: 0 20px;">
-            <div onclick="openLevelModal()" style="position: relative; background: rgba(20, 20, 31, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; overflow: hidden; cursor: pointer; backdrop-filter: blur(10px);">
+            <div onclick="openLevelModal()" style="position: relative; background: rgba(20, 20, 31, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; height: 36px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; overflow: hidden; cursor: pointer; backdrop-filter: blur(10px);">
                 <!-- Заполняющая полоса прогресса (находится под текстом) -->
                 <div id="user-xp-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, rgba(91,91,255,0.8), rgba(0,245,255,0.8)); z-index: 1; transition: width 0.5s ease;"></div>
                 
                 <!-- Текст поверх полосы -->
                 <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <div style="font-size: 16px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">LVL: <span id="user-level">1</span></div>
-                    <div style="font-size: 13px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);"><span id="user-xp-current">0</span> / 100 XP</div>
+                    <div style="font-size: 13px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">LVL: <span id="user-level">1</span></div>
+                    <div style="font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);"><span id="user-xp-current">0</span> / 100 XP</div>
                 </div>
             </div>
         </div>
@@ -849,11 +849,11 @@
 
             <div style="padding: 0 20px 100px 20px;">
                 <!-- НОВЫЙ БЛОК УРОВНЯ В ПРЕДПРОСМОТРЕ -->
-                <div style="position: relative; background: rgba(20, 20, 31, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; overflow: hidden; backdrop-filter: blur(10px);">
+                <div style="position: relative; background: rgba(20, 20, 31, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; height: 36px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; overflow: hidden; backdrop-filter: blur(10px);">
                     <div id="preview-xp-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, rgba(91,91,255,0.8), rgba(0,245,255,0.8)); z-index: 1;"></div>
                     <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                        <div style="font-size: 16px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">LVL: <span id="preview-level">1</span></div>
-                        <div style="font-size: 13px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);"><span id="preview-xp-current">0</span> / 100 XP</div>
+                        <div style="font-size: 13px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">LVL: <span id="preview-level">1</span></div>
+                        <div style="font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);"><span id="preview-xp-current">0</span> / 100 XP</div>
                     </div>
                 </div>
             </div>
