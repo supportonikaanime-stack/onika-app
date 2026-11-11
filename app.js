@@ -466,7 +466,7 @@ function switchTab(tabName, element) {
     
     const nav = document.querySelector('.bottom-nav');
     if (nav) {
-        if (tabName === 'shop' || tabName === 'settings' || tabName === 'preview' || tabName === 'progress') {
+        if (tabName === 'shop' || tabName === 'settings' || tabName === 'preview') {
             nav.style.display = 'none';
         } else {
             nav.style.display = 'flex';
@@ -483,7 +483,6 @@ function switchTab(tabName, element) {
 
     if (tabName !== 'home') stopSlideShow();
     if (tabName==='profile') loadProfileData();
-    if (tabName==='progress') renderProgressPage();
     if (tabName==='catalog'&&document.getElementById('catalog-grid').children.length===0) { initCatalogFilters(); loadCatalog(true); }
     if (tabName==='my') renderMyList();
     if (tabName==='voice') { document.getElementById('voice-title').textContent='Выбор озвучки'; renderVoiceSelection(); }
@@ -1275,11 +1274,11 @@ async function openFriendProfile(id, name = '') {
 
                 <!-- НОВЫЙ БЛОК УРОВНЯ В ПРОФИЛЕ ДРУГА -->
                 <div style="padding: 0 20px;">
-                    <div style="position: relative; background: rgba(20, 20, 31, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; overflow: hidden; backdrop-filter: blur(10px);">
+                    <div style="position: relative; background: rgba(20, 20, 31, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; overflow: hidden; backdrop-filter: blur(10px);">
                         <div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${currentLevelXP}%; background: linear-gradient(90deg, rgba(91,91,255,0.8), rgba(0,245,255,0.8)); z-index: 1;"></div>
                         <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                            <div style="font-size: 12px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">LVL: ${lvl}</div>
-                            <div style="font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">${currentLevelXP} / 100 XP</div>
+                            <div style="font-size: 18px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">LVL: ${lvl}</div>
+                            <div style="font-size: 14px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">${currentLevelXP} / 100 XP</div>
                         </div>
                     </div>
                 </div>
@@ -2358,73 +2357,54 @@ function switchProfileTab(tab) {
     if (bp) bp.classList.add('active');
     if (cp) cp.style.display = 'block';
 }
-function openLevelModal() { switchTab('progress'); }
-
-// Отрисовка нового экрана Прогресса
-function renderProgressPage() {
+function openLevelModal() { 
     const stats = getStats();
     const lvl = Math.min(Math.floor(stats.xp / 100) + 1, 999);
     const currentLevelXP = stats.xp - ((lvl - 1) * 100);
     const rank = LEVEL_TITLES[Math.min(lvl - 1, LEVEL_TITLES.length - 1)] || 'Легенда';
 
-    setElText('progress-page-level', lvl);
-    setElText('progress-page-level-text', lvl);
-    setElText('progress-page-rank', rank);
-    setElText('progress-page-xp-cur', currentLevelXP);
-    setElWidth('progress-page-xp-bar', currentLevelXP + '%');
+    const modalLevelNum = document.getElementById('modal-level-num');
+    if (modalLevelNum) modalLevelNum.textContent = lvl;
+    
+    const modalRank = document.getElementById('modal-rank');
+    if (modalRank) modalRank.textContent = rank;
+    
+    const modalXpBar = document.getElementById('modal-xp-bar');
+    if (modalXpBar) modalXpBar.style.width = currentLevelXP + '%';
+    
+    const modalXpCur = document.getElementById('modal-xp-cur');
+    if (modalXpCur) modalXpCur.textContent = currentLevelXP;
+    
+    const modalXpNext = document.getElementById('modal-xp-next');
+    if (modalXpNext) modalXpNext.textContent = 100;
 
-    setElText('progress-stat-episodes', stats.episodesWatched || 0);
-    setElText('progress-stat-hours', Math.floor((stats.minutesWatched || 0) / 60));
-    setElText('progress-stat-streak', stats.daysStreak || 1);
+    const modalIconLevel = document.getElementById('modal-icon-level');
+    if (modalIconLevel) modalIconLevel.textContent = lvl;
 
-    const totalAch = ACHIEVEMENTS.length;
-    const earnedAch = stats.unlockedAchievements.length;
-    setElText('progress-ach-earned', earnedAch);
-    setElText('progress-ach-total', totalAch);
-
-    const container = document.getElementById('progress-achievements-list');
-    if (!container) return;
-
-    const rarities = [
-        { key: 'common', name: 'Обычные', color: '#ccc', class: 'common' },
-        { key: 'rare', name: 'Редкие', color: '#00d2ff', class: 'rare' },
-        { key: 'epic', name: 'Эпические', color: '#b44aff', class: 'epic' },
-        { key: 'legendary', name: 'Легендарные', color: '#ffd700', class: 'legendary' }
-    ];
-
+    document.getElementById('levelModal').classList.add('active'); 
+}
+function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('active'); }
+function openAchievementsPage() { switchTab('achievements'); }
+function renderAchievementsPage() {
+    const s = getStats(); const c = document.getElementById('achievements-list-container');
+    if (!c) return;
+    setElText('page-ach-earned', s.unlockedAchievements.length); setElText('page-ach-total', ACHIEVEMENTS.length);
+    const rarities = [{ key: 'common', name: 'Обычные', color: '#ccc', class: 'common' }, { key: 'rare', name: 'Редкие', color: '#00d2ff', class: 'rare' }, { key: 'epic', name: 'Эпические', color: '#b44aff', class: 'epic' }, { key: 'legendary', name: 'Легендарные', color: '#ffd700', class: 'legendary' }];
     let html = '';
     rarities.forEach(r => {
-        const list = ACHIEVEMENTS.filter(a => a.rarity === r.key);
-        if (list.length === 0) return;
-        const done = list.filter(a => stats.unlockedAchievements.includes(a.id)).length;
-        
+        const list = ACHIEVEMENTS.filter(a => a.rarity === r.key); if (list.length === 0) return;
+        const done = list.filter(a => s.unlockedAchievements.includes(a.id)).length;
         html += `<div class="ach-category-header ${r.class}"><span style="color: ${r.color};">●</span> ${r.name}<span class="count">${done} / ${list.length}</span></div>`;
-        
         list.forEach(a => {
-            const isDone = stats.unlockedAchievements.includes(a.id);
+            const isDone = s.unlockedAchievements.includes(a.id);
             const rs = RARITY_STYLES[a.rarity];
-            const pc = a.progress(stats); 
-            const pp = (pc / a.max) * 100;
+            const pc = a.progress(s); const pp = (pc / a.max) * 100;
             const ic = a.imgUrl ? `<img src="${safeUrl(a.imgUrl)}" alt="${escapeHTML(a.name)}" onerror="this.style.display='none'">` : '<svg class="icon-inline" style="color:#ffd700;"><use href="#oa-achievement"></use></svg>';
-            
-            html += `
-            <div class="ach-list-item ${rs.class} ${isDone ? 'completed' : ''}">
-                <div class="ach-list-icon" style="color: ${rs.color}">${ic}</div>
-                <div class="ach-list-info">
-                    <h4>${escapeHTML(a.name)}</h4>
-                    <p>${escapeHTML(a.desc)}</p>
-                    ${!isDone ? `<div class="ach-progress-mini"><div style="width: ${pp}%; background: ${rs.color}"></div></div><div style="font-size: 10px; color: #888; margin-top: 2px;">${pc} / ${a.max}</div>` : ''}
-                </div>
-                <div class="ach-reward-badge">+${a.xp} XP, +${a.coins}</div>
-                ${isDone ? '<div class="ach-status-icon" style="color: #ffd700;"><svg class="icon-inline" style="width:20px;height:20px;"><use href="#oa-check"></use></svg></div>' : ''}
-            </div>`;
+            html += `<div class="ach-list-item ${rs.class} ${isDone ? 'completed' : ''}"><div class="ach-list-icon" style="color: ${rs.color}">${ic}</div><div class="ach-list-info"><h4>${escapeHTML(a.name)}</h4><p>${escapeHTML(a.desc)}</p>${!isDone ? `<div class="ach-progress-mini"><div style="width: ${pp}%; background: ${rs.color}"></div></div><div style="font-size: 10px; color: #888; margin-top: 2px;">${pc} / ${a.max}</div>` : ''}</div><div class="ach-reward-badge">+${a.xp} XP, +${a.coins}</div>${isDone ? '<div class="ach-status-icon" style="color: #ffd700;"><svg class="icon-inline" style="width:20px;height:20px;"><use href="#oa-check"></use></svg></div>' : ''}</div>`;
         });
     });
-    container.innerHTML = html;
+    c.innerHTML = html;
 }
-
-function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('active'); }
-function openAchievementsPage() { switchTab('progress'); }
 
 // ==========================================
 // 15. ИНИЦИАЛИЗАЦИЯ
