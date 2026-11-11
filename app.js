@@ -441,7 +441,7 @@ let currentFilters = {search:'',genre:'',year:'',status:'',sort:'popularity'};
 let currentMyListFilter='all', previousScreen='catalog', searchDebounceTimer;
 let currentShopTab='banners';
 let isPreviewMode=false, previewItem=null, savedStats=null;
-let currentShopView = 'catalog'; // 'catalog' или 'inventory'
+let currentShopView = 'catalog'; 
 
 const GENRES=[
     {id:'1',name:'Action',ru:'Экшен'},
@@ -464,7 +464,6 @@ function switchTab(tabName, element) {
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     const scr = document.getElementById(`screen-${tabName}`); if(scr) scr.classList.add('active');
     
-    // Скрываем нижнее меню на экранах настроек и магазина, чтобы не мешало
     const nav = document.querySelector('.bottom-nav');
     if (nav) {
         if (tabName === 'shop' || tabName === 'settings' || tabName === 'preview') {
@@ -572,7 +571,6 @@ async function loadProfileData() {
                 const avEl = document.getElementById('tg-avatar');
                 if (avEl) { const u = dbUser.avatar_url||MY_PHOTO_URL; avEl.innerHTML = u ? `<img src="${safeUrl(u)}" style="width:100%;height:100%;object-fit:cover;">` : `<span>${escapeHTML((dbUser.name||'?')[0].toUpperCase())}</span>`; }
                 
-                // Баннер (если куплен в магазине)
                 if (dbUser.active_banner) { 
                     stats.active_banner = dbUser.active_banner; 
                     const {data:b}=await supabaseClient.from('banners').select('image_url').eq('id',dbUser.active_banner).single(); 
@@ -597,15 +595,7 @@ async function loadProfileData() {
 
     setElText('user-level',lvl); 
     setElText('user-xp-current',currentLevelXP); 
-    setElText('user-xp-current-top',currentLevelXP); 
     setElWidth('user-xp-bar',currentLevelXP + '%'); 
-    
-    const shieldText = document.getElementById('shield-level-text');
-    if (shieldText) {
-        shieldText.textContent = lvl;
-        shieldText.style.left = '50%';
-        shieldText.style.transform = 'translate(-50%, -50%)';
-    }
 
     setElText('stat-episodes', stats.episodesWatched || 0);
     setElText('stat-hours', Math.floor((stats.minutesWatched || 0) / 60));
@@ -725,13 +715,6 @@ function renderPreviewCard() {
     setElText('preview-level', currentLevel); 
     setElText('preview-xp-current', currentLevelXP); 
     setElWidth('preview-xp-bar', currentLevelXP + '%');
-    
-    const previewShieldText = document.getElementById('preview-shield-level-text');
-    if (previewShieldText) {
-        previewShieldText.textContent = currentLevel;
-        previewShieldText.style.left = '50%';
-        previewShieldText.style.transform = 'translate(-50%, -50%)';
-    }
     
     renderEffectParticles(document.getElementById('preview-particle-container'), ACTIVE_EFFECT_CSS);
 }
@@ -1289,20 +1272,13 @@ async function openFriendProfile(id, name = '') {
                     </div>
                 </div>
 
+                <!-- НОВЫЙ БЛОК УРОВНЯ В ПРОФИЛЕ ДРУГА -->
                 <div style="padding: 0 20px;">
-                    <div class="level-row" style="background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 15px 20px; display: flex; align-items: center; gap: 15px;">
-                        <div style="position: relative; width: 90px; height: 90px; flex-shrink: 0;">
-                            <img src="level_hex.png" style="width: 100%; height: 100%; object-fit: contain;" alt="level hex">
-                            <div style="position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8); line-height: 1; display: flex; align-items: center; justify-content: center; width: 100%;">${lvl}</div>
-                        </div>
-                        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 8px; gap: 5px;">
-                                <div style="font-size: 16px; font-weight: 800; color: #fff; white-space: nowrap;">УРОВЕНЬ ${lvl}</div>
-                                <div style="font-size: 12px; font-weight: 600; color: #888; white-space: nowrap;">${currentLevelXP} / 100 XP</div>
-                            </div>
-                            <div class="xp-bar-container" style="width: 100%; height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; overflow: hidden; margin: 0;">
-                                <div class="xp-bar-fill" style="width: ${currentLevelXP}%; height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 5px;"></div>
-                            </div>
+                    <div style="position: relative; background: rgba(20, 20, 31, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; overflow: hidden; backdrop-filter: blur(10px);">
+                        <div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${currentLevelXP}%; background: linear-gradient(90deg, rgba(91,91,255,0.8), rgba(0,245,255,0.8)); z-index: 1;"></div>
+                        <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <div style="font-size: 18px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">LVL: ${lvl}</div>
+                            <div style="font-size: 14px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">${currentLevelXP} / 100 XP</div>
                         </div>
                     </div>
                 </div>
