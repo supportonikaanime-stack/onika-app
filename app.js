@@ -441,6 +441,7 @@ let currentFilters = {search:'',genre:'',year:'',status:'',sort:'popularity'};
 let currentMyListFilter='all', previousScreen='catalog', searchDebounceTimer;
 let currentShopTab='banners';
 let isPreviewMode=false, previewItem=null, savedStats=null;
+let currentShopView = 'catalog'; // 'catalog' или 'inventory'
 
 const GENRES=[
     {id:'1',name:'Action',ru:'Экшен'},
@@ -462,8 +463,25 @@ const SORTS=[{id:'popularity',name:'По популярности'},{id:'ranked'
 function switchTab(tabName, element) {
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     const scr = document.getElementById(`screen-${tabName}`); if(scr) scr.classList.add('active');
+    
+    // Скрываем нижнее меню на экранах настроек и магазина, чтобы не мешало
+    const nav = document.querySelector('.bottom-nav');
+    if (nav) {
+        if (tabName === 'shop' || tabName === 'settings' || tabName === 'preview') {
+            nav.style.display = 'none';
+        } else {
+            nav.style.display = 'flex';
+        }
+    }
+
     if (element) { document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); element.classList.add('active'); }
-    else { document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); const map={home:0,catalog:1,my:2,friends:3,profile:4}; const items=document.querySelectorAll('.nav-item'); if(map[tabName]!==undefined&&items[map[tabName]]) items[map[tabName]].classList.add('active'); }
+    else if (['home', 'catalog', 'my', 'friends', 'profile'].includes(tabName)) { 
+        document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); 
+        const map={home:0,catalog:1,my:2,friends:3,profile:4}; 
+        const items=document.querySelectorAll('.nav-item'); 
+        if(map[tabName]!==undefined&&items[map[tabName]]) items[map[tabName]].classList.add('active'); 
+    }
+
     if (tabName !== 'home') stopSlideShow();
     if (tabName==='profile') loadProfileData();
     if (tabName==='catalog'&&document.getElementById('catalog-grid').children.length===0) { initCatalogFilters(); loadCatalog(true); }
@@ -478,7 +496,9 @@ function switchTab(tabName, element) {
     }
     if (tabName==='achievements') renderAchievementsPage();
     if (tabName==='history') renderWatchHistory();
+    if (tabName==='shop') { currentShopView = 'catalog'; switchShopView('catalog'); renderShopTab(currentShopTab); }
 }
+
 function goBackFromDetail() { if (previousScreen==='my') switchTab('my'); else if (previousScreen==='home') switchTab('home'); else if (previousScreen==='friends') switchTab('friends'); else switchTab('catalog'); }
 function toggleFilters() { const w=document.getElementById('filters-wrapper'); const c=document.getElementById('filter-chevron'); if(!w)return; if(w.classList.contains('filters-collapsed')){w.classList.remove('filters-collapsed');if(c)c.style.transform='rotate(180deg)';}else{w.classList.add('filters-collapsed');if(c)c.style.transform='rotate(0deg)';} }
 function resetCatalogFilters() { currentFilters={search:'',genre:'',year:'',status:'',sort:'popularity'}; document.getElementById('search-input').value=''; const y=document.getElementById('filter-btn-year');if(y)y.innerHTML='Год ⌄'; const s=document.getElementById('filter-btn-status');if(s)s.innerHTML='Статус ⌄'; const so=document.getElementById('filter-btn-sort');if(so)so.innerHTML='Сортировка ⌄'; document.querySelectorAll('#genre-filters .genre-pill').forEach(el=>el.classList.remove('active')); const all=document.querySelector('#genre-filters .genre-pill');if(all){all.classList.add('active');all.innerHTML='<div class="dot"></div>Все';} loadCatalog(true); }
@@ -571,7 +591,6 @@ async function loadProfileData() {
     if (stats.lastVisit !== today) { stats.daysStreak += 1; stats.lastVisit = today; stats.xp += 5; stats.coins += 10; stats.watchedToday = []; saveStats(stats); showToast('Ежедневный вход! +5 XP'); }
     checkAchievements(stats); saveStats(stats);
     
-    // Формула: 1 уровень = 100 XP (макс. 999 уровень)
     const lvl = Math.min(Math.floor(stats.xp/100) + 1, 999);
     const xpForCurrentLevel = (lvl - 1) * 100;
     const currentLevelXP = stats.xp - xpForCurrentLevel;
@@ -581,16 +600,13 @@ async function loadProfileData() {
     setElText('user-xp-current-top',currentLevelXP); 
     setElWidth('user-xp-bar',currentLevelXP + '%'); 
     
-    // Обновляем цифру внутри картинки
     const shieldText = document.getElementById('shield-level-text');
     if (shieldText) {
         shieldText.textContent = lvl;
-        // Принудительно выравниваем по центру
         shieldText.style.left = '50%';
         shieldText.style.transform = 'translate(-50%, -50%)';
     }
 
-    // Заполняем статистику
     setElText('stat-episodes', stats.episodesWatched || 0);
     setElText('stat-hours', Math.floor((stats.minutesWatched || 0) / 60));
     setElText('stat-streak', stats.daysStreak || 1);
@@ -605,7 +621,6 @@ async function loadProfileData() {
     const next = ACHIEVEMENTS.find(a=>!stats.unlockedAchievements.includes(a.id));
     if (next) { setElText('next-ach-name',next.name); setElText('next-ach-reward',next.coins); } else { setElText('next-ach-name','Все выполнено!'); setElText('next-ach-reward','0'); }
 
-    // Применяем фон
     const bEl = document.getElementById('profile-banner'); 
     if (bEl) bEl.style.backgroundImage = ACTIVE_BANNER_URL ? `url('${ACTIVE_BANNER_URL}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)';
     
@@ -704,7 +719,6 @@ function renderPreviewCard() {
     if (titleContainer && titleEl) { if (ACTIVE_TITLE_DATA) { titleContainer.style.display = 'block'; applyTitleToElement(titleEl, ACTIVE_TITLE_DATA); } else { titleContainer.style.display = 'none'; } }
     setElText('preview-coins', stats.coins || 0);
     
-    // Обновляем гексагон и уровень в предпросмотре
     const currentLevel = Math.min(Math.floor(stats.xp / 100) + 1, 999);
     const currentLevelXP = stats.xp - ((currentLevel - 1) * 100);
 
@@ -726,7 +740,7 @@ function cancelPreview() {
     if (savedStats) { ACTIVE_BANNER_URL = savedStats._active_banner_url || ''; ACTIVE_TITLE_DATA = savedStats._active_title_data || null; ACTIVE_EFFECT_CSS = savedStats._active_effect_css || ''; ACTIVE_BADGE_URL = savedStats._active_badge_url || ''; }
     isPreviewMode = false; previewItem = null; savedStats = null;
     document.getElementById('previewBar')?.classList.remove('active');
-    switchTab('profile'); switchProfileTab('shop');
+    switchTab('shop'); switchShopView('catalog');
 }
 async function executePreview() {
     if (!isPreviewMode || !previewItem) return;
@@ -738,12 +752,18 @@ async function executePreview() {
     if (type === 'banner') await buyBanner(item.id, item.price);
     else await buyItem(type, item.id, item.price);
     savedStats = null;
-    switchTab('profile'); switchProfileTab('shop'); await loadProfileData();
+    switchTab('shop'); switchShopView('catalog'); await loadProfileData();
 }
 
 // ==========================================
-// 7. МАГАЗИН
+// 7. МАГАЗИН (КАСТОМИЗАЦИЯ)
 // ==========================================
+function switchShopView(view) {
+    currentShopView = view;
+    document.getElementById('btn-shop-catalog').classList.toggle('active', view === 'catalog');
+    document.getElementById('btn-shop-inventory').classList.toggle('active', view === 'inventory');
+    renderShopTab(currentShopTab);
+}
 function switchShopTab(tabName, element) {
     currentShopTab = tabName;
     document.querySelectorAll('.shop-tab').forEach(el => el.classList.remove('active'));
@@ -760,19 +780,24 @@ function renderShopTab(tabName) {
     else if (tabName === 'effects') renderEffectsInShop(container);
     else if (tabName === 'badges') renderBadgesInShop(container);
 }
+
+// ИНВЕНТАРЬ И МАГАЗИН
 async function renderBannersInShop(container) {
     let stats = getStats();
     if (!supabaseClient) { container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888;">Сервис недоступен</div>'; return; }
     try {
-        const { data: banners, error: bErr } = await supabaseClient.from('banners').select('*');
-        if (bErr) throw bErr;
+        const { data: banners } = await supabaseClient.from('banners').select('*');
         const { data: owned } = await supabaseClient.from('user_banners').select('banner_id').eq('user_id', MY_ID);
         const ownedIds = new Set((owned || []).map(o => o.banner_id));
         if (currentShopTab !== 'banners') return;
+        
+        let itemsToShow = banners || [];
+        if (currentShopView === 'inventory') itemsToShow = itemsToShow.filter(b => ownedIds.has(b.id));
+
         let html = '';
         const rarities = [ { key: 'common', name: 'Обычные', color: '#ccc', class: 'common' }, { key: 'rare', name: 'Редкие', color: '#00d2ff', class: 'rare' }, { key: 'epic', name: 'Эпические', color: '#b44aff', class: 'epic' }, { key: 'legendary', name: 'Легендарные', color: '#ffd700', class: 'legendary' } ];
         rarities.forEach(rarity => {
-            const list = (banners || []).filter(b => (b.rarity || 'common') === rarity.key);
+            const list = itemsToShow.filter(b => (b.rarity || 'common') === rarity.key);
             if (list.length === 0) return;
             html += `<div class="shop-category-header ${rarity.class}"><span style="color: ${rarity.color};">●</span> ${rarity.name}<span class="count">${list.length}</span></div>`;
             list.forEach(b => {
@@ -783,75 +808,109 @@ async function renderBannersInShop(container) {
                 html += `<div class="shop-item" onclick="startPreviewById('banner', '${key}')"><div class="shop-img" style="background-image: url('${safeUrl(b.image_url)}')"></div><div class="shop-info"><div class="shop-name">${escapeHTML(b.name)}</div>${btnHtml}</div></div>`;
             });
         });
-        container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет баннеров</div>';
-    } catch(e) { console.error(e); if (currentShopTab === 'banners') container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #f44;">Ошибка</div>'; }
+        container.innerHTML = html || `<div style="grid-column: 1/-1; text-align: center; color: #888;">${currentShopView==='inventory'?'В инвентаре пусто':'Пока нет баннеров'}</div>`;
+    } catch(e) { console.error(e); }
 }
+
 async function renderTitlesInShop(container) {
-    if (!supabaseClient) { container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888;">Сервис недоступен</div>'; return; }
+    if (!supabaseClient) return;
     let stats = getStats();
     try {
         const { data: items } = await supabaseClient.from('titles').select('*');
+        const { data: owned } = await supabaseClient.from('user_inventory').select('item_id').eq('user_id', MY_ID).eq('item_type', 'title');
+        const ownedIds = new Set((owned || []).map(o => String(o.item_id)));
         if (currentShopTab !== 'titles') return;
+        
+        let itemsToShow = items || [];
+        if (currentShopView === 'inventory') itemsToShow = itemsToShow.filter(t => ownedIds.has(String(t.id)));
+
         let html = '';
-        (items || []).forEach(t => {
-            const isActive = stats.active_title === t.id;
-            let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${t.price}</div>`;
+        itemsToShow.forEach(t => {
+            const isActive = String(stats.active_title) === String(t.id);
+            const isOwned = ownedIds.has(String(t.id));
+            let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Надет</div>` : isOwned ? `<div style="font-size:12px; color:#ffd700; font-weight:bold; margin-top:5px;">Надеть</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${t.price}</div>`;
             let titleHtml = t.is_animated ? `<div class="user-title-display animated-title" data-title="${escapeHTML(t.animation_key || 'gold')}" style="position:relative; font-size:11px; padding: 3px 10px;"><span class="title-text">${escapeHTML(t.name)}</span></div>` : `<div class="user-title-display" style="color:${escapeHTML(t.color)}; border-color:${escapeHTML(t.color)}; font-size:11px; padding: 3px 10px;">${escapeHTML(t.name)}</div>`;
             const key = cachePreviewItem(t);
             html += `<div class="shop-item" onclick="startPreviewById('title', '${key}')"><div class="shop-img" style="background: #111; display:flex; align-items:center; justify-content:center; padding: 10px; box-sizing: border-box; overflow: hidden;">${titleHtml}</div><div class="shop-info"><div class="shop-name">${escapeHTML(t.name)}${t.is_animated ? ' *' : ''}</div>${btnHtml}</div></div>`;
         });
-        container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет титулов</div>';
+        container.innerHTML = html || `<div style="grid-column: 1/-1; text-align: center; color: #888;">${currentShopView==='inventory'?'В инвентаре пусто':'Пока нет титулов'}</div>`;
     } catch(e) { console.error(e); }
 }
+
 async function renderFramesInShop(container) {
-    if (!supabaseClient) { container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888;">Сервис недоступен</div>'; return; }
+    if (!supabaseClient) return;
+    let stats = getStats();
     try {
         const { data: items } = await supabaseClient.from('frames').select('*');
+        const { data: owned } = await supabaseClient.from('user_inventory').select('item_id').eq('user_id', MY_ID).eq('item_type', 'frame');
+        const ownedIds = new Set((owned || []).map(o => String(o.item_id)));
         if (currentShopTab !== 'frames') return;
+
+        let itemsToShow = items || [];
+        if (currentShopView === 'inventory') itemsToShow = itemsToShow.filter(f => ownedIds.has(String(f.id)));
+
         let html = '';
-        (items || []).forEach(f => {
+        itemsToShow.forEach(f => {
+            const isOwned = ownedIds.has(String(f.id));
+            let btnHtml = isOwned ? `<div style="font-size:12px; color:#ffd700; font-weight:bold; margin-top:5px;">Надеть</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${f.price}</div>`;
             const key = cachePreviewItem(f);
-            html += `<div class="shop-item" onclick="startPreviewById('frame', '${key}')"><div class="shop-img" style="background-image: url('${safeUrl(f.image_url)}')"></div><div class="shop-info"><div class="shop-name">${escapeHTML(f.name)}</div><div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${f.price}</div></div></div>`;
+            html += `<div class="shop-item" onclick="startPreviewById('frame', '${key}')"><div class="shop-img" style="background-image: url('${safeUrl(f.image_url)}')"></div><div class="shop-info"><div class="shop-name">${escapeHTML(f.name)}</div>${btnHtml}</div></div>`;
         });
-        container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет рамок</div>';
+        container.innerHTML = html || `<div style="grid-column: 1/-1; text-align: center; color: #888;">${currentShopView==='inventory'?'В инвентаре пусто':'Пока нет рамок'}</div>`;
     } catch(e) { console.error(e); }
 }
+
 async function renderEffectsInShop(container) {
-    if (!supabaseClient) { container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888;">Сервис недоступен</div>'; return; }
+    if (!supabaseClient) return;
     let stats = getStats();
     try {
         const { data: items } = await supabaseClient.from('effects').select('*');
+        const { data: owned } = await supabaseClient.from('user_inventory').select('item_id').eq('user_id', MY_ID).eq('item_type', 'effect');
+        const ownedIds = new Set((owned || []).map(o => String(o.item_id)));
         if (currentShopTab !== 'effects') return;
+
+        let itemsToShow = items || [];
+        if (currentShopView === 'inventory') itemsToShow = itemsToShow.filter(e => ownedIds.has(String(e.id)));
+
         let html = '';
-        (items || []).forEach(e => {
-            const isActive = stats.active_effect === e.id;
-            let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${e.price}</div>`;
+        itemsToShow.forEach(e => {
+            const isActive = String(stats.active_effect) === String(e.id);
+            const isOwned = ownedIds.has(String(e.id));
+            let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : isOwned ? `<div style="font-size:12px; color:#ffd700; font-weight:bold; margin-top:5px;">Надеть</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${e.price}</div>`;
             const key = cachePreviewItem(e);
             html += `<div class="shop-item" onclick="startPreviewById('effect', '${key}')"><div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items:center; justify-content:center;"><div class="avatar" style="width:40px; height:40px; font-size:12px; background:#333; border:1px solid #555;">AA</div></div><div class="shop-info"><div class="shop-name">${escapeHTML(e.name)}</div>${btnHtml}</div></div>`;
         });
-        container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет эффектов</div>';
+        container.innerHTML = html || `<div style="grid-column: 1/-1; text-align: center; color: #888;">${currentShopView==='inventory'?'В инвентаре пусто':'Пока нет эффектов'}</div>`;
     } catch(e) { console.error(e); }
 }
+
 async function renderBadgesInShop(container) {
-    if (!supabaseClient) { container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888;">Сервис недоступен</div>'; return; }
+    if (!supabaseClient) return;
     let stats = getStats();
     try {
         const { data: items } = await supabaseClient.from('badges').select('*');
+        const { data: owned } = await supabaseClient.from('user_inventory').select('item_id').eq('user_id', MY_ID).eq('item_type', 'badge');
+        const ownedIds = new Set((owned || []).map(o => String(o.item_id)));
         if (currentShopTab !== 'badges') return;
+
+        let itemsToShow = items || [];
+        if (currentShopView === 'inventory') itemsToShow = itemsToShow.filter(b => ownedIds.has(String(b.id)));
+
         let html = '';
         const rarities = [ { key: 'common', name: 'Обычные', color: '#ccc', class: 'common' }, { key: 'rare', name: 'Редкие', color: '#00d2ff', class: 'rare' }, { key: 'epic', name: 'Эпические', color: '#b44aff', class: 'epic' }, { key: 'legendary', name: 'Легендарные', color: '#ffd700', class: 'legendary' } ];
         rarities.forEach(rarity => {
-            const list = (items || []).filter(b => (b.rarity || 'common') === rarity.key);
+            const list = itemsToShow.filter(b => (b.rarity || 'common') === rarity.key);
             if (list.length === 0) return;
             html += `<div class="shop-category-header ${rarity.class}"><span style="color: ${rarity.color};">●</span> ${rarity.name}<span class="count">${list.length}</span></div>`;
             list.forEach(b => {
-                const isActive = stats.active_badge === b.id;
-                let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${b.price}</div>`;
+                const isActive = String(stats.active_badge) === String(b.id);
+                const isOwned = ownedIds.has(String(b.id));
+                let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : isOwned ? `<div style="font-size:12px; color:#ffd700; font-weight:bold; margin-top:5px;">Надеть</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${b.price}</div>`;
                 const key = cachePreviewItem(b);
                 html += `<div class="shop-item" onclick="startPreviewById('badge', '${key}')"><div class="shop-img" style="background: #222; display:flex; align-items:center; justify-content:center;"><img src="${safeUrl(b.image_url)}" style="width:50px; height:50px; object-fit:contain;"></div><div class="shop-info"><div class="shop-name">${escapeHTML(b.name)}</div>${btnHtml}</div></div>`;
             });
         });
-        container.innerHTML = html || '<div style="grid-column: 1/-1; text-align: center; color: #888;">Пока нет значков</div>';
+        container.innerHTML = html || `<div style="grid-column: 1/-1; text-align: center; color: #888;">${currentShopView==='inventory'?'В инвентаре пусто':'Пока нет значков'}</div>`;
     } catch(e) { console.error(e); }
 }
 
@@ -879,13 +938,13 @@ async function buyItem(type, itemId, price) {
         showToast('Ошибка покупки — монеты возвращены'); await syncProfileToDB(true);
     }
 }
-async function applyTitle(titleId) { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_title: titleId }).eq('id', MY_ID); stats.active_title = titleId; saveStats(stats); showToast('Титул надет!'); await loadProfileData(); renderShopTab('titles'); } catch(e) {} }
-async function resetTitle() { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_title: null }).eq('id', MY_ID); stats.active_title = null; saveStats(stats); ACTIVE_TITLE_DATA = null; showToast('Титул снят'); await loadProfileData(); } catch(e) {} }
-async function applyEffect(effectId) { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_effect: effectId }).eq('id', MY_ID); stats.active_effect = effectId; saveStats(stats); showToast('Эффект надет!'); await loadProfileData(); renderShopTab('effects'); } catch(e) {} }
-async function resetEffect() { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_effect: null }).eq('id', MY_ID); stats.active_effect = null; saveStats(stats); ACTIVE_EFFECT_CSS = ''; showToast('Эффект снят'); await loadProfileData(); } catch(e) {} }
-async function applyBadge(badgeId) { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_badge: badgeId }).eq('id', MY_ID); stats.active_badge = badgeId; saveStats(stats); showToast('Значок надет!'); await loadProfileData(); renderShopTab('badges'); } catch(e) {} }
-async function resetBadge() { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_badge: null }).eq('id', MY_ID); stats.active_badge = null; saveStats(stats); ACTIVE_BADGE_URL = ''; showToast('Значок снят'); await loadProfileData(); } catch(e) {} }
-async function applyFrame(frameId) { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_frame: frameId }).eq('id', MY_ID); stats.active_frame = frameId; saveStats(stats); showToast('Рамка надета!'); await loadProfileData(); renderShopTab('frames'); } catch(e) {} }
+async function applyTitle(titleId) { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_title: titleId }).eq('id', MY_ID); stats.active_title = titleId; saveStats(stats); showToast('Титул надет!'); await loadProfileData(); switchShopView('inventory'); } catch(e) {} }
+async function resetTitle() { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_title: null }).eq('id', MY_ID); stats.active_title = null; saveStats(stats); ACTIVE_TITLE_DATA = null; showToast('Титул снят'); await loadProfileData(); switchShopView('inventory'); } catch(e) {} }
+async function applyEffect(effectId) { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_effect: effectId }).eq('id', MY_ID); stats.active_effect = effectId; saveStats(stats); showToast('Эффект надет!'); await loadProfileData(); switchShopView('inventory'); } catch(e) {} }
+async function resetEffect() { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_effect: null }).eq('id', MY_ID); stats.active_effect = null; saveStats(stats); ACTIVE_EFFECT_CSS = ''; showToast('Эффект снят'); await loadProfileData(); switchShopView('inventory'); } catch(e) {} }
+async function applyBadge(badgeId) { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_badge: badgeId }).eq('id', MY_ID); stats.active_badge = badgeId; saveStats(stats); showToast('Значок надет!'); await loadProfileData(); switchShopView('inventory'); } catch(e) {} }
+async function resetBadge() { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_badge: null }).eq('id', MY_ID); stats.active_badge = null; saveStats(stats); ACTIVE_BADGE_URL = ''; showToast('Значок снят'); await loadProfileData(); switchShopView('inventory'); } catch(e) {} }
+async function applyFrame(frameId) { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_frame: frameId }).eq('id', MY_ID); stats.active_frame = frameId; saveStats(stats); showToast('Рамка надета!'); await loadProfileData(); switchShopView('inventory'); } catch(e) {} }
 async function buyBanner(bannerId, price) {
     let stats = getStats();
     if (stats.coins < price) { showToast('Недостаточно монет!'); return; }
@@ -897,7 +956,7 @@ async function buyBanner(bannerId, price) {
             const { data: b } = await supabaseClient.from('banners').select('image_url').eq('id', bannerId).single();
             if (b) { stats.active_banner_url = safeUrl(b.image_url); ACTIVE_BANNER_URL = stats.active_banner_url; }
             saveStats(stats); await syncProfileToDB(true);
-            showToast('Баннер надет!'); await loadProfileData(); renderShopTab('banners'); return;
+            showToast('Баннер надет!'); await loadProfileData(); switchShopView('inventory'); return;
         }
     } catch(e) { console.error(e); }
     stats.coins -= price; stats.hasPurchasedBanner = true; saveStats(stats);
@@ -908,7 +967,7 @@ async function buyBanner(bannerId, price) {
         const { data: b } = await supabaseClient.from('banners').select('image_url').eq('id', bannerId).single();
         if (b) { stats.active_banner_url = safeUrl(b.image_url); ACTIVE_BANNER_URL = stats.active_banner_url; }
         saveStats(stats); checkAchievements(stats); await syncProfileToDB(true);
-        showToast('Баннер получен!'); await loadProfileData(); renderShopTab('banners');
+        showToast('Баннер получен!'); await loadProfileData(); switchShopView('inventory');
     } catch(e) {
         console.error(e); stats.coins += price; stats.hasPurchasedBanner = false; saveStats(stats);
         showToast('Ошибка — монеты возвращены'); await syncProfileToDB(true);
@@ -922,6 +981,7 @@ async function resetBanner() {
     const bannerEl = document.getElementById('profile-banner');
     if (bannerEl) bannerEl.style.backgroundImage = 'none';
     showToast('Баннер снят');
+    switchTab('profile');
 }
 
 // ==========================================
@@ -1142,18 +1202,15 @@ async function openFriendProfile(id, name = '') {
     container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
     
     try {
-        // 1. Получаем данные пользователя
         const { data: friend, error } = await supabaseClient.from('users').select('*').eq('id', id).single();
         if (error || !friend) throw new Error('Не найден');
         
-        // 2. Проверяем, в друзьях ли он
         let isFriend = false;
         if (MY_ID && MY_ID !== id) {
             const { data: friendship } = await supabaseClient.from('friends').select('status').eq('user_id', MY_ID).eq('friend_id', id).eq('status', 'accepted').single();
             if (friendship) isFriend = true;
         }
 
-        // 3. Вычисляем уровень и статистику
         const lvl = Math.floor((friend.xp || 0) / 100) + 1;
         const currentLevelXP = (friend.xp || 0) % 100;
         const totalAchCount = ACHIEVEMENTS.length;
@@ -1173,7 +1230,6 @@ async function openFriendProfile(id, name = '') {
         const hours = Math.floor((friend.minutes_watched || 0) / 60);
         const streak = friend.days_streak || 1;
 
-        // 4. Достаём баннер, титул, значок, эффект
         let friendBannerUrl = '';
         if (friend.active_banner) { 
             const { data: b } = await supabaseClient.from('banners').select('image_url').eq('id', friend.active_banner).single(); 
@@ -1201,18 +1257,14 @@ async function openFriendProfile(id, name = '') {
             if (bd) friendBadgeHtml = `<img src="${safeUrl(bd.image_url)}" class="user-badge-icon" alt="badge">`; 
         }
 
-        // 5. Аватарка
         const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
         const nameChar = friend.name && friend.name[0] ? escapeHTML(friend.name[0].toUpperCase()) : '?';
         const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : nameChar;
 
-        // 6. Рендерим новый дизайн
         container.innerHTML = `
-            <div style="margin: -20px -20px 0 -20px;">
-                <!-- Баннер -->
+            <div style="padding-bottom: 40px;">
                 <div id="friend-profile-banner" style="position: relative; width: 100%; height: 220px; background: ${friendBannerUrl ? `url('${friendBannerUrl}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)'}; background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
                     <div class="effect-container" id="friend-particle-container" style="border-radius: 0 0 24px 24px;"></div>
-                    <!-- Аватарка -->
                     <div style="position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); z-index: 10;">
                         <div class="avatar-container" style="position: relative; width: 110px; height: 110px; margin: 0;">
                             <div style="position: absolute; inset: -4px; border-radius: 50%; background: linear-gradient(135deg, #5b5bff, #b44aff); z-index: 1;"></div>
@@ -1223,7 +1275,6 @@ async function openFriendProfile(id, name = '') {
                     </div>
                 </div>
 
-                <!-- Информация (Имя, ID, Титул) -->
                 <div style="padding: 55px 20px 20px 20px; text-align: center; position: relative; z-index: 5;">
                     <h1 style="font-size: 28px; font-weight: 900; color: #fff; margin-bottom: 8px; line-height: 1.1; display: flex; align-items: center; justify-content: center; gap: 8px;">
                         ${escapeHTML(friend.name)}
@@ -1238,7 +1289,6 @@ async function openFriendProfile(id, name = '') {
                     </div>
                 </div>
 
-                <!-- Карточка уровня (без названия ранга) -->
                 <div style="padding: 0 20px;">
                     <div class="level-row" style="background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 15px 20px; display: flex; align-items: center; gap: 15px;">
                         <div style="position: relative; width: 90px; height: 90px; flex-shrink: 0;">
@@ -1257,7 +1307,6 @@ async function openFriendProfile(id, name = '') {
                     </div>
                 </div>
 
-                <!-- Статистика -->
                 <div style="padding: 15px 20px;">
                     <div style="display: flex; gap: 10px; justify-content: space-between;">
                         <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
@@ -1279,7 +1328,6 @@ async function openFriendProfile(id, name = '') {
                     </div>
                 </div>
 
-                <!-- Достижения -->
                 <div style="padding: 0 20px;">
                     <div class="achievements-card" style="margin-top: 0; cursor: default;">
                         <div class="ach-header">
@@ -1291,7 +1339,6 @@ async function openFriendProfile(id, name = '') {
                     </div>
                 </div>
                 
-                <!-- Кнопка дружбы (Добавить или Удалить) -->
                 <div style="padding: 20px;">
                     ${id !== MY_ID ? `
                         ${isFriend ? `
@@ -1304,7 +1351,6 @@ async function openFriendProfile(id, name = '') {
             </div>
         `;
         
-        // Запускаем эффекты
         setTimeout(() => { 
             renderEffectParticles(document.getElementById('friend-particle-container'), friendEffectClass); 
         }, 100);
@@ -2330,15 +2376,37 @@ function setElWidth(id, w) { const el = document.getElementById(id); if (el) el.
 function showToast(msg) { const t = document.createElement('div'); t.textContent = msg; t.style.cssText = `position:fixed;bottom:80px;left:50%;transform:translate(-50%,0);background:linear-gradient(135deg,#5b5bff,#7d7dff);color:#fff;padding:12px 22px;border-radius:24px;font-weight:700;font-size:14px;z-index:99999;box-shadow:0 8px 30px rgba(91,91,255,0.5);text-align:center;max-width:85vw;animation:toastIn 0.4s cubic-bezier(0.22,1,0.36,1);`; document.body.appendChild(t); setTimeout(() => { t.style.animation = 'toastOut 0.3s ease forwards'; setTimeout(() => t.remove(), 300); }, 2400); }
 
 function switchProfileTab(tab) {
-    const bp = document.getElementById('tab-btn-profile'), bs = document.getElementById('tab-btn-shop'), bst = document.getElementById('tab-btn-settings');
-    const cp = document.getElementById('profile-content-tab'), cs = document.getElementById('settings-content-tab'), csh = document.getElementById('shop-content-tab');
-    [bp, bs, bst].forEach(b => b && b.classList.remove('active'));
-    [cp, cs, csh].forEach(c => c && (c.style.display = 'none'));
-    if (tab === 'profile') { if (bp) bp.classList.add('active'); if (cp) cp.style.display = 'block'; }
-    else if (tab === 'shop') { if (bs) bs.classList.add('active'); if (csh) { csh.style.display = 'block'; renderShopTab(currentShopTab); } }
-    else { if (bst) bst.classList.add('active'); if (cs) cs.style.display = 'block'; }
+    const bp = document.getElementById('tab-btn-profile');
+    const cp = document.getElementById('profile-content-tab');
+    if (bp) bp.classList.add('active');
+    if (cp) cp.style.display = 'block';
 }
-function openLevelModal() { document.getElementById('levelModal').classList.add('active'); }
+function openLevelModal() { 
+    const stats = getStats();
+    const lvl = Math.min(Math.floor(stats.xp / 100) + 1, 999);
+    const currentLevelXP = stats.xp - ((lvl - 1) * 100);
+    const rank = LEVEL_TITLES[Math.min(lvl - 1, LEVEL_TITLES.length - 1)] || 'Легенда';
+
+    const modalLevelNum = document.getElementById('modal-level-num');
+    if (modalLevelNum) modalLevelNum.textContent = lvl;
+    
+    const modalRank = document.getElementById('modal-rank');
+    if (modalRank) modalRank.textContent = rank;
+    
+    const modalXpBar = document.getElementById('modal-xp-bar');
+    if (modalXpBar) modalXpBar.style.width = currentLevelXP + '%';
+    
+    const modalXpCur = document.getElementById('modal-xp-cur');
+    if (modalXpCur) modalXpCur.textContent = currentLevelXP;
+    
+    const modalXpNext = document.getElementById('modal-xp-next');
+    if (modalXpNext) modalXpNext.textContent = 100;
+
+    const modalIconLevel = document.getElementById('modal-icon-level');
+    if (modalIconLevel) modalIconLevel.textContent = lvl;
+
+    document.getElementById('levelModal').classList.add('active'); 
+}
 function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('active'); }
 function openAchievementsPage() { switchTab('achievements'); }
 function renderAchievementsPage() {
