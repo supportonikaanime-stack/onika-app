@@ -1140,71 +1140,171 @@ async function openFriendProfile(id, name = '') {
     switchTab('friend-profile');
     const container = document.getElementById('friend-profile-content');
     container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
+    
     try {
+        // 1. Получаем данные пользователя
         const { data: friend, error } = await supabaseClient.from('users').select('*').eq('id', id).single();
         if (error || !friend) throw new Error('Не найден');
+        
+        // 2. Проверяем, в друзьях ли он
+        let isFriend = false;
+        if (MY_ID && MY_ID !== id) {
+            const { data: friendship } = await supabaseClient.from('friends').select('status').eq('user_id', MY_ID).eq('friend_id', id).eq('status', 'accepted').single();
+            if (friendship) isFriend = true;
+        }
+
+        // 3. Вычисляем уровень и статистику
         const lvl = Math.floor((friend.xp || 0) / 100) + 1;
-        const rank = LEVEL_TITLES[Math.min(lvl - 1, LEVEL_TITLES.length - 1)] || 'Легенда';
+        const currentLevelXP = (friend.xp || 0) % 100;
+        const totalAchCount = ACHIEVEMENTS.length;
         let friendAchCount = 0;
+        
         let achSource = friend.unlocked_achievements;
         if (id === MY_ID) friendAchCount = (getStats().unlockedAchievements || []).length;
-        else if (achSource) { try { let p = typeof achSource === 'string' ? JSON.parse(achSource) : achSource; if (Array.isArray(p)) friendAchCount = p.length; } catch(e) {} }
-        const totalAchCount = ACHIEVEMENTS.length;
-        const achPoints = friendAchCount * 10;
-        let lastWatchedHtml = '';
-        if (friend.last_watched) {
-            const animeData = await API.getDetails(friend.last_watched);
-            if (animeData) lastWatchedHtml = `<div style="margin-top: 15px; padding: 15px; background: rgba(91,91,255,0.1); border-radius: 12px; border: 1px solid rgba(91,91,255,0.2); cursor: pointer;" onclick="openAnimeDetail('${escapeHTML(animeData.id)}', 'friends')"><div style="font-size: 12px; color: #888; margin-bottom: 8px;">Последнее аниме:</div><div style="display: flex; gap: 10px; align-items: center;"><img src="${safeUrl(animeData.images.jpg.image_url)}" style="width: 40px; height: 55px; border-radius: 6px; object-fit: cover;"><div style="font-size: 14px; font-weight: bold; color: #fff;">${escapeHTML(animeData.title_ru)}</div></div></div>`;
+        else if (achSource) { 
+            try { 
+                let p = typeof achSource === 'string' ? JSON.parse(achSource) : achSource; 
+                if (Array.isArray(p)) friendAchCount = p.length; 
+            } catch(e) {} 
         }
+        
+        const achPoints = friendAchCount * 10;
+        const episodes = friend.episodes_watched || 0;
+        const hours = Math.floor((friend.minutes_watched || 0) / 60);
+        const streak = friend.days_streak || 1;
+
+        // 4. Достаём баннер, титул, значок, эффект
+        let friendBannerUrl = '';
+        if (friend.active_banner) { 
+            const { data: b } = await supabaseClient.from('banners').select('image_url').eq('id', friend.active_banner).single(); 
+            if (b) friendBannerUrl = safeUrl(b.image_url); 
+        }
+        
+        let friendTitleHtml = '';
+        if (friend.active_title) { 
+            const { data: t } = await supabaseClient.from('titles').select('*').eq('id', friend.active_title).single(); 
+            if (t) { 
+                if (t.is_animated) friendTitleHtml = `<div class="user-title-display animated-title" data-title="${escapeHTML(t.animation_key || 'gold')}" style="margin-top: 10px;"><span class="title-text">${escapeHTML(t.name)}</span></div>`; 
+                else friendTitleHtml = `<div class="user-title-display" style="color: ${escapeHTML(t.color)}; border-color: ${escapeHTML(t.color)}; margin-top: 10px;">${escapeHTML(t.name)}</div>`; 
+            } 
+        }
+        
+        let friendEffectClass = '';
+        if (friend.active_effect) { 
+            const { data: e } = await supabaseClient.from('effects').select('css_class').eq('id', friend.active_effect).single(); 
+            if (e) friendEffectClass = e.css_class; 
+        }
+        
+        let friendBadgeHtml = '';
+        if (friend.active_badge) { 
+            const { data: bd } = await supabaseClient.from('badges').select('image_url').eq('id', friend.active_badge).single(); 
+            if (bd) friendBadgeHtml = `<img src="${safeUrl(bd.image_url)}" class="user-badge-icon" alt="badge">`; 
+        }
+
+        // 5. Аватарка
         const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
         const nameChar = friend.name && friend.name[0] ? escapeHTML(friend.name[0].toUpperCase()) : '?';
         const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : nameChar;
-        let friendBanner = '';
-        if (friend.active_banner) { const { data: b } = await supabaseClient.from('banners').select('image_url').eq('id', friend.active_banner).single(); if (b) friendBanner = `style="background-image: url('${safeUrl(b.image_url)}');"`; }
-        else if (friend.custom_banner_url) { friendBanner = `style="background-image: url('${safeUrl(friend.custom_banner_url)}');"`; }
-        
-        let friendTitleHtml = '';
-        if (friend.active_title) { const { data: t } = await supabaseClient.from('titles').select('*').eq('id', friend.active_title).single(); if (t) { if (t.is_animated) friendTitleHtml = `<div class="user-title-display animated-title" data-title="${escapeHTML(t.animation_key || 'gold')}"><span class="title-text">${escapeHTML(t.name)}</span></div>`; else friendTitleHtml = `<div class="user-title-display" style="color: ${escapeHTML(t.color)}; border-color: ${escapeHTML(t.color)};">${escapeHTML(t.name)}</div>`; } }
-        let friendEffectClass = '';
-        if (friend.active_effect) { const { data: e } = await supabaseClient.from('effects').select('css_class').eq('id', friend.active_effect).single(); if (e) friendEffectClass = e.css_class; }
-        let friendBadgeHtml = '';
-        if (friend.active_badge) { const { data: bd } = await supabaseClient.from('badges').select('image_url').eq('id', friend.active_badge).single(); if (bd) friendBadgeHtml = `<img src="${safeUrl(bd.image_url)}" class="user-badge-icon" alt="badge">`; }
+
+        // 6. Рендерим новый дизайн
         container.innerHTML = `
-            <div class="user-card-wrapper">
-                <div class="user-card-top" ${friendBanner}>
-                    <div class="effect-container ${friendEffectClass}" id="friend-particle-container"></div>
-                    <div class="user-card-top-content">
-                        <div class="avatar-container"><div class="avatar" style="background: linear-gradient(135deg, #5b5bff, #b44aff); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff; overflow: hidden;">${avatarHtml}</div></div>
-                        <div class="user-details">
-                            <div class="user-name-row"><h2>${escapeHTML(friend.name)}</h2>${friendBadgeHtml}</div>
-                            ${friendTitleHtml}
-                            <div class="id-container"><span style="color: #ccc; font-size: 12px;">ID:</span><span style="color: #fff; font-weight: bold; font-size: 14px;">${escapeHTML(friend.public_id || '...')}</span></div>
+            <div style="margin: -20px -20px 0 -20px;">
+                <!-- Баннер -->
+                <div id="friend-profile-banner" style="position: relative; width: 100%; height: 220px; background: ${friendBannerUrl ? `url('${friendBannerUrl}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)'}; background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
+                    <div class="effect-container" id="friend-particle-container" style="border-radius: 0 0 24px 24px;"></div>
+                    <!-- Аватарка -->
+                    <div style="position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); z-index: 10;">
+                        <div class="avatar-container" style="position: relative; width: 110px; height: 110px; margin: 0;">
+                            <div style="position: absolute; inset: -4px; border-radius: 50%; background: linear-gradient(135deg, #5b5bff, #b44aff); z-index: 1;"></div>
+                            <div class="avatar" style="width: 100%; height: 100%; border-radius: 50%; background: #222; border: 4px solid #14141f; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; overflow: hidden; position: relative; z-index: 2;">
+                                ${avatarHtml}
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="user-card-bottom">
-                    <div class="level-row">
-                        <div class="level-badge"><img src="level_icon.png" class="level-badge-img" alt="level" onerror="this.style.display='none'"><span class="level-number">${lvl}</span></div>
-                        <div class="level-info">
-                            <div class="level-title">УРОВЕНЬ ${lvl} <span class="rank">${rank}</span></div>
-                            <div class="xp-bar-container"><div class="xp-bar-fill" style="width: ${(friend.xp || 0) % 100}%;"></div></div>
-                            <div class="xp-text">${(friend.xp || 0) % 100} / 100 XP</div>
+
+                <!-- Информация (Имя, ID, Титул) -->
+                <div style="padding: 55px 20px 20px 20px; text-align: center; position: relative; z-index: 5;">
+                    <h1 style="font-size: 28px; font-weight: 900; color: #fff; margin-bottom: 8px; line-height: 1.1; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        ${escapeHTML(friend.name)}
+                        ${friendBadgeHtml}
+                    </h1>
+                    
+                    ${friendTitleHtml ? `<div style="margin-bottom: 15px;">${friendTitleHtml}</div>` : ''}
+
+                    <div class="id-container" style="background: transparent; border: 1px solid rgba(255,255,255,0.15); padding: 10px 20px; border-radius: 16px; display: inline-flex; align-items: center; gap: 10px; margin: 0 auto;">
+                        <span style="color: #888; font-size: 13px; font-weight: 500;">ID:</span>
+                        <span style="color: #fff; font-weight: 700; font-size: 16px; letter-spacing: 1px;">${escapeHTML(friend.public_id || '...')}</span>
+                    </div>
+                </div>
+
+                <!-- Карточка уровня (без названия ранга) -->
+                <div style="padding: 0 20px;">
+                    <div class="level-row" style="background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 15px 20px; display: flex; align-items: center; gap: 15px;">
+                        <div style="position: relative; width: 90px; height: 90px; flex-shrink: 0;">
+                            <img src="level_hex.png" style="width: 100%; height: 100%; object-fit: contain;" alt="level hex">
+                            <div style="position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8); line-height: 1; display: flex; align-items: center; justify-content: center; width: 100%;">${lvl}</div>
+                        </div>
+                        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 8px; gap: 5px;">
+                                <div style="font-size: 16px; font-weight: 800; color: #fff; white-space: nowrap;">УРОВЕНЬ ${lvl}</div>
+                                <div style="font-size: 12px; font-weight: 600; color: #888; white-space: nowrap;">${currentLevelXP} / 100 XP</div>
+                            </div>
+                            <div class="xp-bar-container" style="width: 100%; height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; overflow: hidden; margin: 0;">
+                                <div class="xp-bar-fill" style="width: ${currentLevelXP}%; height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 5px;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="achievements-card" style="margin-top: 15px; cursor: default;">
-                <div class="ach-header">
-                    <div class="ach-icon-big"><img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'icon-inline\' style=\'color:#ffd700;width:60px;height:60px;\'><use href=\'#oa-achievement\'></use></svg>';"></div>
-                    <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p>${achPoints} очков</p></div>
-                    <div class="ach-total">${friendAchCount}/${totalAchCount}</div>
+
+                <!-- Статистика -->
+                <div style="padding: 15px 20px;">
+                    <div style="display: flex; gap: 10px; justify-content: space-between;">
+                        <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 2px;">${episodes}</div>
+                            <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Серий</div>
+                        </div>
+                        <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 2px;">${hours}</div>
+                            <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Часов</div>
+                        </div>
+                        <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: 900; color: #ff4500; margin-bottom: 2px;">${streak}</div>
+                            <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Дней</div>
+                        </div>
+                        <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: 900; color: #ffd700; margin-bottom: 2px;">${friendAchCount}</div>
+                            <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Ачивок</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="ach-progress-wrap"><div class="ach-progress-bar" style="width: ${(friendAchCount / totalAchCount) * 100}%;"></div></div>
+
+                <!-- Достижения -->
+                <div style="padding: 0 20px;">
+                    <div class="achievements-card" style="margin-top: 0; cursor: default;">
+                        <div class="ach-header">
+                            <div class="ach-icon-big"><img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'icon-inline\' style=\'color:#ffd700;width:60px;height:60px;\'><use href=\'#oa-achievement\'></use></svg>';"></div>
+                            <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p>${achPoints} очков</p></div>
+                            <div class="ach-total">${friendAchCount}/${totalAchCount}</div>
+                        </div>
+                        <div class="ach-progress-wrap"><div class="ach-progress-bar" style="width: ${(friendAchCount / totalAchCount) * 100}%;"></div></div>
+                    </div>
+                </div>
+                
+                <!-- Кнопка удаления (только если он в друзьях) -->
+                ${isFriend ? `<div style="padding: 20px;"><button onclick="removeFriend('${escapeHTML(String(friend.id))}')" class="ripple-btn" style="width: 100%; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">Удалить из друзей</button></div>` : ''}
             </div>
-            ${lastWatchedHtml}
-            <button onclick="removeFriend('${escapeHTML(String(friend.id))}')" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">Удалить из друзей</button>`;
-        setTimeout(() => { renderEffectParticles(document.getElementById('friend-particle-container'), friendEffectClass); }, 100);
-    } catch (e) { console.error(e); container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка</div>'; }
+        `;
+        
+        // Запускаем эффекты
+        setTimeout(() => { 
+            renderEffectParticles(document.getElementById('friend-particle-container'), friendEffectClass); 
+        }, 100);
+
+    } catch (e) { 
+        console.error(e); 
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки профиля</div>'; 
+    }
 }
 
 // ==========================================
