@@ -1291,8 +1291,16 @@ async function openFriendProfile(id, name = '') {
                     </div>
                 </div>
                 
-                <!-- Кнопка удаления (только если он в друзьях) -->
-                ${isFriend ? `<div style="padding: 20px;"><button onclick="removeFriend('${escapeHTML(String(friend.id))}')" class="ripple-btn" style="width: 100%; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">Удалить из друзей</button></div>` : ''}
+                <!-- Кнопка дружбы (Добавить или Удалить) -->
+                <div style="padding: 20px;">
+                    ${id !== MY_ID ? `
+                        ${isFriend ? `
+                            <button onclick="removeFriend('${escapeHTML(String(friend.id))}')" class="ripple-btn" style="width: 100%; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">Удалить из друзей</button>
+                        ` : `
+                            <button onclick="sendFriendRequest('${escapeHTML(String(friend.id))}'); this.innerHTML='Заявка отправлена'; this.style.opacity='0.7';" class="ripple-btn" style="width: 100%; padding: 14px; border-radius: 14px; border: 1px solid rgba(91,91,255,0.3); background: rgba(91,91,255,0.1); color: #5b5bff; font-weight: bold; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;"><svg class="icon-inline" style="width:18px; height:18px;"><use href="#oa-friends"></use></svg> Добавить в друзья</button>
+                        `}
+                    ` : ''}
+                </div>
             </div>
         `;
         
