@@ -583,7 +583,12 @@ async function loadProfileData() {
     
     // Обновляем цифру внутри картинки
     const shieldText = document.getElementById('shield-level-text');
-    if (shieldText) shieldText.textContent = lvl;
+    if (shieldText) {
+        shieldText.textContent = lvl;
+        // Принудительно выравниваем по центру
+        shieldText.style.left = '50%';
+        shieldText.style.transform = 'translate(-50%, -50%)';
+    }
 
     // Заполняем статистику
     setElText('stat-episodes', stats.episodesWatched || 0);
@@ -708,7 +713,11 @@ function renderPreviewCard() {
     setElWidth('preview-xp-bar', currentLevelXP + '%');
     
     const previewShieldText = document.getElementById('preview-shield-level-text');
-    if (previewShieldText) previewShieldText.textContent = currentLevel;
+    if (previewShieldText) {
+        previewShieldText.textContent = currentLevel;
+        previewShieldText.style.left = '50%';
+        previewShieldText.style.transform = 'translate(-50%, -50%)';
+    }
     
     renderEffectParticles(document.getElementById('preview-particle-container'), ACTIVE_EFFECT_CSS);
 }
