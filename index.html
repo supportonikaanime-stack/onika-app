@@ -608,8 +608,7 @@
         <div id="requests-list-container" style="display: none;"></div>
     </div>
 
-    <div id="screen-friend-profile" class="screen" style="padding: 20px;">
-        <button onclick="switchTab('friends')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
+    <div id="screen-friend-profile" class="screen">
         <div id="friend-profile-content"></div>
     </div>
 
@@ -650,21 +649,26 @@
         <div id="achievements-list-container" style="margin-top: 15px;"></div>
     </div>
 
-    <!-- НОВЫЙ ДИЗАЙН ПРОФИЛЯ С КАРТИНКОЙ 90px -->
+    <!-- НОВЫЙ ДИЗАЙН ПРОФИЛЯ -->
     <div id="screen-profile" class="screen" style="background: var(--bg);">
         
         <!-- Верхняя часть с фоном -->
         <div id="profile-banner" style="position: relative; width: 100%; height: 220px; background: linear-gradient(180deg, #2a2a3e 0%, #14141f 100%); background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
-            <!-- Кнопка смены фона ведет в магазин -->
-            <button onclick="switchTab('profile'); switchProfileTab('shop'); switchShopTab('banners');" class="ripple-btn" style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; z-index: 20;">
-                <svg style="width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#oa-image"></use></svg> Сменить фон
-            </button>
+            <!-- Кнопки в правом верхнем углу -->
+            <div style="position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 20;">
+                <!-- Кнопка Магазина (Картинка) -->
+                <button onclick="switchTab('shop')" class="ripple-btn" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); color: #fff; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#oa-image"></use></svg>
+                </button>
+                <!-- Кнопка Настроек (Шестеренка) -->
+                <button onclick="switchTab('settings')" class="ripple-btn" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); color: #fff; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#oa-settings"></use></svg>
+                </button>
+            </div>
             
-            <!-- Эффекты и аватарка -->
             <div class="effect-container" id="particle-effect-container" style="border-radius: 0 0 24px 24px;"></div>
             <div style="position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); z-index: 10;">
                 <div class="avatar-container" onclick="document.getElementById('avatar-upload').click()" style="position: relative; width: 110px; height: 110px; margin: 0;">
-                    <!-- Обводка аватарки -->
                     <div style="position: absolute; inset: -4px; border-radius: 50%; background: linear-gradient(135deg, #5b5bff, #b44aff); z-index: 1;"></div>
                     <div class="avatar" id="tg-avatar" style="width: 100%; height: 100%; border-radius: 50%; background: #222; border: 4px solid #14141f; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; overflow: hidden; position: relative; z-index: 2;">
                         <span id="avatar-letter">?</span>
@@ -677,20 +681,16 @@
             </div>
         </div>
 
-        <!-- Информация о пользователе (Имя, ID) -->
         <div style="padding: 55px 20px 20px 20px; text-align: center; position: relative; z-index: 5;">
-            
             <h1 id="tg-name" style="font-size: 28px; font-weight: 900; color: #fff; margin-bottom: 8px; line-height: 1.1; display: flex; align-items: center; justify-content: center; gap: 8px;">
                 Гость
                 <img id="user-badge-img" class="user-badge-icon" style="display: none; width: 24px; height: 24px; object-fit: contain;" alt="badge">
             </h1>
             
-            <!-- Титул (если надет) -->
             <div id="user-title-container" style="display: none; margin-bottom: 15px;">
                 <div class="user-title-display" id="user-active-title"></div>
             </div>
 
-            <!-- Кнопка ID -->
             <div onclick="copyMyId()" class="id-container" style="background: transparent; border: 1px solid rgba(255,255,255,0.15); padding: 10px 20px; border-radius: 16px; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; margin: 0 auto; transition: background 0.2s;" onpointerdown="this.style.background='rgba(255,255,255,0.05)'" onpointerup="this.style.background='transparent'">
                 <span style="color: #888; font-size: 13px; font-weight: 500;">Мой ID:</span>
                 <span id="my-tg-id" style="color: #fff; font-weight: 700; font-size: 16px; letter-spacing: 1px;">...</span>
@@ -698,11 +698,9 @@
             </div>
         </div>
 
-        <!-- Карточка уровня (XP) с КАРТИНКОЙ 90px -->
         <div style="padding: 0 20px;">
             <div class="level-row" onclick="openLevelModal()" style="background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 15px 20px; display: flex; align-items: center; gap: 15px; cursor: pointer;">
                 
-                <!-- Картинка уровня (90px) -->
                 <div style="position: relative; width: 90px; height: 90px; flex-shrink: 0;">
                     <img src="level_hex.png" style="width: 100%; height: 100%; object-fit: contain;" alt="level hex">
                     <div id="shield-level-text" style="position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 900; color: #ffffff; font-family: 'Nunito', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.8); line-height: 1; display: flex; align-items: center; justify-content: center; width: 100%;">1</div>
@@ -720,25 +718,20 @@
             </div>
         </div>
 
-        <!-- БЛОК СТАТИСТИКИ -->
         <div style="padding: 15px 20px;">
             <div style="display: flex; gap: 10px; justify-content: space-between;">
-                <!-- Серии (клик -> История) -->
                 <div onclick="switchTab('history')" class="ripple-btn" style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center; cursor: pointer;">
                     <div style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 2px;" id="stat-episodes">0</div>
                     <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Серий</div>
                 </div>
-                <!-- Часы -->
                 <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
                     <div style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 2px;" id="stat-hours">0</div>
                     <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Часов</div>
                 </div>
-                <!-- Стрик -->
                 <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
                     <div style="font-size: 20px; font-weight: 900; color: #ff4500; margin-bottom: 2px;" id="stat-streak">1</div>
                     <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Дней</div>
                 </div>
-                <!-- Ачивки (клик -> Достижения) -->
                 <div onclick="switchTab('achievements')" class="ripple-btn" style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center; cursor: pointer;">
                     <div style="font-size: 20px; font-weight: 900; color: #ffd700; margin-bottom: 2px;" id="stat-achievements">0</div>
                     <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Ачивок</div>
@@ -746,15 +739,11 @@
             </div>
         </div>
 
-        <!-- Вкладки -->
         <div style="padding: 0 20px 20px 20px;">
             <div class="profile-tabs" style="margin-top: 0;">
                 <button class="tab-btn ripple-btn active" id="tab-btn-profile" onclick="switchProfileTab('profile')"><svg><use href="#oa-profile"></use></svg> Профиль</button>
-                <button class="tab-btn ripple-btn" id="tab-btn-shop" onclick="switchProfileTab('shop')"><svg><use href="#oa-shop"></use></svg> Магазин</button>
-                <button class="tab-btn ripple-btn" id="tab-btn-settings" onclick="switchProfileTab('settings')"><svg><use href="#oa-settings"></use></svg> Настройки</button>
             </div>
 
-            <!-- Контент вкладки Профиль -->
             <div id="profile-content-tab">
                 <div class="achievements-card" onclick="openAchievementsPage()" style="margin-top: 15px;">
                     <div class="ach-header">
@@ -772,36 +761,61 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Контент вкладки Магазин -->
-            <div id="shop-content-tab" style="display: none;">
-                <div class="shop-tabs">
-                    <div class="shop-tab active" onclick="switchShopTab('banners', this)">Баннеры</div>
-                    <div class="shop-tab" onclick="switchShopTab('titles', this)">Титулы</div>
-                    <div class="shop-tab" onclick="switchShopTab('frames', this)">Рамки</div>
-                    <div class="shop-tab" onclick="switchShopTab('effects', this)">Эффекты</div>
-                    <div class="shop-tab" onclick="switchShopTab('badges', this)">Значки</div>
-                </div>
-                <div id="shop-items-container" class="shop-grid"></div>
+    <!-- НОВЫЙ ЭКРАН: МАГАЗИН КОСМЕТИКИ -->
+    <div id="screen-shop" class="screen" style="background: var(--bg);">
+        <header class="profile-header" style="padding-bottom: 10px; padding-top: 20px;">
+            <h1 style="font-size: 24px;">Магазин косметики</h1>
+            <button onclick="switchTab('profile')" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                <svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-close"></use></svg>
+            </button>
+        </header>
+        
+        <div style="padding: 0 20px;">
+            <div class="shop-tabs" style="margin-top: 0;">
+                <div class="shop-tab active" onclick="switchShopTab('banners', this)">Баннеры</div>
+                <div class="shop-tab" onclick="switchShopTab('titles', this)">Титулы</div>
+                <div class="shop-tab" onclick="switchShopTab('frames', this)">Рамки</div>
+                <div class="shop-tab" onclick="switchShopTab('effects', this)">Эффекты</div>
+                <div class="shop-tab" onclick="switchShopTab('badges', this)">Значки</div>
             </div>
 
-            <!-- Контент вкладки Настройки -->
-            <div class="settings-card" id="settings-content-tab" style="display: none;">
-                <div style="padding: 20px;">
-                    <h3 style="margin-bottom: 15px; color: #fff;">Настройки</h3>
+            <!-- Переключатель Магазин / Инвентарь -->
+            <div style="display: flex; background: #14141f; border-radius: 12px; padding: 4px; margin: 15px 0;">
+                <button id="btn-shop-catalog" class="my-list-tab active" onclick="switchShopView('catalog')" style="flex: 1; border: none; background: transparent; padding: 10px; margin: 0; font-size: 14px;">Магазин</button>
+                <button id="btn-shop-inventory" class="my-list-tab" onclick="switchShopView('inventory')" style="flex: 1; border: none; background: transparent; padding: 10px; margin: 0; font-size: 14px;">Инвентарь</button>
+            </div>
+
+            <div id="shop-items-container" class="shop-grid"></div>
+        </div>
+    </div>
+
+    <!-- НОВЫЙ ЭКРАН: НАСТРОЙКИ -->
+    <div id="screen-settings" class="screen" style="background: var(--bg);">
+        <header class="profile-header" style="padding-bottom: 10px; padding-top: 20px;">
+            <h1 style="font-size: 24px;">Настройки</h1>
+            <button onclick="switchTab('profile')" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                <svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-close"></use></svg>
+            </button>
+        </header>
+
+        <div style="padding: 0 20px;">
+            <div class="settings-card" style="margin-top: 0;">
+                <div style="padding: 10px;">
                     <button class="settings-btn" onclick="resetBanner()"><span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять баннер</span><span style="color: #888;">›</span></button>
                     <button class="settings-btn" onclick="resetTitle()"><span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять титул</span><span style="color: #888;">›</span></button>
                     <button class="settings-btn" onclick="resetEffect()"><span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять эффект</span><span style="color: #888;">›</span></button>
                     <button class="settings-btn" onclick="resetBadge()"><span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять значок</span><span style="color: #888;">›</span></button>
                     
-                    <!-- Кнопка Выйти перенесена сюда -->
                     <button onclick="signOut()" class="settings-btn" style="margin-top: 30px; color: #ff2d78; border-color: rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); justify-content: center;"><svg style="margin-right: 8px;"><use href="#oa-logout"></use></svg> Выйти из аккаунта</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ЭКРАН ПРЕДПРОСМОТРА (ТЕПЕРЬ В НОВОМ ДИЗАЙНЕ) -->
+    <!-- ЭКРАН ПРЕДПРОСМОТРА -->
     <div id="screen-preview" class="screen" style="background: var(--bg);">
         <header class="profile-header" style="padding-bottom: 10px;">
             <h1>Примерка</h1>
@@ -811,7 +825,6 @@
         </header>
         
         <div style="padding: 0;">
-            <!-- Верхняя часть с фоном -->
             <div id="preview-banner" style="position: relative; width: 100%; height: 220px; background: linear-gradient(180deg, #2a2a3e 0%, #14141f 100%); background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
                 <div class="effect-container" id="preview-particle-container" style="border-radius: 0 0 24px 24px;"></div>
                 <div style="position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); z-index: 10;">
@@ -840,7 +853,6 @@
                 </div>
             </div>
 
-            <!-- Карточка уровня (XP) с КАРТИНКОЙ 90px -->
             <div style="padding: 0 20px 100px 20px;">
                 <div class="level-row" style="background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 15px 20px; display: flex; align-items: center; gap: 15px;">
                     <div style="position: relative; width: 90px; height: 90px; flex-shrink: 0;">
