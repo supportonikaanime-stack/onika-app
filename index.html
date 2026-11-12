@@ -4,7 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>OnikaAnime</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- УСКОРЕНИЕ ЗАГРУЗКИ -->
+    <link rel="preconnect" href="https://s4.anilist.co" crossorigin>
+    <link rel="preconnect" href="https://wsaykqhojwfhpqzxptke.supabase.co" crossorigin>
+    <link rel="preconnect" href="https://onika-api.relaxdev.ru" crossorigin>
+    <link rel="dns-prefetch" href="https://s4.anilist.co">
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -821,7 +827,6 @@
                     <!-- Пончик-диаграмма -->
                     <div style="position: relative; width: 120px; height: 120px; flex-shrink: 0; display: flex; justify-content: center; align-items: center;">
                         <div id="donut-chart" style="width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(#2a2a3e 0% 100%); position: relative; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 10px rgba(255,255,255,0.1));">
-                            <!-- Внутренний круг, создающий эффект пончика -->
                             <div style="width: 70%; height: 70%; background: #14141f; border-radius: 50%; position: absolute; box-shadow: inset 0 0 15px rgba(0,0,0,0.5);"></div>
                         </div>
                     </div>
@@ -877,11 +882,6 @@
         <div style="padding: 0 20px;">
             <div class="settings-card" style="margin-top: 0;">
                 <div style="padding: 10px;">
-                    <button class="settings-btn" onclick="resetBanner()"><span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять баннер</span><span style="color: #888;">›</span></button>
-                    <button class="settings-btn" onclick="resetTitle()"><span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять титул</span><span style="color: #888;">›</span></button>
-                    <button class="settings-btn" onclick="resetEffect()"><span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять эффект</span><span style="color: #888;">›</span></button>
-                    <button class="settings-btn" onclick="resetBadge()"><span style="display:flex; align-items:center;"><svg><use href="#oa-close"></use></svg> Снять значок</span><span style="color: #888;">›</span></button>
-                    
                     <button onclick="signOut()" class="settings-btn" style="margin-top: 30px; color: #ff2d78; border-color: rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); justify-content: center;"><svg style="margin-right: 8px;"><use href="#oa-logout"></use></svg> Выйти из аккаунта</button>
                 </div>
             </div>
@@ -1033,6 +1033,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4623"></script>
+    <script src="app.js?v=4625"></script>
 </body>
 </html>
