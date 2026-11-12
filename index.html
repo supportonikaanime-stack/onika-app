@@ -11,6 +11,7 @@
     <link rel="preconnect" href="https://onika-api.relaxdev.ru" crossorigin>
     <link rel="dns-prefetch" href="https://s4.anilist.co">
     
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -846,9 +847,15 @@
     <div id="screen-shop" class="screen" style="background: var(--bg);">
         <header class="profile-header" style="padding-bottom: 10px; padding-top: 20px;">
             <h1 style="font-size: 24px;">Магазин косметики</h1>
-            <button onclick="switchTab('profile')" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-                <svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-close"></use></svg>
-            </button>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="coin-balance" style="margin-bottom: 0; padding: 4px 10px; font-size: 14px;">
+                    <svg style="width: 16px; height: 16px;"><use href="#oa-coin"></use></svg>
+                    <span id="shop-coins">0</span>
+                </div>
+                <button onclick="switchTab('profile')" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-close"></use></svg>
+                </button>
+            </div>
         </header>
         
         <div style="padding: 0 20px;">
@@ -918,22 +925,6 @@
                 
                 <div id="preview-title-container" style="display: none; margin-bottom: 15px;">
                     <div class="user-title-display" id="preview-active-title"></div>
-                </div>
-
-                <div class="coin-balance" style="display: inline-flex; margin-bottom: 15px;">
-                    <svg><use href="#oa-coin"></use></svg>
-                    <span id="preview-coins">0</span>
-                </div>
-            </div>
-
-            <div style="padding: 0 20px 100px 20px;">
-                <!-- СТЕКЛЯННАЯ КАПСУЛА В ПРЕДПРОСМОТРЕ -->
-                <div class="xp-capsule">
-                    <div id="preview-xp-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, rgba(123,104,238,0.85), rgba(100,149,237,0.85)); z-index: 1; border-radius: 12px;"></div>
-                    <div style="position: relative; z-index: 4; display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                        <div style="font-size: 12px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">LVL: <span id="preview-level">1</span></div>
-                        <div style="font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);"><span id="preview-xp-current">0</span> / 100 XP</div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1033,6 +1024,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4625"></script>
+    <script src="app.js?v=4626"></script>
 </body>
 </html>
