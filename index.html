@@ -20,6 +20,52 @@
         .screen { display: none; position: relative; z-index: 1; }
         .screen.active { display: block; animation: screenEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
 
+        /* ==== СТЕКЛЯННАЯ КАПСУЛА УРОВНЯ ==== */
+        .xp-capsule {
+            position: relative;
+            background: rgba(20, 20, 31, 0.15);
+            border: 1px solid transparent;
+            background-clip: padding-box;
+            border-radius: 12px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            overflow: hidden;
+            backdrop-filter: blur(14px) saturate(140%);
+            -webkit-backdrop-filter: blur(14px) saturate(140%);
+            box-shadow:
+                0 0 12px rgba(123,104,238,0.45),
+                0 0 24px rgba(100,149,237,0.25),
+                inset 0 0 14px rgba(123,104,238,0.18),
+                inset 0 0 24px rgba(100,149,237,0.10);
+        }
+        .xp-capsule::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(90deg, #7B68EE, #6495ED, #7B68EE);
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+                    mask-composite: exclude;
+            pointer-events: none;
+            z-index: 3;
+            opacity: 0.95;
+        }
+        .xp-capsule::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 45%;
+            border-radius: 12px 12px 0 0;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.10), transparent);
+            pointer-events: none;
+            z-index: 2;
+        }
+
         @keyframes screenEnter { from { opacity: 0; transform: translateY(14px) scale(0.995); } to { opacity: 1; transform: translateY(0) scale(1); } }
         @keyframes skeletonShimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
         @keyframes skeletonFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
@@ -698,14 +744,11 @@
             </div>
         </div>
 
-        <!-- НОВЫЙ БЛОК УРОВНЯ (КАПСУЛА) -->
+        <!-- НОВЫЙ БЛОК УРОВНЯ (СТЕКЛЯННАЯ КАПСУЛА) -->
         <div style="padding: 0 20px;">
-            <div onclick="openLevelModal()" style="position: relative; background: rgba(20, 20, 31, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; overflow: hidden; cursor: pointer; backdrop-filter: blur(10px);">
-                <!-- Заполняющая полоса прогресса (находится под текстом) -->
-                <div id="user-xp-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, rgba(123,104,238,0.85), rgba(100,149,237,0.85)); z-index: 1; transition: width 0.5s ease;"></div>
-                
-                <!-- Текст поверх полосы -->
-                <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <div onclick="openLevelModal()" class="xp-capsule" style="cursor: pointer;">
+                <div id="user-xp-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, rgba(123,104,238,0.85), rgba(100,149,237,0.85)); z-index: 1; transition: width 0.5s ease; border-radius: 12px;"></div>
+                <div style="position: relative; z-index: 4; display: flex; justify-content: space-between; align-items: center; width: 100%;">
                     <div style="font-size: 12px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">LVL: <span id="user-level">1</span></div>
                     <div style="font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);"><span id="user-xp-current">0</span> / 100 XP</div>
                 </div>
@@ -848,10 +891,10 @@
             </div>
 
             <div style="padding: 0 20px 100px 20px;">
-                <!-- НОВЫЙ БЛОК УРОВНЯ В ПРЕДПРОСМОТРЕ -->
-                <div style="position: relative; background: rgba(20, 20, 31, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; overflow: hidden; backdrop-filter: blur(10px);">
-                    <div id="preview-xp-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, rgba(123,104,238,0.85), rgba(100,149,237,0.85)); z-index: 1;"></div>
-                    <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <!-- СТЕКЛЯННАЯ КАПСУЛА В ПРЕДПРОСМОТРЕ -->
+                <div class="xp-capsule">
+                    <div id="preview-xp-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, rgba(123,104,238,0.85), rgba(100,149,237,0.85)); z-index: 1; border-radius: 12px;"></div>
+                    <div style="position: relative; z-index: 4; display: flex; justify-content: space-between; align-items: center; width: 100%;">
                         <div style="font-size: 12px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">LVL: <span id="preview-level">1</span></div>
                         <div style="font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);"><span id="preview-xp-current">0</span> / 100 XP</div>
                     </div>
