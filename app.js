@@ -7,18 +7,10 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 let supabaseClient = null;
 try { if (window.supabase) supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error('Ошибка Supabase:', e); }
 
-const tg = window.Telegram?.WebApp;
 let MY_ID = null, MY_PUBLIC_ID = null, MY_NAME = 'Гость', MY_PHOTO_URL = '';
 let ACTIVE_BANNER_URL = '', ACTIVE_TITLE_DATA = null, ACTIVE_EFFECT_CSS = '', ACTIVE_BADGE_URL = '';
 let PENDING_VERIFY_EMAIL = '';
 let currentFriendsTab = 'friends';
-
-if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
-    try { tg.expand(); tg.setHeaderColor('#0a0a0f'); tg.setBackgroundColor('#0a0a0f'); } catch(e) {}
-    MY_ID = tg.initDataUnsafe.user.id;
-    MY_NAME = tg.initDataUnsafe.user.first_name + (tg.initDataUnsafe.user.last_name ? ' ' + tg.initDataUnsafe.user.last_name : '');
-    MY_PHOTO_URL = tg.initDataUnsafe.user.photo_url || '';
-}
 
 function escapeHTML(str) { if (str == null) return ''; return String(str).replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t] || t)); }
 function safeUrl(url) { if (!url || typeof url !== 'string') return ''; if (url.startsWith('/')) return 'https://shikimori.io' + url; try { const u = new URL(url, location.origin); return (u.protocol==='http:'||u.protocol==='https:')?u.href:''; } catch { return ''; } }
@@ -123,7 +115,6 @@ async function handleVerifyCode() {
 function hideAuthScreen() { document.getElementById('authScreen')?.classList.remove('active'); }
 function showAuthScreen() { document.getElementById('authScreen')?.classList.add('active'); }
 async function initAuth() {
-    if (MY_ID && tg && tg.initDataUnsafe && tg.initDataUnsafe.user) { hideAuthScreen(); return; }
     if (supabaseClient) {
         try {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -285,21 +276,37 @@ const API_Shikimori = {
     }
 };
 
-async function getCachedTitle(anilistId) {
+// ==========================================
+// КЭШИРОВАНИЕ АНИМЕ В БАЗУ
+// ==========================================
+async function getCachedAnime(anilistId) {
     if (!supabaseClient) return null;
     try {
-        const { data } = await supabaseClient.from('anime_cache').select('title_ru, description').eq('id', String(anilistId)).single();
+        const { data } = await supabaseClient.from('anime_cache').select('*').eq('id', String(anilistId)).single();
         return data || null;
     } catch(e) { return null; }
 }
 
-async function saveCachedTitle(anilistId, titleRu, description) {
+async function saveCachedAnime(animeObj) {
     if (!supabaseClient) return;
     try {
-        if (titleRu && titleRu !== 'Без названия') {
-            await supabaseClient.from('anime_cache').upsert({ id: String(anilistId), title_ru: titleRu, description: description || '', updated_at: new Date().toISOString() }, { onConflict: 'id' });
-        }
-    } catch(e) {}
+        const rawId = animeObj.id.replace('anilist_', '');
+        const payload = {
+            id: String(rawId),
+            title_ru: animeObj.title_ru,
+            title_raw: animeObj.title_raw,
+            image_url: animeObj.images.jpg.image_url,
+            description: animeObj.description,
+            genres: animeObj.genres,
+            score: animeObj.score,
+            year: animeObj.year,
+            episodes: animeObj.episodes,
+            status: animeObj.status,
+            kind: animeObj.kind,
+            updated_at: new Date().toISOString()
+        };
+        await supabaseClient.from('anime_cache').upsert(payload, { onConflict: 'id' });
+    } catch(e) { console.error('Cache save error:', e); }
 }
 
 async function processWithLimit(items, limit, asyncProcessor) {
@@ -319,23 +326,24 @@ async function buildAnimeObject(raw) {
     const searchTitle = raw.title?.english || raw.title?.romaji || raw.title?.native || '';
     const anilistId = String(raw.id);
 
-    const cached = await getCachedTitle(anilistId);
+    // Пробуем взять из базы данных наш полный кэш
+    const cached = await getCachedAnime(anilistId);
     if (cached && cached.title_ru) {
         return {
             id: 'anilist_' + raw.id,
             rawId: raw.id,
             idMal: raw.idMal,
             title_ru: cached.title_ru,
-            title_raw: searchTitle,
+            title_raw: cached.title_raw || searchTitle,
             title: cached.title_ru,
-            year: raw.seasonYear || '--',
-            episodes: raw.episodes || '?',
-            images: { jpg: { image_url: raw.coverImage?.extraLarge || raw.coverImage?.large || '' } },
+            year: cached.year || raw.seasonYear || '--',
+            episodes: cached.episodes || raw.episodes || '?',
+            images: { jpg: { image_url: cached.image_url || raw.coverImage?.extraLarge || raw.coverImage?.large || '' } },
             description: cached.description || raw.description || 'Описание отсутствует.',
-            genres: raw.genres || [],
-            score: raw.averageScore ? (raw.averageScore/10).toFixed(1) : 0,
-            status: raw.status==='RELEASING'?'Онгоинг':raw.status==='FINISHED'?'Завершено':raw.status==='NOT_YET_RELEASED'?'Анонс':'Анонс',
-            kind: raw.format || 'TV',
+            genres: cached.genres || raw.genres || [],
+            score: cached.score || (raw.averageScore ? (raw.averageScore/10).toFixed(1) : 0),
+            status: cached.status || (raw.status==='RELEASING'?'Онгоинг':raw.status==='FINISHED'?'Завершено':raw.status==='NOT_YET_RELEASED'?'Анонс':'Анонс'),
+            kind: cached.kind || raw.format || 'TV',
             trailerId: raw.trailer?.id || null,
             relations: raw.relations || null,
             nextAiringEpisode: raw.nextAiringEpisode || null
@@ -355,11 +363,7 @@ async function buildAnimeObject(raw) {
     let cleanDesc = shikiData.description || raw.description || 'Описание отсутствует.';
     cleanDesc = cleanDesc.replace(/\[[^\]]*\]/g,'').replace(/<[^>]*>?/gm,'').trim();
 
-    if (russianFromAniLibria || shikiData.russian) {
-        await saveCachedTitle(anilistId, finalRussianTitle, cleanDesc);
-    }
-
-    return {
+    const animeObj = {
         id: 'anilist_' + raw.id,
         rawId: raw.id,
         idMal: raw.idMal,
@@ -378,12 +382,20 @@ async function buildAnimeObject(raw) {
         relations: raw.relations || null,
         nextAiringEpisode: raw.nextAiringEpisode || null
     };
+
+    // Сохраняем в кэш
+    if (russianFromAniLibria || shikiData.russian || cleanDesc) {
+        await saveCachedAnime(animeObj);
+    }
+
+    return animeObj;
 }
 
 const API = {
     _cache: new Map(),
     async _cached(key, fn) {
-        if (this._cache.has(key) && Date.now()-this._cache.get(key).t < 5*60*1000) return this._cache.get(key).d;
+        // Кэш в памяти живет 30 минут
+        if (this._cache.has(key) && Date.now()-this._cache.get(key).t < 30*60*1000) return this._cache.get(key).d;
         try { const d = await fn(); this._cache.set(key,{d,t:Date.now()}); return d; } catch(e) { return null; }
     },
     getCatalog(page,limit,filters) {
@@ -544,9 +556,7 @@ function shareMyId() {
     if (!MY_PUBLIC_ID) { showToast('ID еще не загружен'); return; }
     const text = `Добавь меня в друзья на OnikaAnime! Мой ID: ${MY_PUBLIC_ID}`;
     const url = window.location.href;
-    if (tg && tg.openTelegramLink) {
-        tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);
-    } else if (navigator.share) {
+    if (navigator.share) {
         navigator.share({ title: 'OnikaAnime', text: text, url: url }).catch(()=>{});
     } else {
         navigator.clipboard.writeText(text).then(()=>showToast('Текст скопирован!')).catch(()=>{});
@@ -863,6 +873,11 @@ async function renderBannersInShop(container) {
                 const isActive = stats.active_banner === b.id;
                 const isOwned = ownedIds.has(b.id);
                 let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Установлен</div>` : isOwned ? `<div style="font-size:12px; color:#ffd700; font-weight:bold; margin-top:5px;">Надеть</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${b.price === 0 ? 'Получить' : b.price + ''}</div>`;
+                
+                if (isActive && currentShopView === 'inventory') {
+                    btnHtml += `<button onclick="event.stopPropagation(); resetBanner();" class="ripple-btn" style="margin-top:5px; background:rgba(255,45,120,0.1); border:1px solid rgba(255,45,120,0.3); color:#ff2d78; padding:4px 8px; border-radius:6px; font-size:11px; width:100%; cursor:pointer;">Снять</button>`;
+                }
+
                 const key = cachePreviewItem(b);
                 html += `<div class="shop-item" onclick="startPreviewById('banner', '${key}')"><div class="shop-img" style="background-image: url('${safeUrl(b.image_url)}')"></div><div class="shop-info"><div class="shop-name">${escapeHTML(b.name)}</div>${btnHtml}</div></div>`;
             });
@@ -888,6 +903,11 @@ async function renderTitlesInShop(container) {
             const isActive = String(stats.active_title) === String(t.id);
             const isOwned = ownedIds.has(String(t.id));
             let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Надет</div>` : isOwned ? `<div style="font-size:12px; color:#ffd700; font-weight:bold; margin-top:5px;">Надеть</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${t.price}</div>`;
+            
+            if (isActive && currentShopView === 'inventory') {
+                btnHtml += `<button onclick="event.stopPropagation(); resetTitle();" class="ripple-btn" style="margin-top:5px; background:rgba(255,45,120,0.1); border:1px solid rgba(255,45,120,0.3); color:#ff2d78; padding:4px 8px; border-radius:6px; font-size:11px; width:100%; cursor:pointer;">Снять</button>`;
+            }
+
             let titleHtml = t.is_animated ? `<div class="user-title-display animated-title" data-title="${escapeHTML(t.animation_key || 'gold')}" style="position:relative; font-size:11px; padding: 3px 10px;"><span class="title-text">${escapeHTML(t.name)}</span></div>` : `<div class="user-title-display" style="color:${escapeHTML(t.color)}; border-color:${escapeHTML(t.color)}; font-size:11px; padding: 3px 10px;">${escapeHTML(t.name)}</div>`;
             const key = cachePreviewItem(t);
             html += `<div class="shop-item" onclick="startPreviewById('title', '${key}')"><div class="shop-img" style="background: #111; display:flex; align-items:center; justify-content:center; padding: 10px; box-sizing: border-box; overflow: hidden;">${titleHtml}</div><div class="shop-info"><div class="shop-name">${escapeHTML(t.name)}${t.is_animated ? ' *' : ''}</div>${btnHtml}</div></div>`;
@@ -910,8 +930,14 @@ async function renderFramesInShop(container) {
 
         let html = '';
         itemsToShow.forEach(f => {
+            const isActive = String(stats.active_frame) === String(f.id);
             const isOwned = ownedIds.has(String(f.id));
-            let btnHtml = isOwned ? `<div style="font-size:12px; color:#ffd700; font-weight:bold; margin-top:5px;">Надеть</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${f.price}</div>`;
+            let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Надета</div>` : isOwned ? `<div style="font-size:12px; color:#ffd700; font-weight:bold; margin-top:5px;">Надеть</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${f.price}</div>`;
+            
+            if (isActive && currentShopView === 'inventory') {
+                btnHtml += `<button onclick="event.stopPropagation(); applyFrame(null);" class="ripple-btn" style="margin-top:5px; background:rgba(255,45,120,0.1); border:1px solid rgba(255,45,120,0.3); color:#ff2d78; padding:4px 8px; border-radius:6px; font-size:11px; width:100%; cursor:pointer;">Снять</button>`;
+            }
+
             const key = cachePreviewItem(f);
             html += `<div class="shop-item" onclick="startPreviewById('frame', '${key}')"><div class="shop-img" style="background-image: url('${safeUrl(f.image_url)}')"></div><div class="shop-info"><div class="shop-name">${escapeHTML(f.name)}</div>${btnHtml}</div></div>`;
         });
@@ -936,6 +962,11 @@ async function renderEffectsInShop(container) {
             const isActive = String(stats.active_effect) === String(e.id);
             const isOwned = ownedIds.has(String(e.id));
             let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : isOwned ? `<div style="font-size:12px; color:#ffd700; font-weight:bold; margin-top:5px;">Надеть</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${e.price}</div>`;
+            
+            if (isActive && currentShopView === 'inventory') {
+                btnHtml += `<button onclick="event.stopPropagation(); resetEffect();" class="ripple-btn" style="margin-top:5px; background:rgba(255,45,120,0.1); border:1px solid rgba(255,45,120,0.3); color:#ff2d78; padding:4px 8px; border-radius:6px; font-size:11px; width:100%; cursor:pointer;">Снять</button>`;
+            }
+
             const key = cachePreviewItem(e);
             html += `<div class="shop-item" onclick="startPreviewById('effect', '${key}')"><div class="shop-img ${e.css_class}" style="background: #111; display:flex; align-items:center; justify-content:center;"><div class="avatar" style="width:40px; height:40px; font-size:12px; background:#333; border:1px solid #555;">AA</div></div><div class="shop-info"><div class="shop-name">${escapeHTML(e.name)}</div>${btnHtml}</div></div>`;
         });
@@ -965,6 +996,11 @@ async function renderBadgesInShop(container) {
                 const isActive = String(stats.active_badge) === String(b.id);
                 const isOwned = ownedIds.has(String(b.id));
                 let btnHtml = isActive ? `<div style="font-size:12px; color:#2ecc71; font-weight:bold; margin-top:5px;">Активен</div>` : isOwned ? `<div style="font-size:12px; color:#ffd700; font-weight:bold; margin-top:5px;">Надеть</div>` : `<div style="font-size:12px; color:#5b5bff; font-weight:bold; margin-top:5px;">${b.price}</div>`;
+                
+                if (isActive && currentShopView === 'inventory') {
+                    btnHtml += `<button onclick="event.stopPropagation(); resetBadge();" class="ripple-btn" style="margin-top:5px; background:rgba(255,45,120,0.1); border:1px solid rgba(255,45,120,0.3); color:#ff2d78; padding:4px 8px; border-radius:6px; font-size:11px; width:100%; cursor:pointer;">Снять</button>`;
+                }
+
                 const key = cachePreviewItem(b);
                 html += `<div class="shop-item" onclick="startPreviewById('badge', '${key}')"><div class="shop-img" style="background: #222; display:flex; align-items:center; justify-content:center;"><img src="${safeUrl(b.image_url)}" style="width:50px; height:50px; object-fit:contain;"></div><div class="shop-info"><div class="shop-name">${escapeHTML(b.name)}</div>${btnHtml}</div></div>`;
             });
@@ -1003,7 +1039,7 @@ async function applyEffect(effectId) { if (!supabaseClient) return; let stats = 
 async function resetEffect() { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_effect: null }).eq('id', MY_ID); stats.active_effect = null; saveStats(stats); ACTIVE_EFFECT_CSS = ''; showToast('Эффект снят'); await loadProfileData(); switchShopView('inventory'); } catch(e) {} }
 async function applyBadge(badgeId) { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_badge: badgeId }).eq('id', MY_ID); stats.active_badge = badgeId; saveStats(stats); showToast('Значок надет!'); await loadProfileData(); switchShopView('inventory'); } catch(e) {} }
 async function resetBadge() { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_badge: null }).eq('id', MY_ID); stats.active_badge = null; saveStats(stats); ACTIVE_BADGE_URL = ''; showToast('Значок снят'); await loadProfileData(); switchShopView('inventory'); } catch(e) {} }
-async function applyFrame(frameId) { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_frame: frameId }).eq('id', MY_ID); stats.active_frame = frameId; saveStats(stats); showToast('Рамка надета!'); await loadProfileData(); switchShopView('inventory'); } catch(e) {} }
+async function applyFrame(frameId) { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_frame: frameId }).eq('id', MY_ID); stats.active_frame = frameId; saveStats(stats); showToast('Рамка обновлена!'); await loadProfileData(); switchShopView('inventory'); } catch(e) {} }
 async function buyBanner(bannerId, price) {
     let stats = getStats();
     if (stats.coins < price) { showToast('Недостаточно монет!'); return; }
@@ -1040,7 +1076,7 @@ async function resetBanner() {
     const bannerEl = document.getElementById('profile-banner');
     if (bannerEl) bannerEl.style.backgroundImage = 'none';
     showToast('Баннер снят');
-    switchTab('profile');
+    await loadProfileData(); switchShopView('inventory');
 }
 
 // ==========================================
@@ -1501,8 +1537,7 @@ function playEpisode(epNum) {
     let stats = getStats();
     stats.episodesWatched += 1; stats.minutesWatched += 24;
     saveStats(stats); checkAchievements(stats); addXP(5); syncProfileToDB(true);
-    if (tg && tg.showAlert) tg.showAlert(`Просмотр:\n${currentAnimeForPlayer.title_ru}\n${selectedVoice}\n${selectedPlayer}\nСерия: ${epNum}`);
-    else showToast(`Серия ${epNum} (плеер в разработке)`);
+    showToast(`Просмотр: Серия ${epNum}`);
     currentAnimeForPlayer = null; switchTab('home');
 }
 
@@ -1586,7 +1621,7 @@ async function loadCatalog(reset = false) {
             const title = escapeHTML(anime.title_ru);
             const img = safeUrl(anime.images.jpg.image_url);
             const score = anime.score ? Number(anime.score).toFixed(1) : '?';
-            grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;display:flex;align-items:center;gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${score}</div><div class="catalog-card-title">${title}</div></div>`);
+            grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy" decoding="async"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;display:flex;align-items:center;gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${score}</div><div class="catalog-card-title">${title}</div></div>`);
         });
         hasMoreCatalog = items.length >= 30;
         if (lm) lm.style.display = hasMoreCatalog ? 'inline-block' : 'none';
@@ -1652,7 +1687,7 @@ async function searchFranchiseByTitle(anime) {
 
         let ruTitle = rawTitle;
         try {
-            const cached = await getCachedTitle(item.id);
+            const cached = await getCachedAnime(item.id);
             if (cached && cached.title_ru) {
                 ruTitle = cached.title_ru;
             } else {
@@ -1699,49 +1734,58 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
     let similarItems = [];
 
     try {
-        const anime = await API.getDetails(id);
+        // Запускаем загрузку деталей и связанных данных параллельно, где это возможно
+        const animePromise = API.getDetails(id);
+        
+        const anime = await animePromise;
         if (!anime) throw new Error('Anime not found');
 
-        try { franchiseItems = await searchFranchiseByTitle(anime); } catch(e) { console.error('Franchise error:', e); }
-        try { shikiScreenshots = await getShikimoriScreenshots(anime.idMal); } catch(e) { console.error('Shiki error:', e); }
-        
-        try {
-            if (anime.genres && anime.genres.length > 0) {
-                const genreQuery = `query($genre: String) { Page(page: 1, perPage: 10) { media(type: ANIME, genre: $genre, sort: POPULARITY_DESC, genre_not_in:["Hentai","Ecchi","Erotica"]) { id title{romaji english native} coverImage{large} averageScore seasonYear format } } }`;
-                const genreData = await API_AniList.fetch(genreQuery, { genre: anime.genres[0] });
-                if (genreData?.Page?.media) {
-                    similarItems = await processWithLimit(
-                        genreData.Page.media.filter(m => String(m.id) !== String(anime.rawId)).slice(0, 6), 
-                        3, 
-                        async (m) => {
-                            const rawTitle = m.title?.romaji || m.title?.english || m.title?.native || '';
-                            let ruTitle = rawTitle;
-                            if (!/[а-яА-ЯёЁ]/.test(rawTitle)) {
-                                try {
-                                    const cached = await getCachedTitle(m.id);
-                                    if (cached && cached.title_ru) {
-                                        ruTitle = cached.title_ru;
-                                    } else {
-                                        const anilibria = await API_AniLibria.searchRussian(rawTitle);
-                                        if (anilibria) ruTitle = anilibria;
-                                        else {
-                                            const shiki = await API_Shikimori.getRussianData(rawTitle);
-                                            if (shiki.russian) ruTitle = shiki.russian;
+        const [franchiseRes, shikiRes, similarRes] = await Promise.allSettled([
+            searchFranchiseByTitle(anime),
+            getShikimoriScreenshots(anime.idMal),
+            (async () => {
+                if (anime.genres && anime.genres.length > 0) {
+                    const genreQuery = `query($genre: String) { Page(page: 1, perPage: 10) { media(type: ANIME, genre: $genre, sort: POPULARITY_DESC, genre_not_in:["Hentai","Ecchi","Erotica"]) { id title{romaji english native} coverImage{large} averageScore seasonYear format } } }`;
+                    const genreData = await API_AniList.fetch(genreQuery, { genre: anime.genres[0] });
+                    if (genreData?.Page?.media) {
+                        return await processWithLimit(
+                            genreData.Page.media.filter(m => String(m.id) !== String(anime.rawId)).slice(0, 6), 
+                            3, 
+                            async (m) => {
+                                const rawTitle = m.title?.romaji || m.title?.english || m.title?.native || '';
+                                let ruTitle = rawTitle;
+                                if (!/[а-яА-ЯёЁ]/.test(rawTitle)) {
+                                    try {
+                                        const cached = await getCachedAnime(m.id);
+                                        if (cached && cached.title_ru) {
+                                            ruTitle = cached.title_ru;
+                                        } else {
+                                            const anilibria = await API_AniLibria.searchRussian(rawTitle);
+                                            if (anilibria) ruTitle = anilibria;
+                                            else {
+                                                const shiki = await API_Shikimori.getRussianData(rawTitle);
+                                                if (shiki.russian) ruTitle = shiki.russian;
+                                            }
                                         }
-                                    }
-                                } catch(e) {}
+                                    } catch(e) {}
+                                }
+                                return {
+                                    id: 'anilist_' + m.id,
+                                    title: ruTitle,
+                                    image: m.coverImage.large,
+                                    score: m.averageScore ? (m.averageScore/10).toFixed(1) : '?'
+                                };
                             }
-                            return {
-                                id: 'anilist_' + m.id,
-                                title: ruTitle,
-                                image: m.coverImage.large,
-                                score: m.averageScore ? (m.averageScore/10).toFixed(1) : '?'
-                            };
-                        }
-                    );
+                        );
+                    }
                 }
-            }
-        } catch(e) { console.error('Similar error:', e); }
+                return [];
+            })()
+        ]);
+
+        if (franchiseRes.status === 'fulfilled') franchiseItems = franchiseRes.value;
+        if (shikiRes.status === 'fulfilled') shikiScreenshots = shikiRes.value;
+        if (similarRes.status === 'fulfilled') similarItems = similarRes.value || [];
 
         if (supabaseClient && MY_ID) {
             try {
@@ -1773,7 +1817,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 <div style="display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">
                     ${franchiseItems.map(r => `
                         <div class="card" style="min-width: 130px; width: 130px; height: 195px;" onclick="openAnimeDetail('${escapeHTML(r.id)}', 'detail')">
-                            <img class="card-img" src="${safeUrl(r.image)}" loading="lazy">
+                            <img class="card-img" src="${safeUrl(r.image)}" loading="lazy" decoding="async">
                             <div style="position:absolute;top:8px;left:8px;background:rgba(91,91,255,0.8);padding:2px 6px;border-radius:6px;font-size:9px;color:#fff;font-weight:bold;">${r.year || r.format}</div>
                             <div class="card-title">${escapeHTML(r.title)}</div>
                         </div>
@@ -1830,7 +1874,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             hasScreenshots = true;
             screenshotsHtml = shikiScreenshots.map((url) => `
                 <div style="scroll-snap-align: start; flex: 0 0 75%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; background: #222; border: 1px solid rgba(255,255,255,0.1); position: relative;">
-                    <img src="${safeUrl(url)}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none'">
+                    <img src="${safeUrl(url)}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none'">
                 </div>
             `).join('');
         }
@@ -1843,7 +1887,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 <div style="display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">
                     ${similarItems.map(s => `
                         <div class="card" style="min-width: 130px; width: 130px; height: 195px;" onclick="openAnimeDetail('${escapeHTML(s.id)}', 'detail')">
-                            <img class="card-img" src="${safeUrl(s.image)}" loading="lazy">
+                            <img class="card-img" src="${safeUrl(s.image)}" loading="lazy" decoding="async">
                             <div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;display:flex;align-items:center;gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${s.score}</div>
                             <div class="card-title">${escapeHTML(s.title)}</div>
                         </div>
@@ -1896,7 +1940,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         container.innerHTML = `
         <div class="fade-in" style="position: relative;">
             <div style="position: absolute; top: 0; left: -20px; width: calc(100% + 40px); height: 400px; z-index: -1; overflow: hidden;">
-                <img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; object-position: center top; opacity: 0.6; mask-image: linear-gradient(to bottom, black 30%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 30%, transparent 100%);">
+                <img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; object-position: center top; opacity: 0.6; mask-image: linear-gradient(to bottom, black 30%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 30%, transparent 100%);" fetchpriority="high">
                 <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(10,10,15,0.3) 0%, transparent 20%, var(--bg) 100%);"></div>
             </div>
 
@@ -1906,7 +1950,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
 
             <div style="padding-top: 100px;">
                 <div style="display: flex; gap: 16px; margin-bottom: 25px; align-items: flex-end;">
-                    <img class="detail-poster" src="${poster}" style="width: 110px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); object-fit: cover; aspect-ratio: 2/3; flex-shrink: 0;">
+                    <img class="detail-poster" src="${poster}" style="width: 110px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); object-fit: cover; aspect-ratio: 2/3; flex-shrink: 0;" fetchpriority="high">
                     <div style="flex: 1; min-width: 0; padding-bottom: 2px;">
                         <h1 style="font-size: 20px; font-weight: 800; line-height: 1.15; margin-bottom: 6px; color: #fff; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">${title}</h1>
                         <p style="font-size: 12px; color: #ddd; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${titleRaw} (${anime.year})</p>
@@ -2032,7 +2076,6 @@ async function setAnimeStatus(status) {
 function toggleDescription() { const d = document.getElementById('desc-text'); const b = document.getElementById('desc-btn'); if (d.style.webkitLineClamp === '4' || d.style.webkitLineClamp === '') { d.style.webkitLineClamp = 'unset'; b.innerHTML = 'Свернуть ▲'; } else { d.style.webkitLineClamp = '4'; b.innerHTML = 'Читать дальше ▼'; } }
 
 async function openRandomAnime() { 
-    if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium'); 
     showToast('Ищем...'); 
     try { 
         API._cache.delete('r_1'); 
@@ -2110,7 +2153,7 @@ function renderMyListCard(anime, grid) {
          ontouchend="if(window._touchTimer) { clearTimeout(window._touchTimer); window._touchTimer = null; }"
          ontouchmove="if(window._touchTimer) { clearTimeout(window._touchTimer); window._touchTimer = null; }">
         
-        <img class="catalog-card-img" src="${img}" loading="lazy">
+        <img class="catalog-card-img" src="${img}" loading="lazy" decoding="async">
         
         ${nextEpHtml}
         
@@ -2277,7 +2320,7 @@ async function loadTopUsers() {
 function renderSectionCards(container, items, fromScreen = 'home') {
     if (!container) return;
     if (!items || items.length === 0) { container.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; return; }
-    container.innerHTML = items.map(anime => { const title = escapeHTML(anime.title_ru); const img = safeUrl(anime.images.jpg.image_url); return `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', '${fromScreen}')"><img class="card-img" src="${img}" loading="lazy"><div class="card-title">${title}</div></div>`; }).join('');
+    container.innerHTML = items.map(anime => { const title = escapeHTML(anime.title_ru); const img = safeUrl(anime.images.jpg.image_url); return `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', '${fromScreen}')"><img class="card-img" src="${img}" loading="lazy" decoding="async"><div class="card-title">${title}</div></div>`; }).join('');
 }
 
 // ==========================================
@@ -2451,7 +2494,7 @@ function checkAchievements(s) {
 }
 function addXP(amount) {
     let s = getStats(); const oldL = Math.floor(s.xp/100)+1; s.xp += amount; const newL = Math.min(Math.floor(s.xp/100)+1, 999);
-    if (newL > oldL) { const rc = Math.floor(100 + Math.pow(newL, 2.5) * 2); s.coins += rc; showLevelUpPopup(newL, LEVEL_TITLES[Math.min(newL-1, LEVEL_TITLES.length-1)] || 'Легенда', rc); if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); } else showToast(`+${amount} XP`);
+    if (newL > oldL) { const rc = Math.floor(100 + Math.pow(newL, 2.5) * 2); s.coins += rc; showLevelUpPopup(newL, LEVEL_TITLES[Math.min(newL-1, LEVEL_TITLES.length-1)] || 'Легенда', rc); } else showToast(`+${amount} XP`);
     saveStats(s); checkAchievements(s);
 }
 function addXPForTime(min) {
