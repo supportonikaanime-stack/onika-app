@@ -632,14 +632,17 @@ async function loadProfileData() {
 // ==========================================
 // 3.1 СТАТИСТИКА ПРОФИЛЯ (ДИАГРАММА)
 // ==========================================
-async function loadProfileStats() {
-    if (!supabaseClient || !MY_ID) return;
+async function loadProfileStats(userId = null) {
+    const targetId = userId || MY_ID;
+    if (!supabaseClient || !targetId) return;
+
+    const isFriend = userId && userId !== MY_ID;
+    const prefix = isFriend ? 'friend-' : '';
     
     try {
-        const { data: lists, error } = await supabaseClient.from('user_lists').select('status').eq('user_id', MY_ID);
+        const { data: lists, error } = await supabaseClient.from('user_lists').select('status').eq('user_id', targetId);
         if (error) throw error;
 
-        // Считаем статусы. Учитываем favorite как отдельный статус.
         const counts = { watching: 0, planned: 0, completed: 0, dropped: 0, favorite: 0 };
         
         (lists || []).forEach(item => {
@@ -648,41 +651,46 @@ async function loadProfileStats() {
             }
         });
 
-        // Обновляем цифры в легенде
-        setElText('stat-watching', counts.watching);
-        setElText('stat-planned', counts.planned);
-        setElText('stat-completed', counts.completed);
-        setElText('stat-favorite', counts.favorite);
-        setElText('stat-dropped', counts.dropped);
+        const el = (id) => document.getElementById(prefix + id) || document.getElementById(id);
+        
+        if (el('stat-watching')) el('stat-watching').textContent = counts.watching;
+        if (el('stat-planned')) el('stat-planned').textContent = counts.planned;
+        if (el('stat-completed')) el('stat-completed').textContent = counts.completed;
+        if (el('stat-favorite')) el('stat-favorite').textContent = counts.favorite;
+        if (el('stat-dropped')) el('stat-dropped').textContent = counts.dropped;
 
-        // Время просмотра из локальной статистики
-        const stats = getStats();
-        const totalHours = Math.floor((stats.minutesWatched || 0) / 60);
+        let minutes = 0;
+        if (isFriend) {
+            const { data: friendData } = await supabaseClient.from('users').select('minutes_watched').eq('id', targetId).single();
+            if (friendData) minutes = friendData.minutes_watched || 0;
+        } else {
+            minutes = getStats().minutesWatched || 0;
+        }
+        
+        const totalHours = Math.floor(minutes / 60);
         const days = Math.floor(totalHours / 24);
         const hours = totalHours % 24;
-        setElText('stat-total-time', `~ ${days} дн. ${hours} ч.`);
+        if (el('stat-total-time')) el('stat-total-time').textContent = `~ ${days} дн. ${hours} ч.`;
 
-        // Рисуем диаграмму
         const total = counts.watching + counts.planned + counts.completed + counts.dropped + counts.favorite;
-        const donut = document.getElementById('donut-chart');
+        const donut = el('donut-chart');
         
+        if (!donut) return;
+
         if (total === 0) {
             donut.style.background = 'conic-gradient(#2a2a3e 0% 100%)';
             return;
         }
 
-        // Проценты
         const pWatching = (counts.watching / total) * 100;
         const pPlanned = (counts.planned / total) * 100;
         const pCompleted = (counts.completed / total) * 100;
         const pDropped = (counts.dropped / total) * 100;
         const pFavorite = (counts.favorite / total) * 100;
 
-        // Накопительные значения для conic-gradient
         let acc = 0;
         const stops = [];
         
-        // Порядок и цвета совпадают с легендой
         if (counts.completed > 0) { stops.push(`#5b5bff ${acc}% ${acc + pCompleted}%`); acc += pCompleted; }
         if (counts.watching > 0) { stops.push(`#6b8e23 ${acc}% ${acc + pWatching}%`); acc += pWatching; }
         if (counts.planned > 0) { stops.push(`#a259ff ${acc}% ${acc + pPlanned}%`); acc += pPlanned; }
@@ -1312,6 +1320,17 @@ async function openFriendProfile(id, name = '') {
         const nameChar = friend.name && friend.name[0] ? escapeHTML(friend.name[0].toUpperCase()) : '?';
         const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : nameChar;
 
+        let addFriendBtnHtml = '';
+        if (id !== MY_ID && !isFriend) {
+            addFriendBtnHtml = `
+                <button onclick="sendFriendRequest('${escapeHTML(String(friend.id))}'); this.innerHTML='<svg style=\\'width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2.5;\\'><use href=\\'#oa-check\\'></use></svg>'; this.style.background='#2ecc71'; this.style.borderColor='#14141f'; this.style.pointerEvents='none';" 
+                        class="ripple-btn"
+                        style="position: absolute; bottom: 0; right: 0; background: #5b5bff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #14141f; z-index: 10; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: 0.2s;">
+                    <svg style="width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-plus"></use></svg>
+                </button>
+            `;
+        }
+
         container.innerHTML = `
             <div style="padding-bottom: 40px;">
                 <div id="friend-profile-banner" style="position: relative; width: 100%; height: 220px; background: ${friendBannerUrl ? `url('${friendBannerUrl}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)'}; background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
@@ -1322,6 +1341,7 @@ async function openFriendProfile(id, name = '') {
                             <div class="avatar" style="width: 100%; height: 100%; border-radius: 50%; background: #222; border: 4px solid #14141f; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; overflow: hidden; position: relative; z-index: 2;">
                                 ${avatarHtml}
                             </div>
+                            ${addFriendBtnHtml}
                         </div>
                     </div>
                 </div>
@@ -1382,14 +1402,67 @@ async function openFriendProfile(id, name = '') {
                         <div class="ach-progress-wrap"><div class="ach-progress-bar" style="width: ${(friendAchCount / totalAchCount) * 100}%;"></div></div>
                     </div>
                 </div>
+
+                <!-- БЛОК СТАТИСТИКИ ДЛЯ ПРОФИЛЯ ДРУГА -->
+                <div style="padding: 15px 20px 0 20px;">
+                    <div style="background: rgba(20, 20, 31, 0.6); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
+                        <div style="margin-bottom: 20px;">
+                            <h3 style="font-size: 18px; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                Статистика
+                                <svg class="icon-inline" style="color: #888; width: 16px; height: 16px;"><use href="#oa-alert-circle"></use></svg>
+                            </h3>
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+                            <!-- Легенда -->
+                            <div style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
+                                <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500;">
+                                    <div style="width: 16px; height: 16px; border-radius: 4px; background: #6b8e23; box-shadow: 0 0 8px rgba(107,142,35,0.6);"></div>
+                                    <span style="color: #aaa; flex: 1;">Смотрю</span>
+                                    <span style="color: #fff; font-weight: 700;" id="friend-stat-watching">0</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500;">
+                                    <div style="width: 16px; height: 16px; border-radius: 4px; background: #a259ff; box-shadow: 0 0 8px rgba(162,89,255,0.6);"></div>
+                                    <span style="color: #aaa; flex: 1;">В планах</span>
+                                    <span style="color: #fff; font-weight: 700;" id="friend-stat-planned">0</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500;">
+                                    <div style="width: 16px; height: 16px; border-radius: 4px; background: #5b5bff; box-shadow: 0 0 8px rgba(91,91,255,0.6);"></div>
+                                    <span style="color: #aaa; flex: 1;">Просмотрено</span>
+                                    <span style="color: #fff; font-weight: 700;" id="friend-stat-completed">0</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500;">
+                                    <div style="width: 16px; height: 16px; border-radius: 4px; background: #ff69b4; box-shadow: 0 0 8px rgba(255,105,180,0.6);"></div>
+                                    <span style="color: #aaa; flex: 1;">Любимое</span>
+                                    <span style="color: #fff; font-weight: 700;" id="friend-stat-favorite">0</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500;">
+                                    <div style="width: 16px; height: 16px; border-radius: 4px; background: #e74c3c; box-shadow: 0 0 8px rgba(231,76,60,0.6);"></div>
+                                    <span style="color: #aaa; flex: 1;">Заброшено</span>
+                                    <span style="color: #fff; font-weight: 700;" id="friend-stat-dropped">0</span>
+                                </div>
+                            </div>
+
+                            <!-- Пончик-диаграмма -->
+                            <div style="position: relative; width: 120px; height: 120px; flex-shrink: 0; display: flex; justify-content: center; align-items: center;">
+                                <div id="friend-donut-chart" style="width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(#2a2a3e 0% 100%); position: relative; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 10px rgba(255,255,255,0.1));">
+                                    <div style="width: 70%; height: 70%; background: #14141f; border-radius: 50%; position: absolute; box-shadow: inset 0 0 15px rgba(0,0,0,0.5);"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 15px; color: #ccc;">
+                                <span>Время просмотра:</span>
+                                <span style="font-weight: 700; color: #fff;" id="friend-stat-total-time">~ 0 дней 0 часов</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 <div style="padding: 20px;">
-                    ${id !== MY_ID ? `
-                        ${isFriend ? `
-                            <button onclick="removeFriend('${escapeHTML(String(friend.id))}')" class="ripple-btn" style="width: 100%; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">Удалить из друзей</button>
-                        ` : `
-                            <button onclick="sendFriendRequest('${escapeHTML(String(friend.id))}'); this.innerHTML='Заявка отправлена'; this.style.opacity='0.7';" class="ripple-btn" style="width: 100%; padding: 14px; border-radius: 14px; border: 1px solid rgba(91,91,255,0.3); background: rgba(91,91,255,0.1); color: #5b5bff; font-weight: bold; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;"><svg class="icon-inline" style="width:18px; height:18px;"><use href="#oa-friends"></use></svg> Добавить в друзья</button>
-                        `}
+                    ${id !== MY_ID && isFriend ? `
+                        <button onclick="removeFriend('${escapeHTML(String(friend.id))}')" class="ripple-btn" style="width: 100%; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">Удалить из друзей</button>
                     ` : ''}
                 </div>
             </div>
@@ -1397,6 +1470,7 @@ async function openFriendProfile(id, name = '') {
         
         setTimeout(() => { 
             renderEffectParticles(document.getElementById('friend-particle-container'), friendEffectClass); 
+            loadProfileStats(id); 
         }, 100);
 
     } catch (e) { 
