@@ -99,7 +99,7 @@
         
         .hero-title { font-size: 28px; font-weight: 800; line-height: 1.15; margin-bottom: 12px; color: #fff; text-shadow: 0 4px 20px rgba(0,0,0,0.8); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .hero-actions { display: flex; gap: 12px; align-items: center; }
-        .btn-primary { flex: 1; background: linear-gradient(90deg, #5b5bff 0%, #7d7dff 50%, #5b5bff 100%); background-size: 200% 100%; animation: btnShine 4s linear infinite; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 8px 25px rgba(91,91,255,0.4); cursor: pointer; }
+        .btn-primary { flex: 1; background: linear-gradient(90deg, #00BFFF 0%, #FF8C00 50%, #00BFFF 100%); background-size: 200% 100%; animation: btnShine 4s linear infinite; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 8px 25px rgba(0,191,255,0.35); cursor: pointer; }
         .btn-primary:active { transform: scale(0.96); }
         .hero-actions .btn-primary { padding: 13px; font-size: 15px; border-radius: 12px; }
         .hero-actions .btn-icon-heart { width: 48px; height: 48px; border-radius: 12px; }
@@ -223,7 +223,7 @@
         .level-title { font-size: 12px; color: #fff; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
         .level-title .rank { color: #b44aff; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 10px rgba(180, 74, 255, 0.8); font-size: 14px;}
         .xp-bar-container { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.05); }
-        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 4px; animation: xpPulse 2s ease-in-out infinite; }
+        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #00BFFF, #FF8C00); border-radius: 4px; animation: xpPulse 2s ease-in-out infinite; }
         .xp-text { font-size: 12px; color: #aaa; text-align: right; font-weight: 600; }
         
         .profile-tabs { display: flex; background: #14141f; border-radius: 15px; padding: 5px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.05); }
@@ -289,7 +289,7 @@
         .modal-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 5px; }
         .modal-subtitle { font-size: 14px; color: #888; margin-bottom: 20px; word-wrap: break-word; line-height: 1.4; }
         .modal-xp-bar { width: 100%; height: 10px; background: #333; border-radius: 5px; overflow: hidden; margin-bottom: 10px; }
-        .modal-xp-fill { height: 100%; background: linear-gradient(90deg, #5b5bff, #00f5ff); border-radius: 5px; box-shadow: 0 0 10px #00f5ff; }
+        .modal-xp-fill { height: 100%; background: linear-gradient(90deg, #00BFFF, #FF8C00); border-radius: 5px; box-shadow: 0 0 10px rgba(255,140,0,0.7); }
         .modal-xp-text { font-size: 12px; color: #aaa; text-align: right; margin-bottom: 20px; }
         .modal-desc { font-size: 14px; color: #ccc; line-height: 1.5; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; text-align: left; }
         
@@ -702,7 +702,7 @@
         <div style="padding: 0 20px;">
             <div onclick="openLevelModal()" style="position: relative; background: rgba(20, 20, 31, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; overflow: hidden; cursor: pointer; backdrop-filter: blur(10px);">
                 <!-- Заполняющая полоса прогресса (находится под текстом) -->
-                <div id="user-xp-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, rgba(91,91,255,0.8), rgba(0,245,255,0.8)); z-index: 1; transition: width 0.5s ease;"></div>
+                <div id="user-xp-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, rgba(0,191,255,0.85), rgba(255,140,0,0.85)); z-index: 1; transition: width 0.5s ease;"></div>
                 
                 <!-- Текст поверх полосы -->
                 <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; width: 100%;">
@@ -850,7 +850,7 @@
             <div style="padding: 0 20px 100px 20px;">
                 <!-- НОВЫЙ БЛОК УРОВНЯ В ПРЕДПРОСМОТРЕ -->
                 <div style="position: relative; background: rgba(20, 20, 31, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; overflow: hidden; backdrop-filter: blur(10px);">
-                    <div id="preview-xp-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, rgba(91,91,255,0.8), rgba(0,245,255,0.8)); z-index: 1;"></div>
+                    <div id="preview-xp-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, rgba(0,191,255,0.85), rgba(255,140,0,0.85)); z-index: 1;"></div>
                     <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; width: 100%;">
                         <div style="font-size: 12px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">LVL: <span id="preview-level">1</span></div>
                         <div style="font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);"><span id="preview-xp-current">0</span> / 100 XP</div>
