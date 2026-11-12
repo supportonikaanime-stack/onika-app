@@ -1272,13 +1272,13 @@ async function openFriendProfile(id, name = '') {
                     </div>
                 </div>
 
-                <!-- НОВЫЙ БЛОК УРОВНЯ В ПРОФИЛЕ ДРУГА -->
+                <!-- БЛОК УРОВНЯ В ПРОФИЛЕ ДРУГА (такой же как в основном профиле) -->
                 <div style="padding: 0 20px;">
-                    <div style="position: relative; background: rgba(20, 20, 31, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; overflow: hidden; backdrop-filter: blur(10px);">
-                        <div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${currentLevelXP}%; background: linear-gradient(90deg, rgba(91,91,255,0.8), rgba(0,245,255,0.8)); z-index: 1;"></div>
+                    <div style="position: relative; background: rgba(20, 20, 31, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; overflow: hidden; backdrop-filter: blur(10px);">
+                        <div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${currentLevelXP}%; background: linear-gradient(90deg, rgba(0,191,255,0.85), rgba(255,140,0,0.85)); z-index: 1;"></div>
                         <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                            <div style="font-size: 18px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">LVL: ${lvl}</div>
-                            <div style="font-size: 14px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">${currentLevelXP} / 100 XP</div>
+                            <div style="font-size: 12px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">LVL: ${lvl}</div>
+                            <div style="font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">${currentLevelXP} / 100 XP</div>
                         </div>
                     </div>
                 </div>
