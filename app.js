@@ -1272,11 +1272,11 @@ async function openFriendProfile(id, name = '') {
                     </div>
                 </div>
 
-                <!-- БЛОК УРОВНЯ В ПРОФИЛЕ ДРУГА (такой же как в основном профиле) -->
+                <!-- СТЕКЛЯННАЯ КАПСУЛА УРОВНЯ В ПРОФИЛЕ ДРУГА -->
                 <div style="padding: 0 20px;">
-                    <div style="position: relative; background: rgba(20, 20, 31, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; overflow: hidden; backdrop-filter: blur(10px);">
-                        <div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${currentLevelXP}%; background: linear-gradient(90deg, rgba(123,104,238,0.85), rgba(100,149,237,0.85)); z-index: 1;"></div>
-                        <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div class="xp-capsule">
+                        <div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${currentLevelXP}%; background: linear-gradient(90deg, rgba(123,104,238,0.85), rgba(100,149,237,0.85)); z-index: 1; border-radius: 12px;"></div>
+                        <div style="position: relative; z-index: 4; display: flex; justify-content: space-between; align-items: center; width: 100%;">
                             <div style="font-size: 12px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">LVL: ${lvl}</div>
                             <div style="font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">${currentLevelXP} / 100 XP</div>
                         </div>
