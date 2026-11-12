@@ -626,6 +626,74 @@ async function loadProfileData() {
     if (friendIdEl && MY_PUBLIC_ID) friendIdEl.textContent = MY_PUBLIC_ID;
 
     await syncProfileToDB();
+    loadProfileStats(); 
+}
+
+// ==========================================
+// 3.1 СТАТИСТИКА ПРОФИЛЯ (ДИАГРАММА)
+// ==========================================
+async function loadProfileStats() {
+    if (!supabaseClient || !MY_ID) return;
+    
+    try {
+        const { data: lists, error } = await supabaseClient.from('user_lists').select('status').eq('user_id', MY_ID);
+        if (error) throw error;
+
+        // Считаем статусы. Учитываем favorite как отдельный статус.
+        const counts = { watching: 0, planned: 0, completed: 0, dropped: 0, favorite: 0 };
+        
+        (lists || []).forEach(item => {
+            if (counts[item.status] !== undefined) {
+                counts[item.status]++;
+            }
+        });
+
+        // Обновляем цифры в легенде
+        setElText('stat-watching', counts.watching);
+        setElText('stat-planned', counts.planned);
+        setElText('stat-completed', counts.completed);
+        setElText('stat-favorite', counts.favorite);
+        setElText('stat-dropped', counts.dropped);
+
+        // Время просмотра из локальной статистики
+        const stats = getStats();
+        const totalHours = Math.floor((stats.minutesWatched || 0) / 60);
+        const days = Math.floor(totalHours / 24);
+        const hours = totalHours % 24;
+        setElText('stat-total-time', `~ ${days} дн. ${hours} ч.`);
+
+        // Рисуем диаграмму
+        const total = counts.watching + counts.planned + counts.completed + counts.dropped + counts.favorite;
+        const donut = document.getElementById('donut-chart');
+        
+        if (total === 0) {
+            donut.style.background = 'conic-gradient(#2a2a3e 0% 100%)';
+            return;
+        }
+
+        // Проценты
+        const pWatching = (counts.watching / total) * 100;
+        const pPlanned = (counts.planned / total) * 100;
+        const pCompleted = (counts.completed / total) * 100;
+        const pDropped = (counts.dropped / total) * 100;
+        const pFavorite = (counts.favorite / total) * 100;
+
+        // Накопительные значения для conic-gradient
+        let acc = 0;
+        const stops = [];
+        
+        // Порядок и цвета совпадают с легендой
+        if (counts.completed > 0) { stops.push(`#5b5bff ${acc}% ${acc + pCompleted}%`); acc += pCompleted; }
+        if (counts.watching > 0) { stops.push(`#6b8e23 ${acc}% ${acc + pWatching}%`); acc += pWatching; }
+        if (counts.planned > 0) { stops.push(`#a259ff ${acc}% ${acc + pPlanned}%`); acc += pPlanned; }
+        if (counts.favorite > 0) { stops.push(`#ff69b4 ${acc}% ${acc + pFavorite}%`); acc += pFavorite; }
+        if (counts.dropped > 0) { stops.push(`#e74c3c ${acc}% ${acc + pDropped}%`); acc += pDropped; }
+
+        donut.style.background = `conic-gradient(${stops.join(', ')})`;
+
+    } catch (e) {
+        console.error('Ошибка загрузки статистики:', e);
+    }
 }
 
 async function uploadAvatar(event) {
@@ -1883,6 +1951,7 @@ async function setAnimeStatus(status) {
         checkAchievements(stats); await syncProfileToDB(true);
         
         if (document.getElementById('screen-my').classList.contains('active')) renderMyList();
+        if (document.getElementById('screen-profile').classList.contains('active')) loadProfileStats();
         
     } catch(e) { console.error(e); showToast('Ошибка'); }
 }
@@ -2086,10 +2155,6 @@ async function loadTopUsers() {
             const nameChar = user.name && user.name[0] ? escapeHTML(user.name[0].toUpperCase()) : '?';
             const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:100%; height:100%; object-fit:cover;">` : nameChar;
 
-            const lvl = Math.floor((user.xp || 0) / 100) + 1;
-            const achCount = (user.unlocked_achievements || []).length;
-            const hours = Math.floor((user.minutes_watched || 0) / 60);
-
             let rankIndicator = '';
             let nameColor = 'var(--text)';
 
@@ -2106,26 +2171,6 @@ async function loadTopUsers() {
                 rankIndicator = `<div style="width: 18px; height: 18px; margin-right: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); border-radius: 50%; font-size: 11px; font-weight: bold; color: #aaa; flex-shrink: 0;">${index + 1}</div>`;
             }
 
-            const statBlock = `
-                <div style="display: flex; justify-content: space-around; width: 100%; margin-top: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 6px 0;">
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                        <svg class="icon-inline" style="width: 14px; height: 14px; color: #ffd700;"><use href="#oa-star"></use></svg>
-                        <span style="font-size: 11px; font-weight: bold; color: #fff; line-height: 1;">${lvl}</span>
-                        <span style="font-size: 8px; color: #888; text-transform: uppercase;">lvl</span>
-                    </div>
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                        <svg class="icon-inline" style="width: 14px; height: 14px; color: #b44aff;"><use href="#oa-trophy"></use></svg>
-                        <span style="font-size: 11px; font-weight: bold; color: #fff; line-height: 1;">${achCount}</span>
-                        <span style="font-size: 8px; color: #888; text-transform: uppercase;">ach</span>
-                    </div>
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                        <svg class="icon-inline" style="width: 14px; height: 14px; color: #00d2ff;"><use href="#oa-clock"></use></svg>
-                        <span style="font-size: 11px; font-weight: bold; color: #fff; line-height: 1;">${hours}</span>
-                        <span style="font-size: 8px; color: #888; text-transform: uppercase;">hrs</span>
-                    </div>
-                </div>
-            `;
-
             return `
                 <div onclick="openUserFromTop('${escapeHTML(String(user.id))}')" style="display: flex; align-items: flex-start; background: #14141f; border-radius: 12px; padding: 12px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: transform 0.15s ease;" onpointerdown="this.style.transform='scale(0.98)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">
                     <div style="display: flex; align-items: center; margin-right: 12px; margin-top: 2px;">
@@ -2141,7 +2186,6 @@ async function loadTopUsers() {
                             ${badgeHtml}
                         </div>
                         ${titleHtml}
-                        ${statBlock}
                     </div>
                 </div>
             `;
