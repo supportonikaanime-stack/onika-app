@@ -394,7 +394,6 @@ async function buildAnimeObject(raw) {
 const API = {
     _cache: new Map(),
     async _cached(key, fn) {
-        // Кэш в памяти живет 30 минут
         if (this._cache.has(key) && Date.now()-this._cache.get(key).t < 30*60*1000) return this._cache.get(key).d;
         try { const d = await fn(); this._cache.set(key,{d,t:Date.now()}); return d; } catch(e) { return null; }
     },
@@ -507,7 +506,11 @@ function switchTab(tabName, element) {
     }
     if (tabName==='achievements') renderAchievementsPage();
     if (tabName==='history') renderWatchHistory();
-    if (tabName==='shop') { currentShopView = 'catalog'; switchShopView('catalog'); renderShopTab(currentShopTab); }
+    if (tabName==='shop') { 
+        currentShopView = 'catalog'; switchShopView('catalog'); renderShopTab(currentShopTab); 
+        const c = getStats().coins;
+        setElText('shop-coins', c);
+    }
 }
 
 function goBackFromDetail() { if (previousScreen==='my') switchTab('my'); else if (previousScreen==='home') switchTab('home'); else if (previousScreen==='friends') switchTab('friends'); else switchTab('catalog'); }
@@ -793,14 +796,6 @@ function renderPreviewCard() {
     if (badgeEl) { if (ACTIVE_BADGE_URL) { badgeEl.src = ACTIVE_BADGE_URL; badgeEl.style.display = 'block'; } else { badgeEl.style.display = 'none'; } }
     const titleContainer = document.getElementById('preview-title-container'); const titleEl = document.getElementById('preview-active-title');
     if (titleContainer && titleEl) { if (ACTIVE_TITLE_DATA) { titleContainer.style.display = 'block'; applyTitleToElement(titleEl, ACTIVE_TITLE_DATA); } else { titleContainer.style.display = 'none'; } }
-    setElText('preview-coins', stats.coins || 0);
-    
-    const currentLevel = Math.min(Math.floor(stats.xp / 100) + 1, 999);
-    const currentLevelXP = stats.xp - ((currentLevel - 1) * 100);
-
-    setElText('preview-level', currentLevel); 
-    setElText('preview-xp-current', currentLevelXP); 
-    setElWidth('preview-xp-bar', currentLevelXP + '%');
     
     renderEffectParticles(document.getElementById('preview-particle-container'), ACTIVE_EFFECT_CSS);
 }
@@ -832,6 +827,10 @@ function switchShopView(view) {
     document.getElementById('btn-shop-catalog').classList.toggle('active', view === 'catalog');
     document.getElementById('btn-shop-inventory').classList.toggle('active', view === 'inventory');
     renderShopTab(currentShopTab);
+    
+    // Обновляем баланс при переключении
+    const c = getStats().coins;
+    setElText('shop-coins', c);
 }
 function switchShopTab(tabName, element) {
     currentShopTab = tabName;
@@ -1028,9 +1027,11 @@ async function buyItem(type, itemId, price) {
         showToast('Покупка успешна!');
         if (type === 'title') await applyTitle(itemId); else if (type === 'effect') await applyEffect(itemId); else if (type === 'badge') await applyBadge(itemId); else if (type === 'frame') await applyFrame(itemId);
         else { await loadProfileData(); renderShopTab(type + 's'); }
+        setElText('shop-coins', stats.coins);
     } catch(e) {
         console.error(e); stats.coins += price; saveStats(stats);
         showToast('Ошибка покупки — монеты возвращены'); await syncProfileToDB(true);
+        setElText('shop-coins', stats.coins);
     }
 }
 async function applyTitle(titleId) { if (!supabaseClient) return; let stats = getStats(); try { await supabaseClient.from('users').update({ active_title: titleId }).eq('id', MY_ID); stats.active_title = titleId; saveStats(stats); showToast('Титул надет!'); await loadProfileData(); switchShopView('inventory'); } catch(e) {} }
@@ -1063,9 +1064,11 @@ async function buyBanner(bannerId, price) {
         if (b) { stats.active_banner_url = safeUrl(b.image_url); ACTIVE_BANNER_URL = stats.active_banner_url; }
         saveStats(stats); checkAchievements(stats); await syncProfileToDB(true);
         showToast('Баннер получен!'); await loadProfileData(); switchShopView('inventory');
+        setElText('shop-coins', stats.coins);
     } catch(e) {
         console.error(e); stats.coins += price; stats.hasPurchasedBanner = false; saveStats(stats);
         showToast('Ошибка — монеты возвращены'); await syncProfileToDB(true);
+        setElText('shop-coins', stats.coins);
     }
 }
 async function resetBanner() {
@@ -1308,22 +1311,6 @@ async function openFriendProfile(id, name = '') {
 
         const lvl = Math.floor((friend.xp || 0) / 100) + 1;
         const currentLevelXP = (friend.xp || 0) % 100;
-        const totalAchCount = ACHIEVEMENTS.length;
-        let friendAchCount = 0;
-        
-        let achSource = friend.unlocked_achievements;
-        if (id === MY_ID) friendAchCount = (getStats().unlockedAchievements || []).length;
-        else if (achSource) { 
-            try { 
-                let p = typeof achSource === 'string' ? JSON.parse(achSource) : achSource; 
-                if (Array.isArray(p)) friendAchCount = p.length; 
-            } catch(e) {} 
-        }
-        
-        const achPoints = friendAchCount * 10;
-        const episodes = friend.episodes_watched || 0;
-        const hours = Math.floor((friend.minutes_watched || 0) / 60);
-        const streak = friend.days_streak || 1;
 
         let friendBannerUrl = '';
         if (friend.active_banner) { 
@@ -1410,32 +1397,17 @@ async function openFriendProfile(id, name = '') {
                 <div style="padding: 15px 20px;">
                     <div style="display: flex; gap: 10px; justify-content: space-between;">
                         <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 2px;">${episodes}</div>
+                            <div style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 2px;">${friend.episodes_watched || 0}</div>
                             <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Серий</div>
                         </div>
                         <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 2px;">${hours}</div>
+                            <div style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 2px;">${Math.floor((friend.minutes_watched || 0) / 60)}</div>
                             <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Часов</div>
                         </div>
                         <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: 900; color: #ff4500; margin-bottom: 2px;">${streak}</div>
+                            <div style="font-size: 20px; font-weight: 900; color: #ff4500; margin-bottom: 2px;">${friend.days_streak || 1}</div>
                             <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Дней</div>
                         </div>
-                        <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: 900; color: #ffd700; margin-bottom: 2px;">${friendAchCount}</div>
-                            <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Ачивок</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="padding: 0 20px;">
-                    <div class="achievements-card" style="margin-top: 0; cursor: default;">
-                        <div class="ach-header">
-                            <div class="ach-icon-big"><img src="achievements_main.png" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'icon-inline\' style=\'color:#ffd700;width:60px;height:60px;\'><use href=\'#oa-achievement\'></use></svg>';"></div>
-                            <div class="ach-info"><h3>ДОСТИЖЕНИЯ</h3><p>${achPoints} очков</p></div>
-                            <div class="ach-total">${friendAchCount}/${totalAchCount}</div>
-                        </div>
-                        <div class="ach-progress-wrap"><div class="ach-progress-bar" style="width: ${(friendAchCount / totalAchCount) * 100}%;"></div></div>
                     </div>
                 </div>
 
@@ -2496,6 +2468,7 @@ function addXP(amount) {
     let s = getStats(); const oldL = Math.floor(s.xp/100)+1; s.xp += amount; const newL = Math.min(Math.floor(s.xp/100)+1, 999);
     if (newL > oldL) { const rc = Math.floor(100 + Math.pow(newL, 2.5) * 2); s.coins += rc; showLevelUpPopup(newL, LEVEL_TITLES[Math.min(newL-1, LEVEL_TITLES.length-1)] || 'Легенда', rc); } else showToast(`+${amount} XP`);
     saveStats(s); checkAchievements(s);
+    const shopCoins = document.getElementById('shop-coins'); if (shopCoins) shopCoins.textContent = s.coins;
 }
 function addXPForTime(min) {
     let s = getStats();
