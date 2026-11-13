@@ -689,8 +689,8 @@ async function loadProfileData() {
     setElText('user-xp-current',currentLevelXP); 
     setElWidth('user-xp-bar',currentLevelXP + '%'); 
 
-    setElText('stat-episodes', stats.episodesWatched || 0);
-    setElText('stat-hours', Math.floor((stats.minutesWatched || 0) / 60));
+    // Убрали stat-hours, так как этой карточки больше нет
+    setElText('stat-episodes', stats.episodesWatched || 0); // Это значение теперь отображается внизу в блоке статистики
     setElText('stat-streak', stats.daysStreak || 1);
     setElText('stat-achievements', (stats.unlockedAchievements || []).length);
 
