@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>OnikaAnime</title>
     
-    <!-- УСКОРЕНИЕ ЗАГРУЗКИ -->
     <link rel="preconnect" href="https://s4.anilist.co" crossorigin>
     <link rel="preconnect" href="https://wsaykqhojwfhpqzxptke.supabase.co" crossorigin>
     <link rel="preconnect" href="https://onika-api.relaxdev.ru" crossorigin>
@@ -27,7 +26,6 @@
         .screen { display: none; position: relative; z-index: 1; }
         .screen.active { display: block; animation: screenEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
 
-        /* ==== СТЕКЛЯННАЯ КАПСУЛА УРОВНЯ ==== */
         .xp-capsule {
             position: relative;
             background: rgba(20, 20, 31, 0.15);
@@ -622,7 +620,6 @@
         <div class="grid-catalog" id="my-grid" style="margin-top: 10px;"></div>
     </div>
 
-    <!-- СТРАНИЦА ИСТОРИИ ПРОСМОТРОВ -->
     <div id="screen-history" class="screen">
         <button onclick="switchTab('profile')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; padding: 20px; cursor: pointer;">← Назад в профиль</button>
         <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 20px; padding: 0 20px;">История просмотров</h1>
@@ -632,7 +629,6 @@
     <div id="screen-friends" class="screen">
         <header class="profile-header" style="padding-bottom: 10px;"><h1>Друзья</h1></header>
         
-        <!-- Мой ID для друзей -->
         <div style="padding: 0 20px 15px;">
             <div style="background: linear-gradient(135deg, rgba(91,91,255,0.15), rgba(180,74,255,0.15)); border: 1px solid rgba(91,91,255,0.3); border-radius: 16px; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
                 <div>
@@ -652,7 +648,6 @@
         </div>
         <div id="search-result-container" style="padding: 0 20px 20px;"></div>
         
-        <!-- Вкладки Друзья / Заявки -->
         <div class="my-list-tabs" style="padding-top: 5px;">
             <div class="my-list-tab ripple-btn active" onclick="switchFriendsTab('friends', this)">Мои друзья</div>
             <div class="my-list-tab ripple-btn" onclick="switchFriendsTab('requests', this)">Заявки</div>
@@ -703,18 +698,12 @@
         <div id="achievements-list-container" style="margin-top: 15px;"></div>
     </div>
 
-    <!-- НОВЫЙ ДИЗАЙН ПРОФИЛЯ -->
     <div id="screen-profile" class="screen" style="background: var(--bg);">
-        
-        <!-- Верхняя часть с фоном -->
         <div id="profile-banner" style="position: relative; width: 100%; height: 220px; background: linear-gradient(180deg, #2a2a3e 0%, #14141f 100%); background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
-            <!-- Кнопки в правом верхнем углу -->
             <div style="position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 20;">
-                <!-- Кнопка Магазина (Картинка) -->
                 <button onclick="switchTab('shop')" class="ripple-btn" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); color: #fff; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
                     <svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#oa-image"></use></svg>
                 </button>
-                <!-- Кнопка Настроек (Шестеренка) -->
                 <button onclick="switchTab('settings')" class="ripple-btn" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); color: #fff; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
                     <svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#oa-settings"></use></svg>
                 </button>
@@ -752,7 +741,6 @@
             </div>
         </div>
 
-        <!-- НОВЫЙ БЛОК УРОВНЯ (СТЕКЛЯННАЯ КАПСУЛА) -->
         <div style="padding: 0 20px;">
             <div onclick="openLevelModal()" class="xp-capsule" style="cursor: pointer;">
                 <div id="user-xp-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, rgba(123,104,238,0.85), rgba(100,149,237,0.85)); z-index: 1; transition: width 0.5s ease; border-radius: 12px;"></div>
@@ -785,7 +773,6 @@
         </div>
 
         <div style="padding: 0 20px 20px 20px;">
-            <!-- НОВЫЙ БЛОК СТАТИСТИКИ С ДИАГРАММОЙ -->
             <div style="background: rgba(20, 20, 31, 0.6); border-radius: 20px; padding: 20px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3 style="font-size: 18px; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
@@ -796,7 +783,6 @@
                 </div>
 
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
-                    <!-- Легенда -->
                     <div style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
                         <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500;">
                             <div style="width: 16px; height: 16px; border-radius: 4px; background: #6b8e23; box-shadow: 0 0 8px rgba(107,142,35,0.6);"></div>
@@ -825,7 +811,6 @@
                         </div>
                     </div>
 
-                    <!-- Пончик-диаграмма -->
                     <div style="position: relative; width: 120px; height: 120px; flex-shrink: 0; display: flex; justify-content: center; align-items: center;">
                         <div id="donut-chart" style="width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(#2a2a3e 0% 100%); position: relative; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 10px rgba(255,255,255,0.1));">
                             <div style="width: 70%; height: 70%; background: #14141f; border-radius: 50%; position: absolute; box-shadow: inset 0 0 15px rgba(0,0,0,0.5);"></div>
@@ -843,7 +828,6 @@
         </div>
     </div>
 
-    <!-- НОВЫЙ ЭКРАН: МАГАЗИН КОСМЕТИКИ -->
     <div id="screen-shop" class="screen" style="background: var(--bg);">
         <header class="profile-header" style="padding-bottom: 10px; padding-top: 20px;">
             <h1 style="font-size: 24px;">Магазин косметики</h1>
@@ -867,7 +851,6 @@
                 <div class="shop-tab" onclick="switchShopTab('badges', this)">Значки</div>
             </div>
 
-            <!-- Переключатель Магазин / Инвентарь -->
             <div style="display: flex; background: #14141f; border-radius: 12px; padding: 4px; margin: 15px 0;">
                 <button id="btn-shop-catalog" class="my-list-tab active" onclick="switchShopView('catalog')" style="flex: 1; border: none; background: transparent; padding: 10px; margin: 0; font-size: 14px;">Магазин</button>
                 <button id="btn-shop-inventory" class="my-list-tab" onclick="switchShopView('inventory')" style="flex: 1; border: none; background: transparent; padding: 10px; margin: 0; font-size: 14px;">Инвентарь</button>
@@ -877,7 +860,6 @@
         </div>
     </div>
 
-    <!-- НОВЫЙ ЭКРАН: НАСТРОЙКИ -->
     <div id="screen-settings" class="screen" style="background: var(--bg);">
         <header class="profile-header" style="padding-bottom: 10px; padding-top: 20px;">
             <h1 style="font-size: 24px;">Настройки</h1>
@@ -895,7 +877,6 @@
         </div>
     </div>
 
-    <!-- ЭКРАН ПРЕДПРОСМОТРА -->
     <div id="screen-preview" class="screen" style="background: var(--bg);">
         <header class="profile-header" style="padding-bottom: 10px;">
             <h1>Примерка</h1>
@@ -1024,6 +1005,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4627"></script>
+    <script src="app.js?v=4630"></script>
 </body>
 </html>
