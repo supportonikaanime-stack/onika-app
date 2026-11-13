@@ -4,30 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>OnikaAnime</title>
-
+    
     <link rel="preconnect" href="https://s4.anilist.co" crossorigin>
     <link rel="preconnect" href="https://wsaykqhojwfhpqzxptke.supabase.co" crossorigin>
     <link rel="preconnect" href="https://onika-api.relaxdev.ru" crossorigin>
     <link rel="preconnect" href="https://shikimori.io" crossorigin>
     <link rel="preconnect" href="https://aniliberty.top" crossorigin>
-    <link rel="preconnect" href="https://graphql.anilist.co" crossorigin>
     <link rel="dns-prefetch" href="https://s4.anilist.co">
-    <link rel="dns-prefetch" href="https://shikimori.io">
-    <link rel="dns-prefetch" href="https://aniliberty.top">
-
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@900&display=swap');
-
+        
         :root { --bg: #0a0a0f; --card: #1a1a20; --primary: #5b5bff; --text: #fff; --muted: #888; --nav-h: 65px; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        
         #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; opacity: 0.4; background: transparent; }
-
+        
         body { background: linear-gradient(180deg, #0a0a0f 0%, #050508 100%); color: var(--text); padding-bottom: calc(var(--nav-h) + 20px); overflow-x: hidden; }
+        
+        .screen { display: none; position: relative; z-index: 1; }
+        .screen.active { display: block; animation: screenEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
 
-        /* ===== PRELOADER ===== */
+        /* --- PRELOADER ANIMATION --- */
         #app-preloader {
             position: fixed; inset: 0; z-index: 999999;
             background: linear-gradient(180deg, #0a0a0f 0%, #050508 100%);
@@ -37,17 +37,6 @@
         #app-preloader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
         @keyframes preloaderSpin { to { transform: rotate(360deg); } }
         @keyframes preloaderShimmer { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
-        .preloader-ring { position: relative; width: 90px; height: 90px; margin-bottom: 24px; }
-        .preloader-ring > div { position: absolute; border-radius: 50%; }
-        .preloader-ring .r1 { inset: 0; border: 3px solid rgba(91,91,255,0.15); }
-        .preloader-ring .r2 { inset: 0; border: 3px solid transparent; border-top-color: #5b5bff; border-right-color: #b44aff; animation: preloaderSpin 1s linear infinite; }
-        .preloader-ring .r3 { inset: 18px; border: 2px solid transparent; border-bottom-color: #6495ED; animation: preloaderSpin 1.4s linear infinite reverse; }
-        .preloader-ring .logo { inset: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; background: linear-gradient(90deg, #5b5bff, #b44aff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-        .preloader-title { font-size: 22px; font-weight: 900; letter-spacing: 1px; background: linear-gradient(90deg, #5b5bff, #b44aff, #5b5bff); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: preloaderShimmer 2s linear infinite; margin-bottom: 10px; }
-        .preloader-sub { font-size: 12px; color: #888; letter-spacing: 2px; text-transform: uppercase; }
-
-        .screen { display: none; position: relative; z-index: 1; }
-        .screen.active { display: block; animation: screenEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
 
         .xp-capsule {
             position: relative;
@@ -153,24 +142,24 @@
         .hero-slider { position: relative; width: 100%; height: 100%; }
         .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; visibility: hidden; transition: 0.6s; display: flex; align-items: flex-end; }
         .hero-slide.active { opacity: 1; visibility: visible; z-index: 2; }
-
+        
         .hero-bg-poster { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center top; z-index: 1; transition: opacity 0.8s ease; }
         .hero-slide.active .hero-bg-poster { animation: kenBurns 8s ease-out forwards; }
-
+        
         .hero-gradient { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(10,10,15,0.8) 0%, transparent 20%, transparent 50%, var(--bg) 95%), radial-gradient(circle at center, transparent 30%, rgba(10,10,15,0.6) 100%); z-index: 2; pointer-events: none; }
         .hero-content { position: relative; z-index: 3; padding: 16px 20px; width: 100%; padding-bottom: 28px; transform: translateY(20px); opacity: 0; transition: 0.6s; }
         .hero-slide.active .hero-content { transform: translateY(0); opacity: 1; transition-delay: 0.2s; }
-
+        
         .hero-progress-bar { position: absolute; top: 0; left: 0; width: 100%; height: 3px; display: flex; gap: 2px; z-index: 10; padding: 0 4px; }
         .hero-progress-seg { flex: 1; height: 100%; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; position: relative; }
         .hero-progress-seg .fill { position: absolute; top: 0; left: 0; height: 100%; background: #5b5bff; width: 0%; border-radius: 2px; }
         .hero-progress-seg.active .fill { animation: heroProgress 5s linear forwards; }
         .hero-progress-seg.done .fill { width: 100%; background: rgba(255,255,255,0.6); }
-
+        
         .hero-badges { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
         .badge { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #fff; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 4px; }
         .badge.star { color: #ffd700; background: rgba(0,0,0,0.4); border-color: rgba(255,215,0,0.2); animation: badgePulse 2.5s infinite; }
-
+        
         .hero-title { font-size: 28px; font-weight: 800; line-height: 1.15; margin-bottom: 12px; color: #fff; text-shadow: 0 4px 20px rgba(0,0,0,0.8); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .hero-actions { display: flex; gap: 12px; align-items: center; }
         .btn-primary { flex: 1; background: linear-gradient(90deg, #4169E1 0%, #87CEFA 50%, #4169E1 100%); background-size: 200% 100%; animation: btnShine 4s linear infinite; color: #fff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 8px 25px rgba(65,105,225,0.35); cursor: pointer; }
@@ -178,12 +167,12 @@
         .hero-actions .btn-primary { padding: 13px; font-size: 15px; border-radius: 12px; }
         .hero-actions .btn-icon-heart { width: 48px; height: 48px; border-radius: 12px; }
         .hero-actions .btn-icon-heart svg { width: 22px; height: 22px; }
-
+        
         .btn-icon-heart { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 56px; height: 56px; border-radius: 14px; display: flex; justify-content: center; align-items: center; cursor: pointer; flex-shrink: 0; }
         .btn-icon-heart svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         .btn-icon-heart.faved { background: rgba(91,91,255,0.2); border-color: rgba(91,91,255,0.5); color: #5b5bff; }
         .btn-icon-heart.faved svg { fill: #5b5bff; stroke: #5b5bff; }
-
+        
         .content-section { padding: 20px 0; opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
         .content-section.fade-in-section { animation: sectionFadeUp 0.6s ease forwards; }
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-bottom: 15px; }
@@ -202,26 +191,26 @@
         .tg-text h3 { font-size: 15px; font-weight: 700; margin-bottom: 2px; color: white !important; }
         .tg-text p { font-size: 11px; color: rgba(255,255,255,0.6) !important; }
 
-        .filter-btn {
-            background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc;
-            padding: 10px 18px; border-radius: 20px; font-size: 14px; font-weight: 600;
-            white-space: nowrap; cursor: pointer; transition: 0.2s;
-            display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+        .filter-btn { 
+            background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc; 
+            padding: 10px 18px; border-radius: 20px; font-size: 14px; font-weight: 600; 
+            white-space: nowrap; cursor: pointer; transition: 0.2s; 
+            display: flex; align-items: center; gap: 6px; flex-shrink: 0; 
         }
         .filter-btn.active { background: rgba(91,91,255,0.15); border-color: #5b5bff; color: #a29bfe; }
-
-        .genre-pill {
-            background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc;
-            padding: 10px 18px; border-radius: 20px; font-size: 14px; font-weight: 600;
-            white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 8px;
-            flex-shrink: 0;
+        
+        .genre-pill { 
+            background: #14141f; border: 1px solid rgba(255,255,255,0.05); color: #ccc; 
+            padding: 10px 18px; border-radius: 20px; font-size: 14px; font-weight: 600; 
+            white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 8px; 
+            flex-shrink: 0; 
         }
         .genre-pill.active { background: #2a2a3e; color: #fff; border-color: #5b5bff; }
         .genre-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; }
 
         #filters-wrapper { overflow: hidden; transition: max-height 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease, margin 0.3s ease; max-height: 600px; opacity: 1; }
         #filters-wrapper.filters-collapsed { max-height: 0; opacity: 0; margin-bottom: 0; pointer-events: none; }
-
+        
         .catalog-card { background: #14141f; border-radius: 12px; overflow: hidden; position: relative; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); transition: transform 0.12s ease; }
         .catalog-card:active { transform: scale(0.94); }
         .catalog-card-img { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; background: #222; }
@@ -241,7 +230,7 @@
         .friends-search { display: flex; gap: 10px; padding: 0 20px 20px; }
         .friends-search input { flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px; color: #fff; font-size: 15px; outline: none; }
         .friends-search button { background: #5b5bff; border: none; border-radius: 12px; padding: 0 20px; color: #fff; font-weight: 700; cursor: pointer; }
-
+        
         .friend-card { display: flex; align-items: center; gap: 15px; background: #14141f; border-radius: 16px; padding: 15px; margin: 0 20px 10px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: transform 0.2s, border-color 0.2s, background 0.2s; }
         .friend-card:active { transform: scale(0.98); background: #1a1a24; }
         .friend-avatar { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #5b5bff, #b44aff); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; color: #fff; overflow: hidden; }
@@ -252,12 +241,12 @@
         .profile-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; padding-top: 30px; }
         .profile-header h1 { font-size: 32px; font-weight: 800; color: #fff; }
         .profile-container { padding: 0 15px; }
-
+        
         .user-card-wrapper { background: #14141f; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; position: relative; display: flex; flex-direction: column; }
         .user-card-top { padding: 20px 20px 0 20px; position: relative; background-size: cover; background-position: center; min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 15px; overflow: hidden; }
         .user-card-top::before { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(20,20,31,0.1) 0%, rgba(20,20,31,0.7) 60%, #14141f 100%); z-index: 1; pointer-events: none; }
         .user-card-top-content { position: relative; z-index: 3; width: 100%; display: flex; flex-direction: column; align-items: center; }
-
+        
         .user-card-bottom { padding: 0 20px 20px 20px; position: relative; z-index: 4; background: #14141f; border-top: 1px solid rgba(255, 255, 255, 0.08); }
 
         .avatar-container { position: relative; width: 80px; height: 80px; margin: 0 auto 15px auto; z-index: 3; }
@@ -286,9 +275,9 @@
 
         .coin-balance { background: rgba(255, 215, 0, 0.15); border: 1px solid rgba(255, 215, 0, 0.4); border-radius: 12px; padding: 6px 15px; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; color: #ffd700; font-weight: bold; font-size: 16px; backdrop-filter: blur(5px); }
         .coin-balance svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-
+        
         .id-container { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px 15px; display: inline-flex; align-items: center; gap: 10px; margin-bottom: 5px; cursor: pointer; backdrop-filter: blur(5px); }
-
+        
         .level-row { display: flex; align-items: center; gap: 15px; padding: 15px 0; text-align: left; cursor: pointer; }
         .level-badge { width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; border-radius: 8px; overflow: visible; }
         .level-badge-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1; border-radius: 8px; }
@@ -299,20 +288,20 @@
         .xp-bar-container { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.05); }
         .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #7B68EE, #6495ED); border-radius: 4px; animation: xpPulse 2s ease-in-out infinite; }
         .xp-text { font-size: 12px; color: #aaa; text-align: right; font-weight: 600; }
-
+        
         .profile-tabs { display: flex; background: #14141f; border-radius: 15px; padding: 5px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.05); }
         .tab-btn { flex: 1; padding: 12px 5px; border: none; background: transparent; color: #888; font-size: 11px; font-weight: 600; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
         .tab-btn.active { background: #2a2a3e; color: #fff; }
         .tab-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-
+        
         .achievements-card, .settings-card { background: #14141f; border-radius: 20px; padding: 20px; margin-top: 15px; border: 1px solid rgba(255, 215, 0, 0.2); position: relative; cursor: pointer; transition: 0.2s; }
         .achievements-card:active { transform: scale(0.98); }
         .settings-card { border-color: rgba(255,255,255,0.05); cursor: default; }
         .ach-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
-
+        
         .ach-icon-big { width: 60px; height: 60px; background: rgba(255, 215, 0, 0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
         .ach-icon-big svg { width: 100%; height: 100%; }
-
+        
         .ach-info h3 { font-size: 14px; color: #ffd700; margin-bottom: 4px; letter-spacing: 1px; }
         .ach-info p { font-size: 13px; color: #888; }
         .ach-total { margin-left: auto; font-size: 16px; font-weight: bold; color: #fff; }
@@ -355,18 +344,18 @@
         .modal-content { background: #14141f; border-radius: 24px; width: 100%; max-width: 400px; padding: 30px 20px; border: 1px solid rgba(255,255,255,0.1); position: relative; text-align: center; max-height: 80vh; overflow-y: auto; animation: modalPop 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
         .modal-close { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; }
         .modal-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-
+        
         .modal-icon-large { display: flex; justify-content: center; margin-bottom: 15px; color: var(--primary); position: relative; }
         .modal-level-badge { width: 140px !important; height: 140px !important; border-radius: 12px; }
         .modal-level-badge .level-number { font-size: 48px; top: 45%; left: 75%; }
-
+        
         .modal-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 5px; }
         .modal-subtitle { font-size: 14px; color: #888; margin-bottom: 20px; word-wrap: break-word; line-height: 1.4; }
         .modal-xp-bar { width: 100%; height: 10px; background: #333; border-radius: 5px; overflow: hidden; margin-bottom: 10px; }
         .modal-xp-fill { height: 100%; background: linear-gradient(90deg, #7B68EE, #6495ED); border-radius: 5px; box-shadow: 0 0 10px rgba(100,149,237,0.7); }
         .modal-xp-text { font-size: 12px; color: #aaa; text-align: right; margin-bottom: 20px; }
         .modal-desc { font-size: 14px; color: #ccc; line-height: 1.5; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; text-align: left; }
-
+        
         .ach-list-item { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); text-align: left; opacity: 0.6; transition: 0.3s; }
         .ach-list-item.completed { opacity: 1; background: rgba(255,255,255,0.08); }
         .ach-list-item.common.completed { border-color: rgba(200, 200, 200, 0.6); box-shadow: 0 0 15px rgba(200, 200, 200, 0.2); }
@@ -392,7 +381,7 @@
         .ach-category-header.rare { border-bottom-color: rgba(0, 210, 255, 0.3); }
         .ach-category-header.epic { border-bottom-color: rgba(180, 74, 255, 0.3); }
         .ach-category-header.legendary { border-bottom-color: rgba(255, 215, 0, 0.3); }
-
+        
         .level-up-popup { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #1a1a2e, #5b5bff); padding: 15px 30px; border-radius: 50px; display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 30px rgba(91, 91, 255, 0.5); z-index: 20000; transition: top 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55); width: 90%; max-width: 350px; }
         .level-up-popup.show { top: 20px; }
         .level-up-popup .icon { color: #ffd700; flex-shrink: 0; }
@@ -452,14 +441,14 @@
 
     <!-- PRELOADER -->
     <div id="app-preloader">
-        <div class="preloader-ring">
-            <div class="r1"></div>
-            <div class="r2"></div>
-            <div class="r3"></div>
-            <div class="logo">OA</div>
+        <div style="position: relative; width: 90px; height: 90px; margin-bottom: 24px;">
+            <div style="position: absolute; inset: 0; border-radius: 50%; border: 3px solid rgba(91,91,255,0.15);"></div>
+            <div style="position: absolute; inset: 0; border-radius: 50%; border: 3px solid transparent; border-top-color: #5b5bff; border-right-color: #b44aff; animation: preloaderSpin 1s linear infinite;"></div>
+            <div style="position: absolute; inset: 18px; border-radius: 50%; border: 2px solid transparent; border-bottom-color: #6495ED; animation: preloaderSpin 1.4s linear infinite reverse;"></div>
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; background: linear-gradient(90deg, #5b5bff, #b44aff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">OA</div>
         </div>
-        <div class="preloader-title">OnikaAnime</div>
-        <div class="preloader-sub">Загрузка...</div>
+        <div style="font-size: 22px; font-weight: 900; letter-spacing: 1px; background: linear-gradient(90deg, #5b5bff, #b44aff, #5b5bff); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: preloaderShimmer 2s linear infinite; margin-bottom: 10px;">OnikaAnime</div>
+        <div style="font-size: 12px; color: #888; letter-spacing: 2px; text-transform: uppercase;">Загрузка...</div>
     </div>
 
     <canvas id="bg-canvas"></canvas>
@@ -517,14 +506,14 @@
                 <div class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Регистрация</div>
             </div>
             <div class="auth-error" id="authError"></div>
-
+            
             <div id="form-login">
                 <input type="email" id="login-email" class="auth-input" placeholder="Почта (Email)" autocomplete="email">
                 <input type="password" id="login-password" class="auth-input" placeholder="Пароль" autocomplete="current-password">
                 <button class="auth-btn" id="login-btn" onclick="handleLogin()">Войти</button>
                 <div class="auth-footer">Нет аккаунта? <span class="auth-link" onclick="switchAuthTab('register')">Зарегистрироваться</span></div>
             </div>
-
+            
             <div id="form-register" style="display:none;">
                 <input type="email" id="reg-email" class="auth-input" placeholder="Настоящая почта (Email)" autocomplete="email">
                 <input type="text" id="reg-nickname" class="auth-input" placeholder="Никнейм (макс. 12 символов)" maxlength="12" autocomplete="username">
@@ -550,7 +539,7 @@
         </div>
         <div class="coins">+<span id="popup-coins">100</span> <svg><use href="#oa-coin"></use></svg></div>
     </div>
-
+    
     <div id="screen-home" class="screen active">
         <section class="hero-section" id="heroSection">
             <div class="hero-progress-bar" id="heroProgressBar"></div>
@@ -564,7 +553,7 @@
             <div class="section-header"><h2><svg class="icon-inline" style="color:#ff4500;"><use href="#oa-fire"></use></svg> Популярное сейчас</h2></div>
             <div class="horizontal-scroll" id="popular-list"></div>
         </section>
-
+        
         <section class="content-section" id="section-socials">
             <div class="section-header"><h2><svg class="icon-inline" style="color:#fff;"><use href="#oa-planet"></use></svg> Наши сообщества</h2></div>
             <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 20px;">
@@ -606,7 +595,7 @@
                 <span style="color: #888; display: flex; align-items: center;"><svg style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-search"></use></svg></span>
                 <input type="text" id="search-input" placeholder="Найти аниме..." oninput="searchAnime()" style="flex: 1; background: transparent; border: none; padding: 14px 10px; color: #fff; font-size: 15px; outline: none;">
             </div>
-
+            
             <div onclick="openRandomAnime()" style="display: flex; align-items: center; justify-content: space-between; background: #14141f; border-radius: 16px; padding: 16px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <div style="width: 45px; height: 45px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #a29bfe;"><svg style="width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-dice"></use></svg></div>
@@ -617,7 +606,7 @@
                 </div>
                 <div style="color: #888; font-size: 20px;">›</div>
             </div>
-
+            
             <div onclick="toggleFilters()" style="display: flex; align-items: center; justify-content: space-between; background: #14141f; border-radius: 12px; padding: 12px 16px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;">
                 <div style="display: flex; align-items: center; gap: 8px; color: #ccc;">
                     <svg style="width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-filter"></use></svg>
@@ -663,7 +652,7 @@
 
     <div id="screen-friends" class="screen">
         <header class="profile-header" style="padding-bottom: 10px;"><h1>Друзья</h1></header>
-
+        
         <div style="padding: 0 20px 15px;">
             <div style="background: linear-gradient(135deg, rgba(91,91,255,0.15), rgba(180,74,255,0.15)); border: 1px solid rgba(91,91,255,0.3); border-radius: 16px; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
                 <div>
@@ -682,7 +671,7 @@
             <button onclick="searchFriend()">Найти</button>
         </div>
         <div id="search-result-container" style="padding: 0 20px 20px;"></div>
-
+        
         <div class="my-list-tabs" style="padding-top: 5px;">
             <div class="my-list-tab ripple-btn active" onclick="switchFriendsTab('friends', this)">Мои друзья</div>
             <div class="my-list-tab ripple-btn" onclick="switchFriendsTab('requests', this)">Заявки</div>
@@ -743,7 +732,7 @@
                     <svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#oa-settings"></use></svg>
                 </button>
             </div>
-
+            
             <div class="effect-container" id="particle-effect-container" style="border-radius: 0 0 24px 24px;"></div>
             <div style="position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); z-index: 10;">
                 <div class="avatar-container" onclick="document.getElementById('avatar-upload').click()" style="position: relative; width: 110px; height: 110px; margin: 0;">
@@ -764,7 +753,7 @@
                 Гость
                 <img id="user-badge-img" class="user-badge-icon" style="display: none; width: 24px; height: 24px; object-fit: contain; visibility: visible;" alt="badge">
             </h1>
-
+            
             <div id="user-title-container" style="display: none; margin-bottom: 15px;">
                 <div class="user-title-display" id="user-active-title"></div>
             </div>
@@ -876,7 +865,7 @@
                 </button>
             </div>
         </header>
-
+        
         <div style="padding: 0 20px;">
             <div class="shop-tabs" style="margin-top: 0;">
                 <div class="shop-tab active" onclick="switchShopTab('banners', this)">Баннеры</div>
@@ -919,7 +908,7 @@
                 <svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-close"></use></svg>
             </button>
         </header>
-
+        
         <div style="padding: 0;">
             <div id="preview-banner" style="position: relative; width: 100%; height: 220px; background: linear-gradient(180deg, #2a2a3e 0%, #14141f 100%); background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
                 <div class="effect-container" id="preview-particle-container" style="border-radius: 0 0 24px 24px;"></div>
@@ -938,7 +927,7 @@
                     Гость
                     <img id="preview-badge-img" class="user-badge-icon" style="display: none; width: 24px; height: 24px; object-fit: contain;" alt="badge">
                 </h1>
-
+                
                 <div id="preview-title-container" style="display: none; margin-bottom: 15px;">
                     <div class="user-title-display" id="preview-active-title"></div>
                 </div>
@@ -998,11 +987,11 @@
     <div class="preview-hint" id="previewHint">Тапни вещь — примерь её вживую до покупки</div>
 
     <nav class="bottom-nav">
-        <div class="nav-item active" data-tab="home" onclick="switchTab('home', this)"><span class="nav-icon"><svg><use href="#oa-home"></use></svg></span><span class="nav-text">Главная</span></div>
-        <div class="nav-item" data-tab="catalog" onclick="switchTab('catalog', this)"><span class="nav-icon"><svg><use href="#oa-catalog"></use></svg></span><span class="nav-text">Каталог</span></div>
-        <div class="nav-item" data-tab="my" onclick="switchTab('my', this)"><span class="nav-icon"><svg><use href="#oa-bookmark"></use></svg></span><span class="nav-text">Моё</span></div>
-        <div class="nav-item" data-tab="friends" onclick="switchTab('friends', this)"><span class="nav-icon"><svg><use href="#oa-friends"></use></svg></span><span class="nav-text">Друзья</span></div>
-        <div class="nav-item" data-tab="profile" onclick="switchTab('profile', this)"><span class="nav-icon"><svg><use href="#oa-profile"></use></svg></span><span class="nav-text">Профиль</span></div>
+        <div class="nav-item active" onclick="switchTab('home', this)"><span class="nav-icon"><svg><use href="#oa-home"></use></svg></span><span class="nav-text">Главная</span></div>
+        <div class="nav-item" onclick="switchTab('catalog', this)"><span class="nav-icon"><svg><use href="#oa-catalog"></use></svg></span><span class="nav-text">Каталог</span></div>
+        <div class="nav-item" onclick="switchTab('my', this)"><span class="nav-icon"><svg><use href="#oa-bookmark"></use></svg></span><span class="nav-text">Моё</span></div>
+        <div class="nav-item" onclick="switchTab('friends', this)"><span class="nav-icon"><svg><use href="#oa-friends"></use></svg></span><span class="nav-text">Друзья</span></div>
+        <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon"><svg><use href="#oa-profile"></use></svg></span><span class="nav-text">Профиль</span></div>
     </nav>
 
     <script>
