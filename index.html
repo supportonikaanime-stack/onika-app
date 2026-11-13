@@ -246,7 +246,7 @@
         .user-details { text-align: center; width: 100%; position: relative; z-index: 3; }
         .user-name-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 5px; }
         .user-name-row h2 { margin-bottom: 0; }
-        .user-badge-icon { width: 24px; height: 24px; object-fit: contain; filter: drop-shadow(0 0 4px rgba(0,0,0,0.5)); }
+        .user-badge-icon { width: 24px; height: 24px; object-fit: contain; filter: drop-shadow(0 0 4px rgba(0,0,0,0.5)); display: inline-block; visibility: visible; }
 
         .user-title-display { position: relative; font-size: 13px; font-weight: 800; margin-bottom: 8px; display: inline-flex; align-items: center; justify-content: center; padding: 4px 16px; border-radius: 20px; letter-spacing: 0.5px; text-transform: uppercase; z-index: 1; font-family: 'Nunito', -apple-system, sans-serif; }
         .user-title-display:not(.animated-title) { background: rgba(0,0,0,0.4); border: 1px solid currentColor; text-shadow: 0 1px 3px rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
@@ -738,7 +738,7 @@
         <div style="padding: 55px 20px 20px 20px; text-align: center; position: relative; z-index: 5;">
             <h1 id="tg-name" style="font-size: 28px; font-weight: 900; color: #fff; margin-bottom: 8px; line-height: 1.1; display: flex; align-items: center; justify-content: center; gap: 8px;">
                 Гость
-                <img id="user-badge-img" class="user-badge-icon" style="display: none; width: 24px; height: 24px; object-fit: contain;" alt="badge">
+                <img id="user-badge-img" class="user-badge-icon" style="display: none; width: 24px; height: 24px; object-fit: contain; visibility: visible;" alt="badge">
             </h1>
             
             <div id="user-title-container" style="display: none; margin-bottom: 15px;">
@@ -1024,6 +1024,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4626"></script>
+    <script src="app.js?v=4627"></script>
 </body>
 </html>
