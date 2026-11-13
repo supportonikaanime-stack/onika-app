@@ -1422,6 +1422,7 @@ async function openFriendProfile(id, name = '') {
         const nameChar = friend.name && friend.name[0] ? escapeHTML(friend.name[0].toUpperCase()) : '?';
         const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : nameChar;
 
+        // --- ОБНОВЛЕННАЯ ВЕРСТКА ПРОФИЛЯ ДРУГА ---
         container.innerHTML = `
             <div style="padding-bottom: 40px;">
                 <div id="friend-profile-banner" style="position: relative; width: 100%; height: 220px; background: ${friendBannerUrl ? `url('${friendBannerUrl}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)'}; background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
@@ -1460,17 +1461,22 @@ async function openFriendProfile(id, name = '') {
 
                 <div style="padding: 15px 20px;">
                     <div style="display: flex; gap: 10px; justify-content: space-between;">
-                        <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 2px;">${friend.episodes_watched || 0}</div>
-                            <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Серий</div>
+                        <!-- Новая кнопка История (вместо Серий) -->
+                        <div class="ripple-btn" style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0.5;">
+                            <svg style="width: 24px; height: 24px; fill: none; stroke: #5b5bff; stroke-width: 2; margin-bottom: 4px;"><use href="#oa-clock"></use></svg>
+                            <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">История</div>
                         </div>
-                        <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 2px;">${Math.floor((friend.minutes_watched || 0) / 60)}</div>
-                            <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Часов</div>
-                        </div>
+                        
+                        <!-- Кнопка Дней -->
                         <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
                             <div style="font-size: 20px; font-weight: 900; color: #ff4500; margin-bottom: 2px;">${friend.days_streak || 1}</div>
                             <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Дней</div>
+                        </div>
+                        
+                        <!-- Кнопка Ачивок -->
+                        <div class="ripple-btn" style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0.5;">
+                            <div style="font-size: 20px; font-weight: 900; color: #ffd700; margin-bottom: 2px;">${(friend.unlocked_achievements || []).length}</div>
+                            <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Ачивок</div>
                         </div>
                     </div>
                 </div>
@@ -1494,8 +1500,16 @@ async function openFriendProfile(id, name = '') {
                                 </div>
                             </div>
                         </div>
-                        <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 15px; color: #ccc;"><span>Время просмотра:</span><span style="font-weight: 700; color: #fff;" id="friend-stat-total-time">~ 0 дней 0 часов</span></div>
+                        <!-- Блок с временем и сериями -->
+                        <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 15px; color: #ccc;">
+                                <span>Время просмотра:</span>
+                                <span style="font-weight: 700; color: #fff;" id="friend-stat-total-time">~ 0 дней 0 часов</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 15px; color: #ccc;">
+                                <span>Всего серий:</span>
+                                <span style="font-weight: 700; color: #fff;">${friend.episodes_watched || 0}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
