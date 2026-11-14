@@ -21,7 +21,6 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
 
         #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; opacity: 0.4; background: transparent; }
-
         body { background: linear-gradient(180deg, #0a0a0f 0%, #050508 100%); color: var(--text); padding-bottom: calc(var(--nav-h) + 20px); overflow-x: hidden; }
 
         .screen { display: none; position: relative; z-index: 1; }
@@ -461,14 +460,14 @@
         <div class="auth-box">
             <div class="auth-logo">OnikaAnime</div>
 
-            <!-- ⬇️ TELEGRAM LOGIN WIDGET ⬇️ -->
+            <!-- ⬇️ ИСПРАВЛЕННЫЙ TELEGRAM LOGIN WIDGET ⬇️ -->
             <div id="telegram-login-container">
                 <script async src="https://telegram.org/js/telegram-widget.js?22"
                         data-telegram-login="OnikaAnimeBot"
                         data-size="large"
                         data-radius="12"
                         data-request-access="write"
-                        data-onauth="onTelegramAuth(user)"></script>
+                        data-auth-url="https://supportonikaanime-stack.github.io/onika-app/"></script>
             </div>
 
             <div class="tg-auth-divider">
@@ -987,13 +986,10 @@
             resize(); createParticles(); animate();
         })();
 
-        // Telegram auth stub — ДОЛЖЕН быть до загрузки app.js
-        window.onTelegramAuth = window.onTelegramAuth || function(user) {
-            console.log('Telegram auth received, app.js loading...');
-            (window.__tgAuthQueue = window.__tgAuthQueue || []).push(user);
-        };
+        // Заглушка для Telegram Auth (так как мы используем data-auth-url)
+        window.onTelegramAuth = window.onTelegramAuth || function(user) { console.log('Telegram auth disabled (using auth-url)'); };
     </script>
 
-    <script src="app.js?v=4638" defer></script>
+    <script src="app.js?v=4639" defer></script>
 </body>
 </html>
