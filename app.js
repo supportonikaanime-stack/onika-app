@@ -725,7 +725,7 @@ async function loadProfileData() {
 
     await syncProfileToDB();
     loadProfileStats(null, false);
-    loadGenreChart(MY_ID, false); // НОВЫЙ ВЫЗОВ
+    loadGenreChart(MY_ID, false); // ВЫЗОВ ДИАГРАММЫ В ОСНОВНОМ ПРОФИЛЕ
 }
 
 async function loadProfileStats(userId = null, isFriend = false) {
@@ -784,7 +784,7 @@ async function loadProfileStats(userId = null, isFriend = false) {
     } catch (e) { console.error('Ошибка загрузки статистики:', e); }
 }
 
-// НОВАЯ ФУНКЦИЯ: ДИАГРАММА ЖАНРОВ
+// ОБНОВЛЕННАЯ ФУНКЦИЯ: ДИАГРАММА ЖАНРОВ
 async function loadGenreChart(userId, isFriend) {
     const containerId = isFriend ? 'friend-genre-chart-container' : 'genre-chart-container';
     const container = document.getElementById(containerId);
@@ -805,6 +805,26 @@ async function loadGenreChart(userId, isFriend) {
         // 2. Ищем их жанры в кэше
         const cacheMap = await getCachedAnimeBatch(animeIds);
         
+        // 3. Если чего-то нет в кэше — грузим параллельно
+        const missingIds = animeIds.filter(id => !cacheMap.has(id));
+        
+        if (missingIds.length > 0) {
+            // Ограничиваем до 10 штук за раз, чтобы не вешать приложение, если список огромный
+            const toFetch = missingIds.slice(0, 10);
+            const fetched = await processWithLimit(toFetch, 3, async (id) => {
+                try { return await API.getDetails('anilist_' + id); } catch { return null; }
+            });
+            
+            fetched.filter(Boolean).forEach(anime => {
+                if (anime.genres && Array.isArray(anime.genres)) {
+                    cacheMap.set(String(anime.rawId), { genres: anime.genres }); // Сохраняем в локальную мапу для подсчета
+                }
+            });
+            
+            // Если после загрузки всё еще есть пустые, но мы загрузили только часть (10), 
+            // возможно, стоит запустить повторный рендер, но чтобы не спамить API, просто отрисуем что есть.
+        }
+
         const genreCounts = {};
         cacheMap.forEach(anime => {
             if (anime.genres && Array.isArray(anime.genres)) {
@@ -814,17 +834,17 @@ async function loadGenreChart(userId, isFriend) {
             }
         });
 
-        // 3. Сортируем и берем топ-6
+        // 4. Сортируем и берем топ-6
         const sortedGenres = Object.entries(genreCounts)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 6);
 
         if (sortedGenres.length === 0) {
-            container.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; width: 100%;">Жанры не найдены в кэше.</div>';
+            container.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; width: 100%;">Не удалось определить жанры. Попробуйте открыть аниме из списка.</div>';
             return;
         }
 
-        // 4. Рисуем столбцы
+        // 5. Рисуем столбцы
         const maxCount = sortedGenres[0][1];
         const maxBarHeight = 90; // Максимальная высота столбца в px
 
@@ -1662,7 +1682,7 @@ async function openFriendProfile(id, name = '') {
         setTimeout(() => { 
             renderEffectParticles(document.getElementById('friend-particle-container'), friendEffectClass); 
             loadProfileStats(id, true);
-            loadGenreChart(id, true); // НОВЫЙ ВЫЗОВ ДЛЯ ДРУГА
+            loadGenreChart(id, true); // ВЫЗОВ ДИАГРАММЫ ДЛЯ ДРУГА
         }, 100);
 
     } catch (e) { 
