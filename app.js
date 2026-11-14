@@ -790,7 +790,7 @@ async function loadProfileStats(userId = null, isFriend = false) {
     } catch (e) { console.error('Ошибка загрузки статистики:', e); }
 }
 
-// ОБНОВЛЕННАЯ ФУНКЦИЯ: ДИАГРАММА ЖАНРОВ С ЦИФРАМИ ВНУТРИ
+// ОБНОВЛЕННАЯ ФУНКЦИЯ: ДИАГРАММА ЖАНРОВ С ЦИФРАМИ ВНУТРИ И ЕДИНЫМ СТИЛЕМ
 async function loadGenreChart(userId, isFriend) {
     const containerId = isFriend ? 'friend-genre-chart-container' : 'genre-chart-container';
     const container = document.getElementById(containerId);
@@ -848,11 +848,12 @@ async function loadGenreChart(userId, isFriend) {
         const maxBarHeight = 90;
 
         container.innerHTML = sortedGenres.map(([genre, count], index) => {
-            const heightPx = Math.max(24, (count / maxCount) * maxBarHeight); // минимум 24px чтобы цифра влезла
+            const heightPx = Math.max(24, (count / maxCount) * maxBarHeight); 
             const isTop = index === 0;
             
-            const bgColor = isTop ? 'linear-gradient(180deg, #8A2BE2 0%, #5b5bff 100%)' : 'linear-gradient(180deg, #2a2a3e 0%, #1a1a24 100%)';
-            const glow = isTop ? 'box-shadow: 0 0 15px rgba(138,43,226,0.6);' : '';
+            // ЕДИНЫЙ ГРАДИЕНТ ДЛЯ ВСЕХ
+            const bgColor = 'linear-gradient(180deg, #8A2BE2 0%, #5b5bff 100%)';
+            const glow = 'box-shadow: 0 0 15px rgba(138,43,226,0.6);';
 
             let displayGenre = genre;
             if (displayGenre === 'Slice of Life') displayGenre = 'Повседневность';
@@ -871,9 +872,9 @@ async function loadGenreChart(userId, isFriend) {
                 <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%;">
                     <div style="width: 100%; max-width: 24px; height: ${heightPx}px; background: ${bgColor}; border-radius: 6px; ${glow} position: relative; transition: height 0.5s ease-out; display: flex; align-items: center; justify-content: center;">
                         <!-- Цифра ВНУТРИ столбца -->
-                        <div style="font-size: 10px; font-weight: bold; color: ${isTop ? '#fff' : '#888'}; position: absolute; top: 4px; left: 50%; transform: translateX(-50%); z-index: 2; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">${count}</div>
+                        <div style="font-size: 10px; font-weight: bold; color: #fff; position: absolute; top: 4px; left: 50%; transform: translateX(-50%); z-index: 2; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">${count}</div>
                         
-                        <!-- Бейдж #1 -->
+                        <!-- Бейдж #1 (оставил только для первого) -->
                         ${isTop ? `<div style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: rgba(91,91,255,0.2); border: 1px solid #5b5bff; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 8px; z-index: 10;">#1</div>` : ''}
                     </div>
                     <div style="font-size: 9px; color: #888; margin-top: 6px; text-align: center; word-break: break-word; line-height: 1.1; height: 22px; display: flex; align-items: center; justify-content: center;">${displayGenre}</div>
@@ -1588,7 +1589,7 @@ async function openFriendProfile(id, name = '') {
                 <div style="padding: 15px 20px 0 20px;">
                     <div style="background: rgba(20, 20, 31, 0.6); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
                         <div style="margin-bottom: 20px;">
-                            <h3 style="font-size: 18px; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">Статистика<svg class="icon-inline" style="color: #888; width: 16px; height: 16px;"><use href="#oa-alert-circle"></use></svg></h3>
+                            <h3 style="font-size: 18px; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">Статистика</h3>
                         </div>
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
                             <div style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
