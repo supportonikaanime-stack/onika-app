@@ -239,7 +239,6 @@ const API_AniList = {
         const data = await this.fetch(q, { id: parseInt(cleanId) }).catch(()=>null);
         return data?.Media || null;
     },
-    // Запрос только для получения жанров (быстрый)
     async getGenresBatch(ids) {
         if (!ids.length) return [];
         const q = `query($ids:[Int]) { Page(page: 1, perPage: 50) { media(id_in: $ids, type: ANIME) { id genres } } }`;
