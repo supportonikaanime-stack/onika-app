@@ -665,17 +665,22 @@ async function loadProfileData() {
                 if (dbUser.active_title) { const {data:t}=await supabaseClient.from('titles').select('*').eq('id',dbUser.active_title).single(); if(t){ACTIVE_TITLE_DATA=t;stats.active_title=t.id;} } else {ACTIVE_TITLE_DATA=null;stats.active_title=null;}
                 if (dbUser.active_effect) { const {data:e}=await supabaseClient.from('effects').select('*').eq('id',dbUser.active_effect).single(); if(e){ACTIVE_EFFECT_CSS=e.css_class;stats.active_effect=e.id;} } else {ACTIVE_EFFECT_CSS='';stats.active_effect=null;}
                 
-                const badgeEl = document.getElementById('user-badge-img'); 
-                if (dbUser.active_badge) { 
-                    const {data:bd}=await supabaseClient.from('badges').select('image_url').eq('id',dbUser.active_badge).single(); 
-                    if(bd){
-                        ACTIVE_BADGE_URL=safeUrl(bd.image_url);
-                        stats.active_badge=dbUser.active_badge;
-                        if(badgeEl){ badgeEl.src = ACTIVE_BADGE_URL; badgeEl.style.display = 'block'; badgeEl.style.visibility = 'visible'; }
+                // Исправлено: принудительное применение значка
+                const badgeEl = document.getElementById('user-badge-img');
+                if (dbUser.active_badge) {
+                    const { data: bd } = await supabaseClient.from('badges').select('image_url').eq('id', dbUser.active_badge).single();
+                    if (bd) {
+                        ACTIVE_BADGE_URL = safeUrl(bd.image_url);
+                        stats.active_badge = dbUser.active_badge;
+                        if (badgeEl) {
+                            badgeEl.src = ACTIVE_BADGE_URL;
+                            badgeEl.style.display = 'block';
+                            badgeEl.style.visibility = 'visible';
+                        }
                     }
                 } else {
-                    ACTIVE_BADGE_URL='';
-                    stats.active_badge=null;
+                    ACTIVE_BADGE_URL = '';
+                    stats.active_badge = null;
                     if (badgeEl) badgeEl.style.display = 'none';
                 }
                 
@@ -713,11 +718,13 @@ async function loadProfileData() {
     
     renderEffectParticles(document.getElementById('particle-effect-container'), ACTIVE_EFFECT_CSS);
     
+    // Двойная проверка для надежности
     const badgeElCheck = document.getElementById('user-badge-img');
     if (badgeElCheck) {
         if (ACTIVE_BADGE_URL) {
-            if (badgeElCheck.src !== ACTIVE_BADGE_URL) badgeElCheck.src = ACTIVE_BADGE_URL;
+            badgeElCheck.src = ACTIVE_BADGE_URL;
             badgeElCheck.style.display = 'block';
+            badgeElCheck.style.visibility = 'visible';
         } else {
             badgeElCheck.style.display = 'none';
         }
