@@ -4,9 +4,8 @@
 const SUPABASE_URL = 'https://wsaykqhojwfhpqzxptke.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzYXlrcWhvandmaHBxenhwdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MzAxMDgsImV4cCI6MjEwODEwNjEwOH0.6eHuhYt2CyVvIurt-TW3MgP4VE0kzv39vqVHwskodLk';
 
-const BACKEND_URL = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-    ? 'http://localhost:3000'
-    : 'https://onika-api.relaxdev.ru';
+// ЖЕСТКО ЗАДАННЫЙ АДРЕС СЕРВЕРА (БЕЗ LOCALHOST)
+const BACKEND_URL = 'https://supportonikaanime-stack.github.io/onika-app/';
 
 let supabaseClient = null;
 try {
@@ -119,7 +118,7 @@ async function handleTelegramAuth(tgUser) {
         MY_ID = user.id;
         MY_NAME = user.user_metadata?.nickname || 'Игрок';
         MY_PHOTO_URL = user.user_metadata?.avatar_url || '';
-        _statsCache = null; // сброс кэша
+        _statsCache = null;
 
         hideAuthScreen();
         await loadProfileData();
@@ -705,7 +704,6 @@ async function loadProfileData() {
                 if (dbUser.active_title) { const { data: t } = await supabaseClient.from('titles').select('*').eq('id', dbUser.active_title).single(); if (t) { ACTIVE_TITLE_DATA = t; stats.active_title = t.id; } } else { ACTIVE_TITLE_DATA = null; stats.active_title = null; }
                 if (dbUser.active_effect) { const { data: e } = await supabaseClient.from('effects').select('*').eq('id', dbUser.active_effect).single(); if (e) { ACTIVE_EFFECT_CSS = e.css_class; stats.active_effect = e.id; } } else { ACTIVE_EFFECT_CSS = ''; stats.active_effect = null; }
 
-                // ✅ ФИКС: рамка реально применяется
                 if (dbUser.active_frame) {
                     const { data: fr } = await supabaseClient.from('frames').select('image_url').eq('id', dbUser.active_frame).single();
                     if (fr) { ACTIVE_FRAME_URL = safeUrl(fr.image_url); stats.active_frame = dbUser.active_frame; }
@@ -753,7 +751,6 @@ async function loadProfileData() {
 
     renderEffectParticles(document.getElementById('particle-effect-container'), ACTIVE_EFFECT_CSS);
 
-    // Рамка на аватарку (если есть)
     const avCont = document.querySelector('#screen-profile .avatar-container');
     if (avCont && ACTIVE_FRAME_URL) {
         let frameImg = avCont.querySelector('.active-frame-img');
@@ -1410,7 +1407,6 @@ async function openFriendProfile(id, name = '') {
         const { data: friend, error } = await supabaseClient.from('users').select('*').eq('id', id).single();
         if (error || !friend) throw new Error('Не найден');
 
-        // Параллельно грузим баннер/титул/эффект/бейдж/рамку
         const [bannerRes, titleRes, effectRes, badgeRes, frameRes] = await Promise.allSettled([
             friend.active_banner ? supabaseClient.from('banners').select('image_url').eq('id', friend.active_banner).single() : Promise.resolve({ data: null }),
             friend.active_title ? supabaseClient.from('titles').select('*').eq('id', friend.active_title).single() : Promise.resolve({ data: null }),
@@ -2013,7 +2009,6 @@ async function renderWatchHistory() {
                 const idx = ordered.findIndex(o => o === null);
                 if (c && c.title_ru && idx >= 0) ordered[idx] = { id, rawId: Number(rawId), title_ru: c.title_ru, title_raw: c.title_raw, title: c.title_ru, year: c.year, episodes: c.episodes, images: { jpg: { image_url: c.image_url } }, description: c.description, genres: c.genres || [], score: c.score, status: c.status, kind: c.kind };
             });
-            // ✅ ФИКС: сравнение String()
             const stillMissing = missing.filter(id => !ordered.find(o => o && String(o.id) === String(id)));
             if (stillMissing.length) {
                 const fetched = await processWithLimit(stillMissing, 4, async (id) => { try { return await API.getDetails(id); } catch { return null; } });
@@ -2264,7 +2259,6 @@ function renderAchievementsPage() {
 // ==========================================
 // 15. ИНИЦИАЛИЗАЦИЯ
 // ==========================================
-// ✅ ФИКС: реальное время, а не минуты по таймеру
 let _lastActiveTs = Date.now();
 setInterval(() => {
     if (document.visibilityState === 'visible') {
@@ -2286,7 +2280,6 @@ document.addEventListener('visibilitychange', () => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // ✅ Обрабатываем очередь Telegram (если виджет вызвал до app.js)
     window.__tgReady = true;
     if (window.__tgAuthQueue && window.__tgAuthQueue.length > 0) {
         const queued = window.__tgAuthQueue.shift();
