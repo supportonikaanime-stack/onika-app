@@ -239,6 +239,13 @@ const API_AniList = {
         const data = await this.fetch(q, { id: parseInt(cleanId) }).catch(()=>null);
         return data?.Media || null;
     },
+    // Запрос только для получения жанров (быстрый)
+    async getGenresBatch(ids) {
+        if (!ids.length) return [];
+        const q = `query($ids:[Int]) { Page(page: 1, perPage: 50) { media(id_in: $ids, type: ANIME) { id genres } } }`;
+        const data = await this.fetch(q, { ids: ids.map(Number) }).catch(()=>null);
+        return data?.Page?.media || [];
+    },
     async getSimilarByGenre(genres, excludeId, limit = 6) {
         if (!genres || genres.length === 0) return [];
         const vars = { page: 1, perPage: 15, genre: genres[0] };
@@ -784,7 +791,7 @@ async function loadProfileStats(userId = null, isFriend = false) {
     } catch (e) { console.error('Ошибка загрузки статистики:', e); }
 }
 
-// ОБНОВЛЕННАЯ ФУНКЦИЯ: ДИАГРАММА ЖАНРОВ
+// ОБНОВЛЕННАЯ ФУНКЦИЯ: ДИАГРАММА ЖАНРОВ С ДОЗАГРУЗКОЙ ИЗ API
 async function loadGenreChart(userId, isFriend) {
     const containerId = isFriend ? 'friend-genre-chart-container' : 'genre-chart-container';
     const container = document.getElementById(containerId);
@@ -802,29 +809,31 @@ async function loadGenreChart(userId, isFriend) {
 
         const animeIds = lists.map(l => String(l.anime_id).replace('anilist_', ''));
         
-        // 2. Ищем их жанры в кэше
+        // 2. Ищем их жанры в локальном кэше Supabase
         const cacheMap = await getCachedAnimeBatch(animeIds);
         
-        // 3. Если чего-то нет в кэше — грузим параллельно
-        const missingIds = animeIds.filter(id => !cacheMap.has(id));
+        // 3. Ищем те, которых нет в кэше
+        const missingIds = animeIds.filter(id => {
+            const cached = cacheMap.get(id);
+            return !cached || !cached.genres || cached.genres.length === 0;
+        });
         
+        // 4. Догружаем отсутствующие жанры через API (батчами)
         if (missingIds.length > 0) {
-            // Ограничиваем до 10 штук за раз, чтобы не вешать приложение, если список огромный
-            const toFetch = missingIds.slice(0, 10);
-            const fetched = await processWithLimit(toFetch, 3, async (id) => {
-                try { return await API.getDetails('anilist_' + id); } catch { return null; }
-            });
+            const toFetch = missingIds.slice(0, 50); // Ограничиваем 50, чтобы не вешать запросами
+            const fetchedGenres = await API_AniList.getGenresBatch(toFetch);
             
-            fetched.filter(Boolean).forEach(anime => {
-                if (anime.genres && Array.isArray(anime.genres)) {
-                    cacheMap.set(String(anime.rawId), { genres: anime.genres }); // Сохраняем в локальную мапу для подсчета
+            // Сохраняем найденные жанры в локальную мапу для отрисовки
+            fetchedGenres.forEach(item => {
+                if (item.genres && item.genres.length > 0) {
+                    const existing = cacheMap.get(String(item.id)) || {};
+                    existing.genres = item.genres;
+                    cacheMap.set(String(item.id), existing);
                 }
             });
-            
-            // Если после загрузки всё еще есть пустые, но мы загрузили только часть (10), 
-            // возможно, стоит запустить повторный рендер, но чтобы не спамить API, просто отрисуем что есть.
         }
 
+        // 5. Считаем статистику
         const genreCounts = {};
         cacheMap.forEach(anime => {
             if (anime.genres && Array.isArray(anime.genres)) {
@@ -834,17 +843,17 @@ async function loadGenreChart(userId, isFriend) {
             }
         });
 
-        // 4. Сортируем и берем топ-6
+        // 6. Сортируем и берем топ-6
         const sortedGenres = Object.entries(genreCounts)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 6);
 
         if (sortedGenres.length === 0) {
-            container.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; width: 100%;">Не удалось определить жанры. Попробуйте открыть аниме из списка.</div>';
+            container.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; width: 100%;">Жанры не найдены.</div>';
             return;
         }
 
-        // 5. Рисуем столбцы
+        // 7. Рисуем столбцы
         const maxCount = sortedGenres[0][1];
         const maxBarHeight = 90; // Максимальная высота столбца в px
 
