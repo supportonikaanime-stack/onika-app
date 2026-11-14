@@ -791,7 +791,7 @@ async function loadProfileStats(userId = null, isFriend = false) {
     } catch (e) { console.error('Ошибка загрузки статистики:', e); }
 }
 
-// ОБНОВЛЕННАЯ ФУНКЦИЯ: ДИАГРАММА ЖАНРОВ С ДОЗАГРУЗКОЙ ИЗ API
+// ОБНОВЛЕННАЯ ФУНКЦИЯ: ДИАГРАММА ЖАНРОВ С ЦИФРАМИ ВНУТРИ
 async function loadGenreChart(userId, isFriend) {
     const containerId = isFriend ? 'friend-genre-chart-container' : 'genre-chart-container';
     const container = document.getElementById(containerId);
@@ -800,7 +800,6 @@ async function loadGenreChart(userId, isFriend) {
     container.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; width: 100%;">Загрузка данных...</div>';
 
     try {
-        // 1. Получаем ID всех аниме пользователя
         const { data: lists } = await supabaseClient.from('user_lists').select('anime_id').eq('user_id', userId);
         if (!lists || lists.length === 0) {
             container.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; width: 100%;">Нет данных для анализа (список пуст).</div>';
@@ -808,22 +807,17 @@ async function loadGenreChart(userId, isFriend) {
         }
 
         const animeIds = lists.map(l => String(l.anime_id).replace('anilist_', ''));
-        
-        // 2. Ищем их жанры в локальном кэше Supabase
         const cacheMap = await getCachedAnimeBatch(animeIds);
         
-        // 3. Ищем те, которых нет в кэше
         const missingIds = animeIds.filter(id => {
             const cached = cacheMap.get(id);
             return !cached || !cached.genres || cached.genres.length === 0;
         });
         
-        // 4. Догружаем отсутствующие жанры через API (батчами)
         if (missingIds.length > 0) {
-            const toFetch = missingIds.slice(0, 50); // Ограничиваем 50, чтобы не вешать запросами
+            const toFetch = missingIds.slice(0, 50);
             const fetchedGenres = await API_AniList.getGenresBatch(toFetch);
             
-            // Сохраняем найденные жанры в локальную мапу для отрисовки
             fetchedGenres.forEach(item => {
                 if (item.genres && item.genres.length > 0) {
                     const existing = cacheMap.get(String(item.id)) || {};
@@ -833,7 +827,6 @@ async function loadGenreChart(userId, isFriend) {
             });
         }
 
-        // 5. Считаем статистику
         const genreCounts = {};
         cacheMap.forEach(anime => {
             if (anime.genres && Array.isArray(anime.genres)) {
@@ -843,7 +836,6 @@ async function loadGenreChart(userId, isFriend) {
             }
         });
 
-        // 6. Сортируем и берем топ-6
         const sortedGenres = Object.entries(genreCounts)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 6);
@@ -853,19 +845,16 @@ async function loadGenreChart(userId, isFriend) {
             return;
         }
 
-        // 7. Рисуем столбцы
         const maxCount = sortedGenres[0][1];
-        const maxBarHeight = 90; // Максимальная высота столбца в px
+        const maxBarHeight = 90;
 
         container.innerHTML = sortedGenres.map(([genre, count], index) => {
-            const heightPx = Math.max(10, (count / maxCount) * maxBarHeight);
+            const heightPx = Math.max(24, (count / maxCount) * maxBarHeight); // минимум 24px чтобы цифра влезла
             const isTop = index === 0;
             
-            // Цвета как на скриншоте (темно-фиолетовый для всех, яркий для топ-1)
             const bgColor = isTop ? 'linear-gradient(180deg, #8A2BE2 0%, #5b5bff 100%)' : 'linear-gradient(180deg, #2a2a3e 0%, #1a1a24 100%)';
             const glow = isTop ? 'box-shadow: 0 0 15px rgba(138,43,226,0.6);' : '';
 
-            // Сокращаем длинные названия жанров
             let displayGenre = genre;
             if (displayGenre === 'Slice of Life') displayGenre = 'Повседневность';
             if (displayGenre === 'Sci-Fi') displayGenre = 'Фантастика';
@@ -881,8 +870,11 @@ async function loadGenreChart(userId, isFriend) {
 
             return `
                 <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%;">
-                    <div style="font-size: 10px; font-weight: bold; color: ${isTop ? '#fff' : '#888'}; margin-bottom: 4px;">${count}</div>
-                    <div style="width: 100%; max-width: 24px; height: ${heightPx}px; background: ${bgColor}; border-radius: 6px; ${glow} position: relative; transition: height 0.5s ease-out;">
+                    <div style="width: 100%; max-width: 24px; height: ${heightPx}px; background: ${bgColor}; border-radius: 6px; ${glow} position: relative; transition: height 0.5s ease-out; display: flex; align-items: center; justify-content: center;">
+                        <!-- Цифра ВНУТРИ столбца -->
+                        <div style="font-size: 10px; font-weight: bold; color: ${isTop ? '#fff' : '#888'}; position: absolute; top: 4px; left: 50%; transform: translateX(-50%); z-index: 2; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">${count}</div>
+                        
+                        <!-- Бейдж #1 -->
                         ${isTop ? `<div style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: rgba(91,91,255,0.2); border: 1px solid #5b5bff; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 8px; z-index: 10;">#1</div>` : ''}
                     </div>
                     <div style="font-size: 9px; color: #888; margin-top: 6px; text-align: center; word-break: break-word; line-height: 1.1; height: 22px; display: flex; align-items: center; justify-content: center;">${displayGenre}</div>
