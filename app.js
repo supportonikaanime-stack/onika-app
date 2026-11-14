@@ -689,8 +689,7 @@ async function loadProfileData() {
     setElText('user-xp-current',currentLevelXP); 
     setElWidth('user-xp-bar',currentLevelXP + '%'); 
 
-    // Убрали stat-hours, так как этой карточки больше нет
-    setElText('stat-episodes', stats.episodesWatched || 0); // Это значение теперь отображается внизу в блоке статистики
+    setElText('stat-episodes', stats.episodesWatched || 0);
     setElText('stat-streak', stats.daysStreak || 1);
     setElText('stat-achievements', (stats.unlockedAchievements || []).length);
 
@@ -726,6 +725,7 @@ async function loadProfileData() {
 
     await syncProfileToDB();
     loadProfileStats(null, false);
+    loadGenreChart(MY_ID, false); // НОВЫЙ ВЫЗОВ
 }
 
 async function loadProfileStats(userId = null, isFriend = false) {
@@ -783,6 +783,90 @@ async function loadProfileStats(userId = null, isFriend = false) {
         donut.style.background = `conic-gradient(${stops.join(', ')})`;
     } catch (e) { console.error('Ошибка загрузки статистики:', e); }
 }
+
+// НОВАЯ ФУНКЦИЯ: ДИАГРАММА ЖАНРОВ
+async function loadGenreChart(userId, isFriend) {
+    const containerId = isFriend ? 'friend-genre-chart-container' : 'genre-chart-container';
+    const container = document.getElementById(containerId);
+    if (!container || !supabaseClient || !userId) return;
+
+    container.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; width: 100%;">Загрузка данных...</div>';
+
+    try {
+        // 1. Получаем ID всех аниме пользователя
+        const { data: lists } = await supabaseClient.from('user_lists').select('anime_id').eq('user_id', userId);
+        if (!lists || lists.length === 0) {
+            container.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; width: 100%;">Нет данных для анализа (список пуст).</div>';
+            return;
+        }
+
+        const animeIds = lists.map(l => String(l.anime_id).replace('anilist_', ''));
+        
+        // 2. Ищем их жанры в кэше
+        const cacheMap = await getCachedAnimeBatch(animeIds);
+        
+        const genreCounts = {};
+        cacheMap.forEach(anime => {
+            if (anime.genres && Array.isArray(anime.genres)) {
+                anime.genres.forEach(g => {
+                    genreCounts[g] = (genreCounts[g] || 0) + 1;
+                });
+            }
+        });
+
+        // 3. Сортируем и берем топ-6
+        const sortedGenres = Object.entries(genreCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 6);
+
+        if (sortedGenres.length === 0) {
+            container.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; width: 100%;">Жанры не найдены в кэше.</div>';
+            return;
+        }
+
+        // 4. Рисуем столбцы
+        const maxCount = sortedGenres[0][1];
+        const maxBarHeight = 90; // Максимальная высота столбца в px
+
+        container.innerHTML = sortedGenres.map(([genre, count], index) => {
+            const heightPx = Math.max(10, (count / maxCount) * maxBarHeight);
+            const isTop = index === 0;
+            
+            // Цвета как на скриншоте (темно-фиолетовый для всех, яркий для топ-1)
+            const bgColor = isTop ? 'linear-gradient(180deg, #8A2BE2 0%, #5b5bff 100%)' : 'linear-gradient(180deg, #2a2a3e 0%, #1a1a24 100%)';
+            const glow = isTop ? 'box-shadow: 0 0 15px rgba(138,43,226,0.6);' : '';
+
+            // Сокращаем длинные названия жанров
+            let displayGenre = genre;
+            if (displayGenre === 'Slice of Life') displayGenre = 'Повседневность';
+            if (displayGenre === 'Sci-Fi') displayGenre = 'Фантастика';
+            if (displayGenre === 'Action') displayGenre = 'Экшен';
+            if (displayGenre === 'Romance') displayGenre = 'Романтика';
+            if (displayGenre === 'Comedy') displayGenre = 'Комедия';
+            if (displayGenre === 'Fantasy') displayGenre = 'Фэнтези';
+            if (displayGenre === 'Drama') displayGenre = 'Драма';
+            if (displayGenre === 'Adventure') displayGenre = 'Приключения';
+            if (displayGenre === 'Mystery') displayGenre = 'Детектив';
+            if (displayGenre === 'Thriller') displayGenre = 'Триллер';
+            if (displayGenre === 'Horror') displayGenre = 'Ужасы';
+
+            return `
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%;">
+                    <div style="font-size: 10px; font-weight: bold; color: ${isTop ? '#fff' : '#888'}; margin-bottom: 4px;">${count}</div>
+                    <div style="width: 100%; max-width: 24px; height: ${heightPx}px; background: ${bgColor}; border-radius: 6px; ${glow} position: relative; transition: height 0.5s ease-out;">
+                        ${isTop ? `<div style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: rgba(91,91,255,0.2); border: 1px solid #5b5bff; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 8px; z-index: 10;">#1</div>` : ''}
+                    </div>
+                    <div style="font-size: 9px; color: #888; margin-top: 6px; text-align: center; word-break: break-word; line-height: 1.1; height: 22px; display: flex; align-items: center; justify-content: center;">${displayGenre}</div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (e) {
+        console.error('Ошибка графика жанров:', e);
+        container.innerHTML = '<div style="color: #ff4444; font-size: 12px; text-align: center; width: 100%;">Ошибка загрузки</div>';
+    }
+}
+
 
 async function uploadAvatar(event) {
     const file = event.target.files[0];
@@ -1422,7 +1506,7 @@ async function openFriendProfile(id, name = '') {
         const nameChar = friend.name && friend.name[0] ? escapeHTML(friend.name[0].toUpperCase()) : '?';
         const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : nameChar;
 
-        // --- ОБНОВЛЕННАЯ ВЕРСТКА ПРОФИЛЯ ДРУГА ---
+        // --- ВЕРСТКА ПРОФИЛЯ ДРУГА С ДИАГРАММОЙ ---
         container.innerHTML = `
             <div style="padding-bottom: 40px;">
                 <div id="friend-profile-banner" style="position: relative; width: 100%; height: 220px; background: ${friendBannerUrl ? `url('${friendBannerUrl}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)'}; background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
@@ -1513,8 +1597,23 @@ async function openFriendProfile(id, name = '') {
                         </div>
                     </div>
                 </div>
-                
+
+                <!-- ДИАГРАММА ЖАНРОВ ДЛЯ ДРУГА -->
                 <div style="padding: 20px;">
+                    <div style="background: rgba(20, 20, 31, 0.6); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
+                        <h3 style="font-size: 18px; color: #fff; margin: 0 0 15px 0; display: flex; align-items: center; gap: 8px;">
+                            Любимые жанры
+                        </h3>
+                        <div id="friend-genre-chart-container" style="display: flex; align-items: flex-end; justify-content: space-between; height: 140px; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;">
+                            <!-- Сюда рендерится график друга через JS -->
+                        </div>
+                        <div style="font-size: 12px; color: #888; line-height: 1.5;">
+                            На основе списка аниме этого пользователя.
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="padding: 0 20px 20px 20px;">
                     ${id !== MY_ID && friendshipStatus === 'accepted' ? `<button onclick="removeFriend('${escapeHTML(String(friend.id))}')" class="ripple-btn" style="width: 100%; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">Удалить из друзей</button>` : ''}
                 </div>
             </div>
@@ -1563,6 +1662,7 @@ async function openFriendProfile(id, name = '') {
         setTimeout(() => { 
             renderEffectParticles(document.getElementById('friend-particle-container'), friendEffectClass); 
             loadProfileStats(id, true);
+            loadGenreChart(id, true); // НОВЫЙ ВЫЗОВ ДЛЯ ДРУГА
         }, 100);
 
     } catch (e) { 
@@ -1931,6 +2031,7 @@ async function setAnimeStatus(status) {
         checkAchievements(stats); await syncProfileToDB(true);
         if (document.getElementById('screen-my').classList.contains('active')) renderMyList();
         if (document.getElementById('screen-profile').classList.contains('active')) loadProfileStats();
+        if (document.getElementById('screen-profile').classList.contains('active')) loadGenreChart(MY_ID, false); // ОБНОВЛЯЕМ ГРАФИК
     } catch(e) { console.error(e); showToast('Ошибка'); }
 }
 function toggleDescription() { const d = document.getElementById('desc-text'); const b = document.getElementById('desc-btn'); if (d.style.webkitLineClamp === '4' || d.style.webkitLineClamp === '') { d.style.webkitLineClamp = 'unset'; b.innerHTML = 'Свернуть ▲'; } else { d.style.webkitLineClamp = '4'; b.innerHTML = 'Читать дальше ▼'; } }
