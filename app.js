@@ -4,8 +4,7 @@
 const SUPABASE_URL = 'https://wsaykqhojwfhpqzxptke.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzYXlrcWhvandmaHBxenhwdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MzAxMDgsImV4cCI6MjEwODEwNjEwOH0.6eHuhYt2CyVvIurt-TW3MgP4VE0kzv39vqVHwskodLk';
 
-// ЖЕСТКО ЗАДАННЫЙ АДРЕС СЕРВЕРА (БЕЗ LOCALHOST)
-const BACKEND_URL = 'https://supportonikaanime-stack.github.io/onika-app/';
+const BACKEND_URL = 'https://onika-api.relaxdev.ru';
 
 let supabaseClient = null;
 try {
@@ -2280,6 +2279,21 @@ document.addEventListener('visibilitychange', () => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // === ПЕРЕХВАТ ДАННЫХ ОТ TELEGRAM (data-auth-url) ===
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('hash') && urlParams.has('id')) {
+        const tgUser = {};
+        urlParams.forEach((value, key) => { tgUser[key] = value; });
+        // Очищаем URL, чтобы данные не висели в адресной строке
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Вызываем функцию авторизации
+        if (typeof handleTelegramAuth === 'function') {
+            await handleTelegramAuth(tgUser);
+        }
+    }
+    // ====================================================
+
     window.__tgReady = true;
     if (window.__tgAuthQueue && window.__tgAuthQueue.length > 0) {
         const queued = window.__tgAuthQueue.shift();
