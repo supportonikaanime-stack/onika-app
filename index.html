@@ -98,6 +98,7 @@
         @keyframes textPulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
         @keyframes heroProgress { from { width: 0%; } to { width: 100%; } }
         @keyframes sectionFadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes growBar { from { height: 0%; } to { height: 100%; } }
 
         .skeleton { background: linear-gradient(90deg, #1a1a20 0%, #25252e 40%, #2e2e3a 50%, #25252e 60%, #1a1a20 100%); background-size: 800px 100%; animation: skeletonShimmer 1.4s linear infinite; border-radius: 8px; position: relative; overflow: hidden; }
         .skeleton-text { height: 12px; margin-bottom: 8px; border-radius: 6px; }
@@ -856,6 +857,21 @@
                 </div>
             </div>
         </div>
+
+        <!-- НОВЫЙ БЛОК: ДИАГРАММА ЖАНРОВ -->
+        <div style="padding: 0 20px 20px 20px;">
+            <div style="background: rgba(20, 20, 31, 0.6); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
+                <h3 style="font-size: 18px; color: #fff; margin: 0 0 15px 0; display: flex; align-items: center; gap: 8px;">
+                    Любимые жанры
+                </h3>
+                <div id="genre-chart-container" style="display: flex; align-items: flex-end; justify-content: space-between; height: 140px; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;">
+                    <!-- Сюда рендерится график через JS -->
+                </div>
+                <div style="font-size: 12px; color: #888; line-height: 1.5;">
+                    На основе вашего списка аниме. Столбцы показывают, какой жанр вы предпочитаете больше всего.
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="screen-shop" class="screen" style="background: var(--bg);">
@@ -1035,6 +1051,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4631" defer></script>
+    <script src="app.js?v=4633" defer></script>
 </body>
 </html>
