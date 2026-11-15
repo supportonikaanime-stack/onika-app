@@ -77,25 +77,31 @@ function hidePreloader() {
     if (p) { p.classList.add('hidden'); setTimeout(() => p.remove(), 700); }
 }
 
-// ✅ ИСПРАВЛЕННАЯ ФУНКЦИЯ ПЛАШКИ
+// ✅ ИСПРАВЛЕННАЯ ФУНКЦИЯ ПЛАШКИ (С ЛОГОТИПОМ)
 function getRatingBadgeHTML(score, isLarge = false) {
     const sizeClass = isLarge ? 'large-mode' : '';
-    const svgSize = isLarge ? '28px' : '18px';
-    const starSize = isLarge ? '16px' : '10px';
-    const scoreFont = isLarge ? '22px' : '14px';
+    const svgSize = isLarge ? '20px' : '14px';
+    const starSize = isLarge ? '14px' : '10px';
+    const scoreFont = isLarge ? '18px' : '12px';
     
+    // Твой логотип (звезда с глазом) в виде SVG
+    const logoSvg = `
+        <svg class="onika-logo" viewBox="0 0 100 100">
+            <path d="M50 5 L60 35 L95 30 L70 55 L85 90 L50 70 L15 90 L30 55 L5 30 L40 35 Z" fill="none" stroke="url(#logoGrad)" stroke-width="6" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="50" rx="20" ry="12" fill="url(#logoGrad)" transform="rotate(-30 50 50)"/>
+            <circle cx="50" cy="50" r="6" fill="#14141f" stroke="#00e5ff" stroke-width="2"/>
+            <defs>
+                <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#ff00cc;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#00e5ff;stop-opacity:1" />
+                </linearGradient>
+            </defs>
+        </svg>
+    `;
+
     return `
         <div class="new-rating-badge ${sizeClass}">
-            <svg style="width: ${svgSize}; height: ${svgSize};" viewBox="0 0 100 100">
-                <defs>
-                    <linearGradient id="grad_${Math.random().toString(36).substr(2, 9)}" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#ff00cc;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#00e5ff;stop-opacity:1" />
-                    </linearGradient>
-                </defs>
-                <path d="M50 10 L60 40 L90 40 L65 60 L75 90 L50 70 L25 90 L35 60 L10 40 L40 40 Z" fill="none" stroke="url(#grad_${Math.random().toString(36).substr(2, 9)})" stroke-width="6" stroke-linejoin="round"/>
-                <circle cx="50" cy="50" r="8" fill="url(#grad_${Math.random().toString(36).substr(2, 9)})" />
-            </svg>
+            ${logoSvg}
             <div class="new-rating-divider"></div>
             <div class="new-rating-score" style="font-size: ${scoreFont};">
                 ${score}
