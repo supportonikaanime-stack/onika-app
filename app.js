@@ -178,7 +178,7 @@ async function handleVerifyCode() {
     const btn = document.getElementById('verify-btn');
     btn.disabled = true; btn.textContent = 'Проверка...'; showAuthError('');
     try {
-        const { data, error } = await supabaseClient.auth.verifyOtp({ email: PENDING_VERIFY_EMAIL, token: code, type: 'email' });
+        const { data, error } = await supabaseClient.auth.verifyOtp({ email: PENDING_VERIFY_EMAIL, token: code, type: 'signup' });
         if (error) throw error;
         if (data.session) {
             MY_ID = data.user.id;
@@ -1079,25 +1079,67 @@ async function loadGenreChart(userId, isFriend) {
 async function uploadAvatar(event) {
     const file = event.target.files[0];
     if (!file) return;
+
     if (!supabaseClient) { showToast('Сервис недоступен'); return; }
+    if (!MY_ID) { showToast('Сначала войдите в аккаунт'); return; }
     if (file.size > 5 * 1024 * 1024) { showToast('Файл слишком большой (макс. 5 МБ)'); event.target.value = ''; return; }
     if (!file.type.startsWith('image/')) { showToast('Пожалуйста, выберите изображение'); return; }
-    showToast('Загрузка...');
+
+    showToast('Обработка фото...');
+
     try {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${MY_ID}_${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabaseClient.storage.from('avatars').upload(fileName, file, { upsert: true });
-        if (uploadError) throw uploadError;
+        const processedFile = await new Promise((resolve, reject) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                const canvas = document.createElement('canvas');
+                const MAX_SIZE = 500;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+                } else {
+                    if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    if (!blob) return reject(new Error('Ошибка сжатия'));
+                    resolve(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
+                }, 'image/jpeg', 0.85);
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Не удалось прочитать изображение')); };
+            img.src = url;
+        });
+
+        showToast('Загрузка на сервер...');
+
+        const fileName = `${MY_ID}_${Date.now()}.jpg`;
+        const { error: uploadError } = await supabaseClient.storage
+            .from('avatars')
+            .upload(fileName, processedFile, { cacheControl: '3600', upsert: true, contentType: 'image/jpeg' });
+
+        if (uploadError) throw new Error(uploadError.message);
+
         const { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
         const { error: dbError } = await supabaseClient.from('users').update({ avatar_url: publicUrl }).eq('id', MY_ID);
         if (dbError) throw dbError;
+
         let s = getStats(); s.avatar_url = publicUrl; saveStats(s);
+
         const avatarEl = document.getElementById('tg-avatar');
         if (avatarEl) avatarEl.innerHTML = `<img src="${publicUrl}" style="width:100%; height:100%; object-fit:cover;">`;
+
         showToast('Аватарка обновлена!');
     } catch (error) {
-        console.error(error);
-        showToast('Ошибка загрузки');
+        console.error('Avatar Upload Error:', error);
+        showToast('Ошибка: ' + (error.message || 'неизвестная ошибка'));
     } finally {
         event.target.value = '';
     }
