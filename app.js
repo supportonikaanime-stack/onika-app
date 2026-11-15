@@ -851,23 +851,32 @@ async function loadProfileData() {
                     if (e) { ACTIVE_EFFECT_CSS = e.css_class; stats.active_effect = e.id; }
                 } else { ACTIVE_EFFECT_CSS = ''; stats.active_effect = null; }
 
-                const badgeEl = document.getElementById('user-badge-img');
+                // ИСПРАВЛЕНИЕ ЗНАЧКА (принудительное создание)
+                const nameContainer = document.getElementById('tg-name');
+                const oldBadge = document.getElementById('user-badge-img');
+                
                 if (dbUser.active_badge) {
                     const { data: bd } = await supabaseClient.from('badges').select('image_url').eq('id', dbUser.active_badge).single();
                     const safeBadge = bd ? safeUrl(bd.image_url) : '';
+                    
                     if (safeBadge) {
                         ACTIVE_BADGE_URL = safeBadge;
                         stats.active_badge = dbUser.active_badge;
-                        if (badgeEl) {
-                            badgeEl.src = safeBadge;
-                            badgeEl.style.display = 'block';
-                            badgeEl.style.visibility = 'visible';
+                        if (oldBadge) oldBadge.remove();
+                        
+                        if (nameContainer) {
+                            const newBadge = document.createElement('img');
+                            newBadge.id = 'user-badge-img';
+                            newBadge.className = 'user-badge-icon';
+                            newBadge.src = safeBadge;
+                            newBadge.style.cssText = 'width: 24px; height: 24px; object-fit: contain; display: inline-block; margin-left: 8px;';
+                            nameContainer.appendChild(newBadge); 
                         }
                     }
                 } else {
                     ACTIVE_BADGE_URL = '';
                     stats.active_badge = null;
-                    if (badgeEl) badgeEl.style.display = 'none';
+                    if (oldBadge) oldBadge.remove();
                 }
 
                 saveStats(stats);
@@ -913,17 +922,6 @@ async function loadProfileData() {
     if (bEl) bEl.style.backgroundImage = ACTIVE_BANNER_URL ? `url('${ACTIVE_BANNER_URL}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)';
 
     renderEffectParticles(document.getElementById('particle-effect-container'), ACTIVE_EFFECT_CSS);
-
-    const badgeElCheck = document.getElementById('user-badge-img');
-    if (badgeElCheck) {
-        if (ACTIVE_BADGE_URL) {
-            badgeElCheck.src = ACTIVE_BADGE_URL;
-            badgeElCheck.style.display = 'block';
-            badgeElCheck.style.visibility = 'visible';
-        } else {
-            badgeElCheck.style.display = 'none';
-        }
-    }
 
     const tCont = document.getElementById('user-title-container'), tEl = document.getElementById('user-active-title');
     if (ACTIVE_TITLE_DATA) { tCont.style.display = 'block'; applyTitleToElement(tEl, ACTIVE_TITLE_DATA); }
