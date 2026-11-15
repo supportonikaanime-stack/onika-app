@@ -77,11 +77,16 @@ function hidePreloader() {
     if (p) { p.classList.add('hidden'); setTimeout(() => p.remove(), 700); }
 }
 
-// Функция для генерации HTML плашки (чтобы не дублировать код)
+// ✅ ИСПРАВЛЕННАЯ ФУНКЦИЯ ПЛАШКИ
 function getRatingBadgeHTML(score, isLarge = false) {
+    const sizeClass = isLarge ? 'large-mode' : '';
+    const svgSize = isLarge ? '28px' : '18px';
+    const starSize = isLarge ? '16px' : '10px';
+    const scoreFont = isLarge ? '22px' : '14px';
+    
     return `
-        <div class="new-rating-badge" style="padding: ${isLarge ? '8px 18px' : '6px 14px'}; gap: ${isLarge ? '12px' : '10px'};">
-            <svg style="width: ${isLarge ? '28px' : '24px'}; height: ${isLarge ? '28px' : '24px'};" viewBox="0 0 100 100">
+        <div class="new-rating-badge ${sizeClass}">
+            <svg style="width: ${svgSize}; height: ${svgSize};" viewBox="0 0 100 100">
                 <defs>
                     <linearGradient id="grad_${Math.random().toString(36).substr(2, 9)}" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" style="stop-color:#ff00cc;stop-opacity:1" />
@@ -91,10 +96,10 @@ function getRatingBadgeHTML(score, isLarge = false) {
                 <path d="M50 10 L60 40 L90 40 L65 60 L75 90 L50 70 L25 90 L35 60 L10 40 L40 40 Z" fill="none" stroke="url(#grad_${Math.random().toString(36).substr(2, 9)})" stroke-width="6" stroke-linejoin="round"/>
                 <circle cx="50" cy="50" r="8" fill="url(#grad_${Math.random().toString(36).substr(2, 9)})" />
             </svg>
-            <div class="new-rating-divider" style="height: ${isLarge ? '24px' : '20px'};"></div>
-            <div class="new-rating-score" style="font-size: ${isLarge ? '22px' : '18px'};">
+            <div class="new-rating-divider"></div>
+            <div class="new-rating-score" style="font-size: ${scoreFont};">
                 ${score}
-                <svg class="new-rating-star" style="width: ${isLarge ? '18px' : '14px'}; height: ${isLarge ? '18px' : '14px'};" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <svg class="new-rating-star" style="width: ${starSize}; height: ${starSize};" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             </div>
         </div>
     `;
@@ -1910,6 +1915,7 @@ async function openFriendProfile(id, name = '') {
         const nameChar = friend.name && friend.name[0] ? escapeHTML(friend.name[0].toUpperCase()) : '?';
         const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : nameChar;
 
+        // ✅ Аватарка теперь 110px, как и в основном профиле
         container.innerHTML = `
             <div style="padding-bottom: 40px;">
                 <div id="friend-profile-banner" style="position: relative; width: 100%; height: 280px; background: ${friendBannerUrl ? `url('${friendBannerUrl}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)'}; background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
@@ -2439,8 +2445,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             </div>
         </div>`;
 
-        // --- НОВЫЙ БЛОК: ОЦЕНКА СООБЩЕСТВА (Заглушка) ---
-        // В будущем здесь будет среднее значение из БД
+        // --- НОВЫЙ БЛОК: ОЦЕНКА СООБЩЕСТВА ---
         const communityScore = score; // Пока берем из AniList
         let communityRatingHTML = `
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
