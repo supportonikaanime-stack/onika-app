@@ -851,7 +851,6 @@ async function loadProfileData() {
                     if (e) { ACTIVE_EFFECT_CSS = e.css_class; stats.active_effect = e.id; }
                 } else { ACTIVE_EFFECT_CSS = ''; stats.active_effect = null; }
 
-                // ИСПРАВЛЕНИЕ ЗНАЧКА (принудительное создание)
                 const nameContainer = document.getElementById('tg-name');
                 const oldBadge = document.getElementById('user-badge-img');
                 
@@ -1891,12 +1890,11 @@ async function openFriendProfile(id, name = '') {
 
         container.innerHTML = `
             <div style="padding-bottom: 40px;">
-                <div id="friend-profile-banner" style="position: relative; width: 100%; height: 220px; background: ${friendBannerUrl ? `url('${friendBannerUrl}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)'}; background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
+                <div id="friend-profile-banner" style="position: relative; width: 100%; height: 280px; background: ${friendBannerUrl ? `url('${friendBannerUrl}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)'}; background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
                     <div class="effect-container" id="friend-particle-container" style="border-radius: 0 0 24px 24px;"></div>
                     <div style="position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); z-index: 10;">
-                        <div class="avatar-container" id="friend-avatar-wrap" style="position: relative; width: 110px; height: 110px; margin: 0;">
-                            <div style="position: absolute; inset: -4px; border-radius: 50%; background: linear-gradient(135deg, #5b5bff, #b44aff); z-index: 1;"></div>
-                            <div class="avatar" style="width: 100%; height: 100%; border-radius: 50%; background: #222; border: 4px solid #14141f; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; overflow: hidden; position: relative; z-index: 2;">
+                        <div class="avatar-container" id="friend-avatar-wrap" style="position: relative; width: 90px; height: 90px; margin: 0;">
+                            <div class="avatar" style="width: 100%; height: 100%; border-radius: 50%; background: #222; border: 4px solid #14141f; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; overflow: hidden; position: relative; z-index: 2;">
                                 ${avatarHtml}
                             </div>
                         </div>
@@ -1999,32 +1997,32 @@ async function openFriendProfile(id, name = '') {
                     // ничего
                 } else if (friendshipStatus === 'pending_out') {
                     const btn = document.createElement('div');
-                    btn.style.cssText = 'position: absolute; bottom: 0; right: 0; background: #2ecc71; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #14141f; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: default;';
-                    btn.innerHTML = '<svg style="width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-check"></use></svg>';
+                    btn.style.cssText = 'position: absolute; bottom: 0; right: 0; background: #2ecc71; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #14141f; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: default;';
+                    btn.innerHTML = '<svg style="width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-check"></use></svg>';
                     avatarWrap.appendChild(btn);
                 } else if (friendshipStatus === 'pending_in') {
                     const btn = document.createElement('button');
                     btn.className = 'ripple-btn';
-                    btn.style.cssText = 'position: absolute; bottom: 0; right: 0; background: #ffd700; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #14141f; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer;';
-                    btn.innerHTML = '<svg style="width: 16px; height: 16px; fill: none; stroke: #14141f; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-check"></use></svg>';
+                    btn.style.cssText = 'position: absolute; bottom: 0; right: 0; background: #ffd700; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #14141f; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer;';
+                    btn.innerHTML = '<svg style="width: 14px; height: 14px; fill: none; stroke: #14141f; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-check"></use></svg>';
                     btn.onclick = async (e) => {
                         e.stopPropagation();
                         btn.style.pointerEvents = 'none';
                         btn.style.background = '#2ecc71';
-                        btn.innerHTML = '<svg style="width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-check"></use></svg>';
+                        btn.innerHTML = '<svg style="width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-check"></use></svg>';
                         await acceptFriend(friend.id);
                     };
                     avatarWrap.appendChild(btn);
                 } else {
                     const btn = document.createElement('button');
                     btn.className = 'ripple-btn';
-                    btn.style.cssText = 'position: absolute; bottom: 0; right: 0; background: #5b5bff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #14141f; z-index: 10; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);';
-                    btn.innerHTML = '<svg style="width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-plus"></use></svg>';
+                    btn.style.cssText = 'position: absolute; bottom: 0; right: 0; background: #5b5bff; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #14141f; z-index: 10; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);';
+                    btn.innerHTML = '<svg style="width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-plus"></use></svg>';
                     btn.onclick = async (e) => {
                         e.stopPropagation();
                         btn.style.pointerEvents = 'none';
                         btn.style.background = '#2ecc71';
-                        btn.innerHTML = '<svg style="width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-check"></use></svg>';
+                        btn.innerHTML = '<svg style="width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-check"></use></svg>';
                         await sendFriendRequest(friend.id);
                     };
                     avatarWrap.appendChild(btn);
@@ -2765,7 +2763,7 @@ async function loadTopUsers() {
             else if (index === 2) { rankIndicator = `<svg style="width:14px; height:14px; margin-right: 8px;"><use href="#oa-dot-green"></use></svg>`; nameColor = '#2ecc71'; }
             else rankIndicator = `<div style="width: 18px; height: 18px; margin-right: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); border-radius: 50%; font-size: 11px; font-weight: bold; color: #aaa; flex-shrink: 0;">${index + 1}</div>`;
 
-            return `<div onclick="openUserFromTop('${escapeHTML(String(user.id))}')" style="display: flex; align-items: flex-start; background: #14141f; border-radius: 12px; padding: 12px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;"><div style="display: flex; align-items: center; margin-right: 12px; margin-top: 2px;">${rankIndicator}<div class="friend-avatar" style="width: 46px; height: 46px; font-size: 18px; border: 2px solid ${index < 3 ? nameColor : 'rgba(255,255,255,0.1)'};">${avatarHtml}</div></div><div style="flex: 1; min-width: 0;"><div style="display: flex; align-items: center; gap: 4px;"><h3 style="color: ${nameColor}; font-size: 15px; margin: 0; font-weight: 700;">${escapeHTML(user.name)}</h3>${badgeHtml}</div>${titleHtml}</div></div>`;
+            return `<div onclick="openUserFromTop('${escapeHTML(String(user.id))}')" style="display: flex; align-items: flex-start; background: #14141f; border-radius: 12px; padding: 12px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;"><div style="display: flex; align-items: center; margin-right: 12px; margin-top: 2px;">${rankIndicator}<div class="friend-avatar" style="width: 46px; height: 46px; font-size: 18px;">${avatarHtml}</div></div><div style="flex: 1; min-width: 0;"><div style="display: flex; align-items: center; gap: 4px;"><h3 style="color: ${nameColor}; font-size: 15px; margin: 0; font-weight: 700;">${escapeHTML(user.name)}</h3>${badgeHtml}</div>${titleHtml}</div></div>`;
         });
         container.innerHTML = topUsersHtml.join('');
         section.style.display = 'block';
