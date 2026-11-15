@@ -41,7 +41,6 @@ function safeUrl(url) {
     } catch { return ''; }
 }
 
-// Заглушка для битых/отсутствующих постеров
 const PLACEHOLDER_POSTER = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300' fill='%23222'%3E%3Crect width='200' height='300'/%3E%3Ctext x='50%25' y='50%25' fill='%23666' font-family='sans-serif' font-size='14' text-anchor='middle'%3EНет фото%3C/text%3E%3C/svg%3E";
 
 window._previewCache = {};
@@ -76,6 +75,29 @@ function showToast(msg) {
 function hidePreloader() {
     const p = document.getElementById('app-preloader');
     if (p) { p.classList.add('hidden'); setTimeout(() => p.remove(), 700); }
+}
+
+// Функция для генерации HTML плашки (чтобы не дублировать код)
+function getRatingBadgeHTML(score, isLarge = false) {
+    return `
+        <div class="new-rating-badge" style="padding: ${isLarge ? '8px 18px' : '6px 14px'}; gap: ${isLarge ? '12px' : '10px'};">
+            <svg style="width: ${isLarge ? '28px' : '24px'}; height: ${isLarge ? '28px' : '24px'};" viewBox="0 0 100 100">
+                <defs>
+                    <linearGradient id="grad_${Math.random().toString(36).substr(2, 9)}" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#ff00cc;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#00e5ff;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <path d="M50 10 L60 40 L90 40 L65 60 L75 90 L50 70 L25 90 L35 60 L10 40 L40 40 Z" fill="none" stroke="url(#grad_${Math.random().toString(36).substr(2, 9)})" stroke-width="6" stroke-linejoin="round"/>
+                <circle cx="50" cy="50" r="8" fill="url(#grad_${Math.random().toString(36).substr(2, 9)})" />
+            </svg>
+            <div class="new-rating-divider" style="height: ${isLarge ? '24px' : '20px'};"></div>
+            <div class="new-rating-score" style="font-size: ${isLarge ? '22px' : '18px'};">
+                ${score}
+                <svg class="new-rating-star" style="width: ${isLarge ? '18px' : '14px'}; height: ${isLarge ? '18px' : '14px'};" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
+        </div>
+    `;
 }
 
 // ==========================================
@@ -1888,7 +1910,6 @@ async function openFriendProfile(id, name = '') {
         const nameChar = friend.name && friend.name[0] ? escapeHTML(friend.name[0].toUpperCase()) : '?';
         const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : nameChar;
 
-        // ✅ Аватарка теперь 110px, как и в основном профиле
         container.innerHTML = `
             <div style="padding-bottom: 40px;">
                 <div id="friend-profile-banner" style="position: relative; width: 100%; height: 280px; background: ${friendBannerUrl ? `url('${friendBannerUrl}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)'}; background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
@@ -2220,7 +2241,11 @@ function renderCatalogCard(anime, grid) {
     let img = safeUrl(anime.images.jpg.image_url);
     if (!img) img = PLACEHOLDER_POSTER;
     const score = anime.score && Number(anime.score) > 0 ? Number(anime.score).toFixed(1) : '?';
-    grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy" decoding="async" fetchpriority="low" onerror="this.src='${PLACEHOLDER_POSTER}'"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;display:flex;align-items:center;gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${score}</div><div class="catalog-card-title">${title}</div></div>`);
+    
+    // ✅ ИСПОЛЬЗУЕМ НОВУЮ ПЛАШКУ
+    const ratingHTML = getRatingBadgeHTML(score);
+    
+    grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy" decoding="async" fetchpriority="low" onerror="this.src='${PLACEHOLDER_POSTER}'">${ratingHTML}<div class="catalog-card-title">${title}</div></div>`);
 }
 
 function loadMoreCatalog() {
@@ -2392,11 +2417,37 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             ? `<button class="btn-primary" style="background: #2a2a3e; color: #888; box-shadow: none; cursor: not-allowed; width: auto; padding: 16px 24px;" disabled><svg class="icon-inline" style="stroke:#888;fill:#888;width:20px;height:20px;margin-right:8px;"><use href="#oa-clock"></use></svg> Скоро</button>`
             : `<button class="btn-primary ripple-btn" onclick="startWatching(window._animeCache['${escapeHTML(anime.id)}'])" style="width: auto; padding: 16px 24px; font-size: 16px; display:flex;align-items:center;gap:8px; border-radius: 14px;"><svg class="icon-inline" style="stroke:#fff;fill:#fff;width:20px;height:20px;"><use href="#oa-play"></use></svg> Смотреть</button>`;
 
-        let starsHtml = '';
-        for (let i = 1; i <= 5; i++) {
-            const active = i <= userRating ? 'color: #ffd700;' : 'color: #444;';
-            starsHtml += `<span onclick="rateAnime('${escapeHTML(anime.id)}', ${i})" style="font-size: 32px; cursor: pointer; ${active} display:inline-block; transition: transform 0.1s;">★</span>`;
-        }
+        // --- НОВЫЙ БЛОК ОЦЕНКИ ---
+        let ratingSliderHTML = `
+        <div style="background: #14141f; border-radius: 16px; padding: 20px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="font-size: 16px; color: #fff; margin: 0;">Ваша оценка</h3>
+                <div id="rating-value-display" style="font-size: 24px; font-weight: 900; color: #fff; text-shadow: 0 0 10px #5b5bff;">${userRating > 0 ? userRating.toFixed(1) : '—'}</div>
+            </div>
+            <div style="position: relative;">
+                <input type="range" min="1" max="10" step="0.1" value="${userRating > 0 ? userRating : 5}" 
+                       oninput="document.getElementById('rating-value-display').innerText = parseFloat(this.value).toFixed(1);"
+                       onchange="rateAnime('${escapeHTML(anime.id)}', parseFloat(this.value))"
+                       style="width: 100%; -webkit-appearance: none; background: transparent; cursor: pointer; z-index: 10; position: relative;">
+                <style>
+                    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 8px; background: linear-gradient(90deg, #ff00cc 0%, #00e5ff 100%); border-radius: 4px; }
+                    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px #00e5ff; margin-top: -8px; border: 2px solid #14141f; }
+                </style>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 11px; color: #666;">
+                <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+            </div>
+        </div>`;
+
+        // --- НОВЫЙ БЛОК: ОЦЕНКА СООБЩЕСТВА (Заглушка) ---
+        // В будущем здесь будет среднее значение из БД
+        const communityScore = score; // Пока берем из AniList
+        let communityRatingHTML = `
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                ${getRatingBadgeHTML(communityScore, true)}
+                <span style="font-size: 12px; color: #888;">Оценка сообщества</span>
+            </div>
+        `;
 
         let commentsHtml = '';
         if (comments && comments.length > 0) {
@@ -2420,7 +2471,7 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             <div style="padding-top: 100px;">
                 <div style="display: flex; gap: 16px; margin-bottom: 25px; align-items: flex-end;">
                     <img class="detail-poster" src="${poster}" style="width: 110px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); object-fit: cover; aspect-ratio: 2/3; flex-shrink: 0;" fetchpriority="high">
-                    <div style="flex: 1; min-width: 0; padding-bottom: 2px;"><h1 style="font-size: 20px; font-weight: 800; line-height: 1.15; margin-bottom: 6px; color: #fff; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${title}</h1><p style="font-size: 12px; color: #ddd; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${titleRaw} (${anime.year})</p><div style="display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: #fff;"><svg style="width:16px;height:16px;color:#ffd700;fill:#ffd700;stroke:none;"><use href="#oa-star"></use></svg>${score} <span style="color: #bbb; font-weight: 500; font-size: 13px;">${anime.year}</span></div></div>
+                    <div style="flex: 1; min-width: 0; padding-bottom: 2px;"><h1 style="font-size: 20px; font-weight: 800; line-height: 1.15; margin-bottom: 6px; color: #fff; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${title}</h1><p style="font-size: 12px; color: #ddd; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${titleRaw} (${anime.year})</p>${communityRatingHTML}</div>
                 </div>
                 <div style="display: flex; gap: 10px; margin-bottom: 25px; align-items: stretch; justify-content: flex-start;">
                     ${watchBtnHtml}
@@ -2429,10 +2480,12 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 </div>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;">${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #ccc; padding: 8px 16px; border-radius: 20px; font-size: 14px;">${escapeHTML(g)}</span>`).join('')}<span style="background: ${isUpcoming ? 'rgba(255,193,7,0.15)' : 'rgba(46,204,113,0.15)'}; border: 1px solid ${isUpcoming ? 'rgba(255,193,7,0.4)' : 'rgba(46,204,113,0.4)'}; color: ${isUpcoming ? '#ffc107' : '#2ecc71'}; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;">${escapeHTML(anime.status)}</span></div>
                 <div style="margin-bottom: 25px;"><p id="desc-text" style="color: #ccc; font-size: 15px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p><button id="desc-btn" onclick="toggleDescription()" style="display: none; background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 15px; margin-top: 8px; cursor: pointer;">Читать дальше</button></div>
+                
+                ${ratingSliderHTML}
+                
                 ${relationsHtml}
                 ${nextEpisodeHtml}
                 ${hasScreenshots ? `<div style="margin-bottom: 30px;"><h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">Кадры</h3><div style="display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">${screenshotsHtml}</div></div>` : ''}
-                <div style="background: #14141f; border-radius: 16px; padding: 20px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(255,255,255,0.05);"><h3 style="font-size: 16px; color: #fff; margin-bottom: 12px;">Ваша оценка:</h3><div style="display: flex; justify-content: center; gap: 8px;">${starsHtml}</div></div>
                 ${similarHtml}
                 <div style="margin-bottom: 40px;"><h3 style="font-size: 18px; margin-bottom: 15px; color: #fff;">Комментарии</h3><div style="display: flex; gap: 10px; margin-bottom: 20px;"><input type="text" id="comment-input" placeholder="Написать отзыв..." style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 16px; color: #fff; font-size: 15px; outline: none;"><button onclick="sendComment('${escapeHTML(anime.id)}')" class="ripple-btn" style="background: #5b5bff; border: none; border-radius: 12px; padding: 0 20px; color: #fff; font-weight: bold; cursor: pointer;">→</button></div><div>${commentsHtml}</div></div>
             </div>
@@ -2449,14 +2502,18 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
     }
 }
 
+// Обновленная функция оценки (теперь принимает float)
 async function rateAnime(animeId, rating) {
     if (!supabaseClient || !MY_ID) return;
     try {
         const { data: ex } = await supabaseClient.from('user_lists').select('id').eq('user_id', MY_ID).eq('anime_id', animeId).single();
         if (ex) await supabaseClient.from('user_lists').update({ rating }).eq('user_id', MY_ID).eq('anime_id', animeId);
         else await supabaseClient.from('user_lists').insert({ user_id: MY_ID, anime_id: animeId, status: 'planned', rating });
-        showToast(`Оценка ${rating}`);
-    } catch { showToast('Ошибка'); }
+        showToast(`Оценка ${rating.toFixed(1)} сохранена`);
+    } catch (e) { 
+        console.error(e);
+        showToast('Ошибка сохранения оценки'); 
+    }
 }
 
 async function sendComment(animeId) {
@@ -2624,6 +2681,9 @@ function renderMyListCard(anime, grid) {
     if (!img) img = PLACEHOLDER_POSTER;
 
     const score = anime.score && Number(anime.score) > 0 ? Number(anime.score).toFixed(1) : '?';
+    
+    // ✅ ИСПОЛЬЗУЕМ НОВУЮ ПЛАШКУ
+    const ratingHTML = getRatingBadgeHTML(score);
 
     let nextEpHtml = '';
     if (anime.nextAiringEpisode && anime.nextAiringEpisode.airingAt) {
@@ -2637,7 +2697,7 @@ function renderMyListCard(anime, grid) {
         }
     }
 
-    grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'my')" oncontextmenu="event.preventDefault(); openStatusModal('${escapeHTML(anime.id)}'); return false;"><img class="catalog-card-img" src="${img}" loading="lazy" decoding="async" onerror="this.src='${PLACEHOLDER_POSTER}'">${nextEpHtml}<div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold; display:flex; align-items:center; gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${score}</div><div class="catalog-card-title">${title}</div></div>`);
+    grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'my')" oncontextmenu="event.preventDefault(); openStatusModal('${escapeHTML(anime.id)}'); return false;"><img class="catalog-card-img" src="${img}" loading="lazy" decoding="async" onerror="this.src='${PLACEHOLDER_POSTER}'">${nextEpHtml}${ratingHTML}<div class="catalog-card-title">${title}</div></div>`);
 }
 
 async function renderWatchHistory() {
@@ -2785,12 +2845,18 @@ function renderSectionCards(container, items, fromScreen = 'home') {
         let img = safeUrl(anime.images.jpg.image_url);
         if (!img) img = PLACEHOLDER_POSTER;
         const eager = i < 4;
+        const score = anime.score && Number(anime.score) > 0 ? Number(anime.score).toFixed(1) : '?';
+        
+        // ✅ ИСПОЛЬЗУЕМ НОВУЮ ПЛАШКУ
+        const ratingHTML = getRatingBadgeHTML(score);
+
         return `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', '${fromScreen}')">
             <img class="card-img" src="${img}"
                  loading="${eager ? 'eager' : 'lazy'}"
                  decoding="async"
                  fetchpriority="${eager ? 'high' : 'low'}"
                  onerror="this.src='${PLACEHOLDER_POSTER}'">
+            ${ratingHTML}
             <div class="card-title">${title}</div>
         </div>`;
     }).join('');
