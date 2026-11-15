@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0a0f">
     <title>OnikaAnime</title>
     
     <link rel="preconnect" href="https://s4.anilist.co" crossorigin>
@@ -22,9 +23,11 @@
         
         #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; opacity: 0.4; background: transparent; }
         
-        body { background: linear-gradient(180deg, #0a0a0f 0%, #050508 100%); color: var(--text); padding-bottom: calc(var(--nav-h) + 20px); overflow-x: hidden; }
+        /* ✅ Прозрачный фон для body */
+        body { background: transparent; color: var(--text); padding-bottom: calc(var(--nav-h) + 20px); overflow-x: hidden; }
         
-        .screen { display: none; position: relative; z-index: 1; }
+        /* ✅ Прозрачный фон для экранов */
+        .screen { display: none; position: relative; z-index: 1; background: transparent; }
         .screen.active { display: block; animation: screenEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
 
         /* --- PRELOADER ANIMATION --- */
@@ -139,7 +142,8 @@
         .auth-footer { text-align: center; color: #888; font-size: 13px; margin-top: 20px; line-height: 1.5; }
         .auth-link { color: #5b5bff; font-weight: 700; cursor: pointer; text-decoration: underline; }
 
-        .hero-section { position: relative; height: 62vh; min-height: 380px; max-height: 520px; overflow: hidden; border-radius: 0 0 20px 20px; background: #111; }
+        /* ✅ Прозрачный фон для Hero-секции */
+        .hero-section { position: relative; height: 62vh; min-height: 380px; max-height: 520px; overflow: hidden; border-radius: 0 0 20px 20px; background: transparent; }
         .hero-slider { position: relative; width: 100%; height: 100%; }
         .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; visibility: hidden; transition: 0.6s; display: flex; align-items: flex-end; }
         .hero-slide.active { opacity: 1; visibility: visible; z-index: 2; }
@@ -525,7 +529,7 @@
 
             <div id="form-verify" style="display:none;">
                 <p style="text-align: center; color: #ccc; margin-bottom: 20px; font-size: 14px;">Мы отправили код на вашу почту. Введите его ниже:</p>
-                <input type="text" id="verify-code" class="auth-input" placeholder="8-значный код" maxlength="8" inputmode="numeric">
+                <input type="text" id="verify-code" class="auth-input" placeholder="8-значный код" maxlength="8" inputmode="numeric" onkeypress="if(event.key === 'Enter') handleVerifyCode()">
                 <button class="auth-btn" id="verify-btn" onclick="handleVerifyCode()">Подтвердить</button>
                 <div class="auth-footer"><span class="auth-link" onclick="switchAuthTab('login')">Назад ко входу</span></div>
             </div>
@@ -723,7 +727,8 @@
         <div id="achievements-list-container" style="margin-top: 15px;"></div>
     </div>
 
-    <div id="screen-profile" class="screen" style="background: var(--bg);">
+    <!-- ✅ Убран инлайновый фон у профиля -->
+    <div id="screen-profile" class="screen">
         <div id="profile-banner" style="position: relative; width: 100%; height: 220px; background: linear-gradient(180deg, #2a2a3e 0%, #14141f 100%); background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
             <div style="position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 20;">
                 <button onclick="switchTab('shop')" class="ripple-btn" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); color: #fff; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
@@ -737,7 +742,7 @@
             <div class="effect-container" id="particle-effect-container" style="border-radius: 0 0 24px 24px;"></div>
             <div style="position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); z-index: 10;">
                 <div class="avatar-container" onclick="document.getElementById('avatar-upload').click()" style="position: relative; width: 110px; height: 110px; margin: 0;">
-                    <div style="position: absolute; inset: -4px; border-radius: 50%; background: linear-gradient(135deg, #5b5bff, #b44aff); z-index: 1;"></div>
+                    <!-- ✅ Обводка убрана -->
                     <div class="avatar" id="tg-avatar" style="width: 100%; height: 100%; border-radius: 50%; background: #222; border: 4px solid #14141f; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; overflow: hidden; position: relative; z-index: 2;">
                         <span id="avatar-letter">?</span>
                     </div>
@@ -778,19 +783,16 @@
 
         <div style="padding: 15px 20px;">
             <div style="display: flex; gap: 10px; justify-content: space-between;">
-                <!-- Новая кнопка История (вместо Серий) -->
                 <div onclick="switchTab('history')" class="ripple-btn" style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center; cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center;">
                     <svg style="width: 24px; height: 24px; fill: none; stroke: #5b5bff; stroke-width: 2; margin-bottom: 4px;"><use href="#oa-clock"></use></svg>
                     <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">История</div>
                 </div>
                 
-                <!-- Кнопка Дней -->
                 <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
                     <div style="font-size: 20px; font-weight: 900; color: #ff4500; margin-bottom: 2px;" id="stat-streak">1</div>
                     <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Дней</div>
                 </div>
                 
-                <!-- Кнопка Ачивок -->
                 <div onclick="switchTab('achievements')" class="ripple-btn" style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center; cursor: pointer;">
                     <div style="font-size: 20px; font-weight: 900; color: #ffd700; margin-bottom: 2px;" id="stat-achievements">0</div>
                     <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Ачивок</div>
@@ -803,7 +805,6 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3 style="font-size: 18px; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
                         Статистика
-                        <!-- УБРАН КРУЖОК ! -->
                     </h3>
                     <button onclick="switchTab('my')" style="background: none; border: none; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;">Показать все</button>
                 </div>
@@ -844,7 +845,6 @@
                     </div>
                 </div>
 
-                <!-- Блок с временем и сериями -->
                 <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; display: flex; flex-direction: column; gap: 10px;">
                     <div style="display: flex; justify-content: space-between; font-size: 15px; color: #ccc;">
                         <span>Время просмотра:</span>
@@ -858,14 +858,12 @@
             </div>
         </div>
 
-        <!-- НОВЫЙ БЛОК: ДИАГРАММА ЖАНРОВ -->
         <div style="padding: 0 20px 20px 20px;">
             <div style="background: rgba(20, 20, 31, 0.6); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
                 <h3 style="font-size: 18px; color: #fff; margin: 0 0 15px 0; display: flex; align-items: center; gap: 8px;">
                     Любимые жанры
                 </h3>
                 <div id="genre-chart-container" style="display: flex; align-items: flex-end; justify-content: space-between; height: 140px; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;">
-                    <!-- Сюда рендерится график через JS -->
                 </div>
                 <div style="font-size: 12px; color: #888; line-height: 1.5;">
                     На основе вашего списка аниме. Столбцы показывают, какой жанр вы предпочитаете больше всего.
@@ -874,7 +872,7 @@
         </div>
     </div>
 
-    <div id="screen-shop" class="screen" style="background: var(--bg);">
+    <div id="screen-shop" class="screen">
         <header class="profile-header" style="padding-bottom: 10px; padding-top: 20px;">
             <h1 style="font-size: 24px;">Магазин косметики</h1>
             <div style="display: flex; align-items: center; gap: 10px;">
@@ -906,7 +904,7 @@
         </div>
     </div>
 
-    <div id="screen-settings" class="screen" style="background: var(--bg);">
+    <div id="screen-settings" class="screen">
         <header class="profile-header" style="padding-bottom: 10px; padding-top: 20px;">
             <h1 style="font-size: 24px;">Настройки</h1>
             <button onclick="switchTab('profile')" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
@@ -923,7 +921,7 @@
         </div>
     </div>
 
-    <div id="screen-preview" class="screen" style="background: var(--bg);">
+    <div id="screen-preview" class="screen">
         <header class="profile-header" style="padding-bottom: 10px;">
             <h1>Примерка</h1>
             <button onclick="cancelPreview()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
@@ -936,7 +934,6 @@
                 <div class="effect-container" id="preview-particle-container" style="border-radius: 0 0 24px 24px;"></div>
                 <div style="position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); z-index: 10;">
                     <div class="avatar-container" style="position: relative; width: 110px; height: 110px; margin: 0;">
-                        <div style="position: absolute; inset: -4px; border-radius: 50%; background: linear-gradient(135deg, #5b5bff, #b44aff); z-index: 1;"></div>
                         <div class="avatar" id="preview-avatar" style="width: 100%; height: 100%; border-radius: 50%; background: #222; border: 4px solid #14141f; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; overflow: hidden; position: relative; z-index: 2;">
                             <span>?</span>
                         </div>
@@ -1051,6 +1048,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4637" defer></script>
+    <script src="app.js?v=4638" defer></script>
 </body>
 </html>
