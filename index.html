@@ -23,11 +23,11 @@
         
         #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; opacity: 0.4; background: transparent; }
         
-        /* ✅ Прозрачный фон для body */
-        body { background: transparent; color: var(--text); padding-bottom: calc(var(--nav-h) + 20px); overflow-x: hidden; }
+        /* ✅ Вернули черный градиент фону */
+        body { background: linear-gradient(180deg, #0a0a0f 0%, #050508 100%); color: var(--text); padding-bottom: calc(var(--nav-h) + 20px); overflow-x: hidden; }
         
-        /* ✅ Прозрачный фон для экранов */
-        .screen { display: none; position: relative; z-index: 1; background: transparent; }
+        /* ✅ Вернули фон экранам, убрали отступы */
+        .screen { display: none; position: relative; z-index: 1; background: var(--bg); }
         .screen.active { display: block; animation: screenEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
 
         /* --- PRELOADER ANIMATION --- */
@@ -142,16 +142,16 @@
         .auth-footer { text-align: center; color: #888; font-size: 13px; margin-top: 20px; line-height: 1.5; }
         .auth-link { color: #5b5bff; font-weight: 700; cursor: pointer; text-decoration: underline; }
 
-        /* ✅ Слайдер теперь нормального размера и с отступом */
+        /* ✅ Вернули фон и убрали отступы у Hero-секции */
         .hero-section { 
             position: relative; 
-            height: 65vh; 
-            min-height: 400px; 
-            max-height: 600px; 
+            height: 62vh; 
+            min-height: 380px; 
+            max-height: 520px; 
             overflow: hidden; 
             border-radius: 0 0 20px 20px; 
-            background: transparent; 
-            margin-top: 70px; 
+            background: #111; 
+            margin-top: 0; 
         }
         .hero-slider { position: relative; width: 100%; height: 100%; }
         .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; visibility: hidden; transition: 0.6s; display: flex; align-items: flex-end; }
@@ -603,7 +603,7 @@
         </section>
     </div>
 
-    <div id="screen-catalog" class="screen" style="padding-top: 70px;">
+    <div id="screen-catalog" class="screen">
         <div style="padding: 20px 20px 10px 20px; position: relative;">
             <div style="display: flex; align-items: center; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 0 15px; margin-bottom: 15px;">
                 <span style="color: #888; display: flex; align-items: center;"><svg style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><use href="#oa-search"></use></svg></span>
@@ -645,7 +645,7 @@
         </div>
     </div>
 
-    <div id="screen-my" class="screen" style="padding-top: 70px;">
+    <div id="screen-my" class="screen">
         <header class="profile-header" style="padding-bottom: 10px;"><h1>Моё</h1></header>
         <div class="my-list-tabs" id="my-list-tabs">
             <div class="my-list-tab ripple-btn active" onclick="filterMyList('all', this)">Все</div>
@@ -658,13 +658,13 @@
         <div class="grid-catalog" id="my-grid" style="margin-top: 10px;"></div>
     </div>
 
-    <div id="screen-history" class="screen" style="padding-top: 70px;">
+    <div id="screen-history" class="screen">
         <button onclick="switchTab('profile')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; padding: 20px; cursor: pointer;">← Назад в профиль</button>
         <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 20px; padding: 0 20px;">История просмотров</h1>
         <div class="grid-catalog" id="history-grid" style="margin-top: 10px;"></div>
     </div>
 
-    <div id="screen-friends" class="screen" style="padding-top: 70px;">
+    <div id="screen-friends" class="screen">
         <header class="profile-header" style="padding-bottom: 10px;"><h1>Друзья</h1></header>
         
         <div style="padding: 0 20px 15px;">
@@ -695,34 +695,34 @@
         <div id="requests-list-container" style="display: none;"></div>
     </div>
 
-    <div id="screen-friend-profile" class="screen" style="padding-top: 70px;">
+    <div id="screen-friend-profile" class="screen">
         <div id="friend-profile-content"></div>
     </div>
 
-    <div id="screen-detail" class="screen" style="padding: 70px 20px 20px 20px;">
+    <div id="screen-detail" class="screen" style="padding: 0 20px 20px 20px;">
         <div id="detail-content"></div>
     </div>
 
-    <div id="screen-voice" class="screen" style="padding: 70px 20px 20px 20px;">
+    <div id="screen-voice" class="screen" style="padding: 20px;">
         <button onclick="switchTab('detail')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <h1 id="voice-title" style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор озвучки</h1>
         <div style="display: flex; flex-direction: column; gap: 12px;" id="voice-list"></div>
     </div>
 
-    <div id="screen-player" class="screen" style="padding: 70px 20px 20px 20px;">
+    <div id="screen-player" class="screen" style="padding: 20px;">
         <button onclick="switchTab('voice')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <h1 id="player-title" style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор плеера</h1>
         <div style="display: flex; flex-direction: column; gap: 12px;" id="player-list"></div>
     </div>
 
-    <div id="screen-episodes" class="screen" style="padding: 70px 20px 20px 20px;">
+    <div id="screen-episodes" class="screen" style="padding: 20px;">
         <button onclick="switchTab('player')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <h1 id="eps-title" style="font-size: 24px; font-weight: 800; margin-bottom: 10px;">Выбор серии</h1>
         <p style="color: #888; font-size: 14px; margin-bottom: 20px;">Озвучка: <span id="selected-voice-text" style="color: #fff;"></span> • Плеер: <span id="selected-player-text" style="color: #fff;"></span></p>
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;" id="episodes-list"></div>
     </div>
 
-    <div id="screen-achievements" class="screen" style="padding: 70px 20px 20px 20px;">
+    <div id="screen-achievements" class="screen" style="padding: 20px;">
         <button onclick="switchTab('profile')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
             <div class="ach-icon-big" style="width: 50px; height: 50px;">
@@ -736,9 +736,9 @@
         <div id="achievements-list-container" style="margin-top: 15px;"></div>
     </div>
 
-    <!-- ✅ Увеличен баннер (280px) и уменьшена аватарка (90px) -->
-    <div id="screen-profile" class="screen" style="padding-top: 70px;">
-        <div id="profile-banner" style="position: relative; width: 100%; height: 280px; background: linear-gradient(180deg, #2a2a3e 0%, #14141f 100%); background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
+    <!-- ✅ Вернули фон экрану профиля, убрали отступы сверху -->
+    <div id="screen-profile" class="screen" style="background: var(--bg);">
+        <div id="profile-banner" style="position: relative; width: 100%; height: 220px; background: linear-gradient(180deg, #2a2a3e 0%, #14141f 100%); background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
             <div style="position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 20;">
                 <button onclick="switchTab('shop')" class="ripple-btn" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); color: #fff; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
                     <svg style="width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#oa-image"></use></svg>
@@ -750,12 +750,12 @@
             
             <div class="effect-container" id="particle-effect-container" style="border-radius: 0 0 24px 24px;"></div>
             <div style="position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); z-index: 10;">
-                <div class="avatar-container" onclick="document.getElementById('avatar-upload').click()" style="position: relative; width: 90px; height: 90px; margin: 0;">
-                    <div class="avatar" id="tg-avatar" style="width: 100%; height: 100%; border-radius: 50%; background: #222; border: 4px solid #14141f; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; overflow: hidden; position: relative; z-index: 2;">
+                <div class="avatar-container" onclick="document.getElementById('avatar-upload').click()" style="position: relative; width: 110px; height: 110px; margin: 0;">
+                    <div class="avatar" id="tg-avatar" style="width: 100%; height: 100%; border-radius: 50%; background: #222; border: 4px solid #14141f; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; overflow: hidden; position: relative; z-index: 2;">
                         <span id="avatar-letter">?</span>
                     </div>
-                    <div style="position: absolute; bottom: 5px; right: 5px; background: #5b5bff; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #14141f; z-index: 10;">
-                        <svg style="width: 12px; height: 12px; fill: none; stroke: #fff; stroke-width: 2;"><use href="#oa-edit"></use></svg>
+                    <div style="position: absolute; bottom: 5px; right: 5px; background: #5b5bff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #14141f; z-index: 10;">
+                        <svg style="width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 2;"><use href="#oa-edit"></use></svg>
                     </div>
                 </div>
                 <input type="file" id="avatar-upload" accept="image/*" style="display: none;" onchange="uploadAvatar(event)">
@@ -880,7 +880,7 @@
         </div>
     </div>
 
-    <div id="screen-shop" class="screen" style="padding-top: 70px;">
+    <div id="screen-shop" class="screen" style="background: var(--bg);">
         <header class="profile-header" style="padding-bottom: 10px; padding-top: 20px;">
             <h1 style="font-size: 24px;">Магазин косметики</h1>
             <div style="display: flex; align-items: center; gap: 10px;">
@@ -912,7 +912,7 @@
         </div>
     </div>
 
-    <div id="screen-settings" class="screen" style="padding-top: 70px;">
+    <div id="screen-settings" class="screen" style="background: var(--bg);">
         <header class="profile-header" style="padding-bottom: 10px; padding-top: 20px;">
             <h1 style="font-size: 24px;">Настройки</h1>
             <button onclick="switchTab('profile')" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
@@ -929,7 +929,7 @@
         </div>
     </div>
 
-    <div id="screen-preview" class="screen" style="padding-top: 70px;">
+    <div id="screen-preview" class="screen" style="background: var(--bg);">
         <header class="profile-header" style="padding-bottom: 10px;">
             <h1>Примерка</h1>
             <button onclick="cancelPreview()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
@@ -938,11 +938,11 @@
         </header>
         
         <div style="padding: 0;">
-            <div id="preview-banner" style="position: relative; width: 100%; height: 280px; background: linear-gradient(180deg, #2a2a3e 0%, #14141f 100%); background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
+            <div id="preview-banner" style="position: relative; width: 100%; height: 220px; background: linear-gradient(180deg, #2a2a3e 0%, #14141f 100%); background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
                 <div class="effect-container" id="preview-particle-container" style="border-radius: 0 0 24px 24px;"></div>
                 <div style="position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); z-index: 10;">
-                    <div class="avatar-container" style="position: relative; width: 90px; height: 90px; margin: 0;">
-                        <div class="avatar" id="preview-avatar" style="width: 100%; height: 100%; border-radius: 50%; background: #222; border: 4px solid #14141f; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; overflow: hidden; position: relative; z-index: 2;">
+                    <div class="avatar-container" style="position: relative; width: 110px; height: 110px; margin: 0;">
+                        <div class="avatar" id="preview-avatar" style="width: 100%; height: 100%; border-radius: 50%; background: #222; border: 4px solid #14141f; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; overflow: hidden; position: relative; z-index: 2;">
                             <span>?</span>
                         </div>
                     </div>
@@ -1056,6 +1056,6 @@
         })();
     </script>
 
-    <script src="app.js?v=4641" defer></script>
+    <script src="app.js?v=4642" defer></script>
 </body>
 </html>
