@@ -11,6 +11,137 @@ try {
     console.error('Ошибка Supabase:', e);
 }
 
+// ==========================================
+// 1.2 СИСТЕМА РЕЙТИНГА OnikaAnime
+// ==========================================
+async function getOnikaRating(animeId) {
+    if (!supabaseClient) return { avg: null, count: 0 };
+    try {
+        const { data, error } = await supabaseClient.from('anime_ratings').select('rating').eq('anime_id', String(animeId));
+        if (error) throw error;
+        if (!data || !data.length) return { avg: null, count: 0 };
+        const sum = data.reduce((a, r) => a + Number(r.rating), 0);
+        return { avg: Math.round((sum / data.length) * 10) / 10, count: data.length };
+    } catch (e) { console.error('getOnikaRating:', e); return { avg: null, count: 0 }; }
+}
+
+async function getOnikaRatingsBatch(animeIds) {
+    if (!supabaseClient || !animeIds?.length) return {};
+    try {
+        const ids = animeIds.map(String);
+        const { data, error } = await supabaseClient.from('anime_ratings').select('anime_id, rating').in('anime_id', ids);
+        if (error) throw error;
+        const map = {};
+        (data || []).forEach(r => {
+            if (!map[r.anime_id]) map[r.anime_id] = { sum: 0, count: 0 };
+            map[r.anime_id].sum += Number(r.rating);
+            map[r.anime_id].count++;
+        });
+        const res = {};
+        ids.forEach(id => {
+            const m = map[id];
+            res[id] = m ? { avg: Math.round((m.sum / m.count) * 10) / 10, count: m.count } : { avg: null, count: 0 };
+        });
+        return res;
+    } catch (e) { console.error('getOnikaRatingsBatch:', e); return {}; }
+}
+
+async function getMyRating(animeId) {
+    if (!supabaseClient || !MY_ID) return null;
+    try {
+        const { data, error } = await supabaseClient.from('anime_ratings').select('rating').eq('anime_id', String(animeId)).eq('user_id', MY_ID).maybeSingle();
+        if (error) throw error;
+        return data ? Number(data.rating) : null;
+    } catch { return null; }
+}
+
+async function saveMyRatingToDb(animeId, rating) {
+    if (!supabaseClient || !MY_ID) return false;
+    try {
+        const r = Math.round(Number(rating) * 10) / 10;
+        if (r < 1 || r > 10) return false;
+        const { error } = await supabaseClient.from('anime_ratings').upsert(
+            { user_id: MY_ID, anime_id: String(animeId), rating: r, updated_at: new Date().toISOString() },
+            { onConflict: 'user_id,anime_id' }
+        );
+        if (error) throw error;
+        return true;
+    } catch (e) { console.error('saveMyRatingToDb:', e); return false; }
+}
+
+async function removeMyRatingFromDb(animeId) {
+    if (!supabaseClient || !MY_ID) return false;
+    try {
+        const { error } = await supabaseClient.from('anime_ratings').delete().eq('anime_id', String(animeId)).eq('user_id', MY_ID);
+        if (error) throw error;
+        return true;
+    } catch (e) { console.error('removeMyRatingFromDb:', e); return false; }
+}
+
+function renderRatingBlock(anime, onika, myRating) {
+    const aScore = anime.score && Number(anime.score) > 0 ? Number(anime.score).toFixed(1) : '—';
+    const aCount = anime.rawPopularity ? anime.rawPopularity + ' голосов' : 'AniList';
+    const oScore = onika?.avg != null ? onika.avg.toFixed(1) : '—';
+    const oCount = onika?.count ? onika.count + ' оценок' : 'нет оценок';
+    return `
+        <div class="rating-block">
+            <div class="rating-box anilist">
+                <div class="rating-label">★ AniList</div>
+                <div class="rating-value">${aScore}</div>
+                <div class="rating-count">${aCount}</div>
+            </div>
+            <div class="rating-box onika">
+                <div class="rating-label">◆ Onika</div>
+                <div class="rating-value" id="onika-avg-value">${oScore}</div>
+                <div class="rating-count" id="onika-votes-count">${oCount}</div>
+            </div>
+        </div>
+        <div class="rating-slider-wrap">
+            <div style="font-size:13px;color:#aaa;margin-bottom:8px;text-align:center;">Ваша оценка ${myRating ? '— ' + myRating : ''}</div>
+            <div class="user-rating" id="user-rating-stars">
+                ${[1,2,3,4,5,6,7,8,9,10].map(v => `<button class="star-btn ${myRating && v <= Math.round(myRating) ? 'active' : ''}" data-value="${v}" onclick="onStarClick(${v})">★</button>`).join('')}
+            </div>
+            <input type="range" min="1" max="10" step="0.5" value="${myRating || 5}" id="rating-range" oninput="document.getElementById('rating-range-label').textContent=this.value">
+            <div class="rating-slider-value" id="rating-range-label">${myRating || 5}</div>
+            <div class="rating-actions">
+                <button class="save" onclick="saveMyRating('${escapeHTML(String(anime.id))}')">Сохранить</button>
+                <button class="clear" onclick="clearMyRating('${escapeHTML(String(anime.id))}')">Удалить</button>
+            </div>
+        </div>
+    `;
+}
+
+let _tempRating = null;
+function onStarClick(v) {
+    _tempRating = v;
+    document.querySelectorAll('#user-rating-stars .star-btn').forEach(s => s.classList.toggle('active', +s.dataset.value <= v));
+    const r = document.getElementById('rating-range'); if (r) r.value = v;
+    const l = document.getElementById('rating-range-label'); if (l) l.textContent = v;
+}
+
+async function saveMyRating(animeId) {
+    const v = _tempRating || Number(document.getElementById('rating-range')?.value || 5);
+    const ok = await saveMyRatingToDb(animeId, v);
+    if (ok) {
+        showToast(`Оценка ${v} сохранена`);
+        const o = await getOnikaRating(animeId);
+        const a = document.getElementById('onika-avg-value'); if (a) a.textContent = o.avg != null ? o.avg.toFixed(1) : '—';
+        const c = document.getElementById('onika-votes-count'); if (c) c.textContent = o.count ? o.count + ' оценок' : 'нет оценок';
+    } else showToast('Ошибка сохранения');
+}
+
+async function clearMyRating(animeId) {
+    const ok = await removeMyRatingFromDb(animeId);
+    if (ok) {
+        showToast('Оценка удалена');
+        _tempRating = null;
+        const o = await getOnikaRating(animeId);
+        const a = document.getElementById('onika-avg-value'); if (a) a.textContent = o.avg != null ? o.avg.toFixed(1) : '—';
+        const c = document.getElementById('onika-votes-count'); if (c) c.textContent = o.count ? o.count + ' оценок' : 'нет оценок';
+        document.querySelectorAll('#user-rating-stars .star-btn').forEach(s => s.classList.remove('active'));
+    } else showToast('Ошибка');
+}
+
 let MY_ID = null, MY_PUBLIC_ID = null, MY_NAME = 'Гость', MY_PHOTO_URL = '';
 let ACTIVE_BANNER_URL = '', ACTIVE_TITLE_DATA = null, ACTIVE_EFFECT_CSS = '', ACTIVE_BADGE_URL = '';
 let PENDING_VERIFY_EMAIL = '';
@@ -41,7 +172,6 @@ function safeUrl(url) {
     } catch { return ''; }
 }
 
-// Заглушка для битых/отсутствующих постеров
 const PLACEHOLDER_POSTER = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300' fill='%23222'%3E%3Crect width='200' height='300'/%3E%3Ctext x='50%25' y='50%25' fill='%23666' font-family='sans-serif' font-size='14' text-anchor='middle'%3EНет фото%3C/text%3E%3C/svg%3E";
 
 window._previewCache = {};
@@ -51,7 +181,6 @@ function cachePreviewItem(item) {
     return key;
 }
 
-// Очередь тостов
 const toastQueue = [];
 let toastActive = 0;
 const TOAST_MAX = 3;
@@ -205,15 +334,12 @@ function showAuthScreen() { document.getElementById('authScreen')?.classList.add
 
 async function initAuth() {
     if (!supabaseClient) { showAuthScreen(); return; }
-
     supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user && !MY_ID) {
             MY_ID = session.user.id;
             MY_NAME = session.user.user_metadata?.nickname || 'Игрок';
             hideAuthScreen();
-            try {
-                await loadProfileData();
-            } catch (e) { console.error(e); }
+            try { await loadProfileData(); } catch (e) { console.error(e); }
         }
         if (event === 'SIGNED_OUT') {
             MY_ID = null;
@@ -221,7 +347,6 @@ async function initAuth() {
             showAuthScreen();
         }
     });
-
     try {
         const { data: { session } } = await supabaseClient.auth.getSession();
         if (session?.user) {
@@ -238,9 +363,7 @@ async function initAuth() {
             hideAuthScreen();
             return;
         }
-    } catch (e) {
-        console.error(e);
-    }
+    } catch (e) { console.error(e); }
     showAuthScreen();
 }
 
@@ -297,10 +420,8 @@ const ANILIBRIA_API = 'https://aniliberty.top/api/v1';
 const API_AniList = {
     async fetch(query, variables = {}, signal) {
         const res = await fetch(PROXY_URL + encodeURIComponent(ANILIST_URL), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query, variables }),
-            signal
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, variables }), signal
         });
         if (!res.ok) throw new Error('AniList HTTP ' + res.status);
         const d = await res.json();
@@ -308,12 +429,10 @@ const API_AniList = {
         return d.data;
     },
     _mediaFields: `id idMal title{romaji english native} averageScore episodes status format seasonYear coverImage{extraLarge large medium} genres trailer{id}`,
-
     async getCatalog(page, limit, filters, signal) {
         const perPage = Math.min(limit || 30, 50);
         const vars = { page: page || 1, perPage };
         let args = ['type: ANIME', 'sort: POPULARITY_DESC', 'genre_not_in: ["Hentai", "Ecchi", "Erotica"]'];
-
         if (filters && filters.search) { vars.search = filters.search; args.push('search: $search'); }
         if (filters && filters.year) { vars.seasonYear = parseInt(filters.year); args.push('seasonYear: $seasonYear'); }
         if (filters && filters.genre) { vars.genre = filters.genre; args.push('genre: $genre'); }
@@ -322,45 +441,29 @@ const API_AniList = {
             vars.status = m[filters.status];
             if (vars.status) args.push('status: $status');
         }
-
         const sortMap = { popularity: 'POPULARITY_DESC', ranked: 'SCORE_DESC', aired_on: 'START_DATE_DESC', newest: 'START_DATE_DESC', oldest: 'START_DATE_ASC' };
         const sort = sortMap[filters?.sort] || 'POPULARITY_DESC';
-
         const q = `query($page:Int,$perPage:Int${vars.search ? ', $search:String' : ''}${vars.seasonYear ? ', $seasonYear:Int' : ''}${vars.genre ? ', $genre:String' : ''}${vars.status ? ', $status:MediaStatus' : ''}){Page(page:$page,perPage:$perPage){media(${args.filter(a => !a.startsWith('sort')).join(', ')},sort:${sort}){${this._mediaFields}}}}`;
-
-        const data = await this.fetch(q, vars, signal).catch(e => {
-            if (e.name === 'AbortError') throw e;
-            return null;
-        });
+        const data = await this.fetch(q, vars, signal).catch(e => { if (e.name === 'AbortError') throw e; return null; });
         return data?.Page?.media || [];
     },
-
     async getDetails(id, signal) {
         const cleanId = String(id).replace('anilist_', '');
         const q = `query($id:Int){Media(id:$id,type:ANIME){${this._mediaFields} description(asHtml:false) nextAiringEpisode{airingAt timeUntilAiring episode} relations{edges{relationType node{id idMal title{romaji english native} coverImage{large} seasonYear format}}}}}`;
-        const data = await this.fetch(q, { id: parseInt(cleanId) }, signal).catch(e => {
-            if (e.name === 'AbortError') throw e;
-            return null;
-        });
+        const data = await this.fetch(q, { id: parseInt(cleanId) }, signal).catch(e => { if (e.name === 'AbortError') throw e; return null; });
         return data?.Media || null;
     },
-
     async getGenresBatch(ids) {
         if (!ids.length) return [];
         const q = `query($ids:[Int]) { Page(page: 1, perPage: 50) { media(id_in: $ids, type: ANIME) { id genres } } }`;
         const data = await this.fetch(q, { ids: ids.map(Number) }).catch(() => null);
         return data?.Page?.media || [];
     },
-
     async getRandom(limit, signal) {
         const q = `query($page:Int,$perPage:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,sort:POPULARITY_DESC,genre_not_in:["Hentai","Ecchi","Erotica"]){${this._mediaFields}}}}`;
-        const data = await this.fetch(q, { page: 1, perPage: Math.min((limit || 5) * 6, 50) }, signal).catch(e => {
-            if (e.name === 'AbortError') throw e;
-            return null;
-        });
+        const data = await this.fetch(q, { page: 1, perPage: Math.min((limit || 5) * 6, 50) }, signal).catch(e => { if (e.name === 'AbortError') throw e; return null; });
         return (data?.Page?.media || []).sort(() => Math.random() - 0.5).slice(0, limit || 5);
     },
-
     async getSeasonal(limit, signal) {
         const now = new Date();
         const month = now.getMonth();
@@ -369,13 +472,9 @@ const API_AniList = {
         else if (month >= 6 && month < 9) season = 'SUMMER';
         else if (month >= 9) season = 'FALL';
         const q = `query($page:Int,$perPage:Int,$season:MediaSeason,$seasonYear:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,season:$season,seasonYear:$seasonYear,sort:POPULARITY_DESC,genre_not_in:["Hentai","Ecchi","Erotica"]){${this._mediaFields}}}}`;
-        const data = await this.fetch(q, { page: 1, perPage: Math.min((limit || 6) * 2, 50), season, seasonYear: now.getFullYear() }, signal).catch(e => {
-            if (e.name === 'AbortError') throw e;
-            return null;
-        });
+        const data = await this.fetch(q, { page: 1, perPage: Math.min((limit || 6) * 2, 50), season, seasonYear: now.getFullYear() }, signal).catch(e => { if (e.name === 'AbortError') throw e; return null; });
         return (data?.Page?.media || []).slice(0, limit || 6);
     },
-
     async getUpcoming(limit, signal) {
         const now = new Date();
         const month = now.getMonth();
@@ -385,19 +484,12 @@ const API_AniList = {
         else if (month >= 6 && month < 9) season = 'FALL';
         else { season = 'WINTER'; year += 1; }
         const q = `query($page:Int,$perPage:Int,$season:MediaSeason,$seasonYear:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,season:$season,seasonYear:$seasonYear,status:NOT_YET_RELEASED,sort:POPULARITY_DESC,genre_not_in:["Hentai","Ecchi","Erotica"]){${this._mediaFields}}}}`;
-        const data = await this.fetch(q, { page: 1, perPage: Math.min((limit || 6) * 2, 50), season, seasonYear: year }, signal).catch(e => {
-            if (e.name === 'AbortError') throw e;
-            return null;
-        });
+        const data = await this.fetch(q, { page: 1, perPage: Math.min((limit || 6) * 2, 50), season, seasonYear: year }, signal).catch(e => { if (e.name === 'AbortError') throw e; return null; });
         return (data?.Page?.media || []).slice(0, limit || 6);
     },
-
     async getTopRated(limit = 6, signal) {
         const q = `query($page:Int,$perPage:Int){Page(page:$page,perPage:$perPage){media(type:ANIME,sort:SCORE_DESC,genre_not_in:["Hentai","Ecchi","Erotica"]){${this._mediaFields}}}}`;
-        const data = await this.fetch(q, { page: 1, perPage: Math.min(limit, 50) }, signal).catch(e => {
-            if (e.name === 'AbortError') throw e;
-            return null;
-        });
+        const data = await this.fetch(q, { page: 1, perPage: Math.min(limit, 50) }, signal).catch(e => { if (e.name === 'AbortError') throw e; return null; });
         return data?.Page?.media || [];
     }
 };
@@ -422,8 +514,7 @@ const API_AniLibria = {
 const API_Shikimori = {
     async fetchGraphQL(query) {
         const res = await fetch(PROXY_URL + encodeURIComponent(SHIKIMORI_GRAPHQL), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query })
         });
         if (!res.ok) throw new Error('Shikimori HTTP ' + res.status);
@@ -440,17 +531,12 @@ const API_Shikimori = {
                 const d = await this.fetchGraphQL(q);
                 if (d.animes && d.animes.length) return { russian: d.animes[0].russian || null, description: d.animes[0].description || null };
                 break;
-            } catch {
-                if (attempt === 1) await new Promise(r => setTimeout(r, 300));
-            }
+            } catch { if (attempt === 1) await new Promise(r => setTimeout(r, 300)); }
         }
         return { russian: null, description: null };
     }
 };
 
-// ==========================================
-// БАТЧ-КЭШ
-// ==========================================
 async function getCachedAnimeBatch(ids) {
     if (!supabaseClient || !ids.length) return new Map();
     try {
@@ -518,8 +604,7 @@ async function processWithLimit(items, limit, asyncProcessor) {
         while (true) {
             const i = cursor++;
             if (i >= items.length) return;
-            try { results[i] = await asyncProcessor(items[i], i); }
-            catch { results[i] = null; }
+            try { results[i] = await asyncProcessor(items[i], i); } catch { results[i] = null; }
         }
     });
     await Promise.all(workers);
@@ -530,19 +615,13 @@ async function buildAnimeObjectsBatch(rawList) {
     if (!rawList || !rawList.length) return [];
     const ids = rawList.map(r => String(r.id));
     const cachedMap = await getCachedAnimeBatch(ids);
-
     const results = new Array(rawList.length);
     const toTranslate = [];
-
     rawList.forEach((raw, i) => {
         const c = cachedMap.get(String(raw.id));
-        if (c && c.title_ru) {
-            results[i] = buildAnimeObjectFromCache(raw, c);
-        } else {
-            toTranslate.push({ raw, index: i });
-        }
+        if (c && c.title_ru) results[i] = buildAnimeObjectFromCache(raw, c);
+        else toTranslate.push({ raw, index: i });
     });
-
     await processWithLimit(toTranslate, 4, async (item) => {
         const { raw, index } = item;
         const searchTitle = raw.title?.english || raw.title?.romaji || raw.title?.native || '';
@@ -555,7 +634,6 @@ async function buildAnimeObjectsBatch(rawList) {
         cleanDesc = cleanDesc.replace(/\[[^\]]*\]/g, '').replace(/<[^>]*>?/gm, '').trim();
         results[index] = buildRawAnimeObject(raw, finalTitle, cleanDesc);
     });
-
     const toSave = toTranslate.map(t => results[t.index]).filter(Boolean);
     if (toSave.length) saveCachedAnimeBatch(toSave).catch(() => {});
     return results.filter(Boolean);
@@ -565,7 +643,6 @@ const API = {
     _cache: new Map(),
     _CACHE_TTL: 30 * 60 * 1000,
     _CACHE_MAX: 200,
-
     _getCache(key) {
         const item = this._cache.get(key);
         if (item && Date.now() - item.t < this._CACHE_TTL) return item.d;
@@ -582,13 +659,8 @@ const API = {
     async _cached(key, fn) {
         const cached = this._getCache(key);
         if (cached !== undefined) return cached;
-        try {
-            const d = await fn();
-            if (d) this._setCache(key, d);
-            return d;
-        } catch { return null; }
+        try { const d = await fn(); if (d) this._setCache(key, d); return d; } catch { return null; }
     },
-
     getCatalog(page, limit, filters, signal) {
         return this._cached(`c_${page}_${limit}_${JSON.stringify(filters || {})}`, async () => {
             const raw = await API_AniList.getCatalog(page, limit, filters, signal);
@@ -668,13 +740,11 @@ function switchTab(tabName, element) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const scr = document.getElementById(`screen-${tabName}`);
     if (scr) scr.classList.add('active');
-
     const nav = document.querySelector('.bottom-nav');
     if (nav) {
         if (tabName === 'shop' || tabName === 'settings' || tabName === 'preview') nav.style.display = 'none';
         else nav.style.display = 'flex';
     }
-
     if (element) {
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         element.classList.add('active');
@@ -684,7 +754,6 @@ function switchTab(tabName, element) {
         const items = document.querySelectorAll('.nav-item');
         if (map[tabName] !== undefined && items[map[tabName]]) items[map[tabName]].classList.add('active');
     }
-
     if (tabName !== 'home') stopSlideShow();
     if (tabName === 'profile') loadProfileData();
     if (tabName === 'catalog' && document.getElementById('catalog-grid').children.length === 0) {
@@ -775,15 +844,12 @@ async function syncProfileToDB(forceLocal = false) {
             episodes_watched: stats.episodesWatched, minutes_watched: stats.minutesWatched,
             days_streak: stats.daysStreak, active_banner: stats.active_banner,
             active_title: stats.active_title, active_effect: stats.active_effect,
-            active_badge: stats.active_badge,
-            active_frame: stats.active_frame,
+            active_badge: stats.active_badge, active_frame: stats.active_frame,
             unlocked_achievements: stats.unlockedAchievements || [],
             last_watched: stats.favedAnime.length > 0 ? stats.favedAnime[stats.favedAnime.length - 1].id : null
         };
-
-        if (forceLocal) {
-            payload.coins = stats.coins; payload.xp = stats.xp;
-        } else {
+        if (forceLocal) { payload.coins = stats.coins; payload.xp = stats.xp; }
+        else {
             const { data: remote } = await supabaseClient.from('users').select('coins,xp').eq('id', MY_ID).single();
             if (remote) {
                 payload.coins = remote.coins || 0;
@@ -791,9 +857,7 @@ async function syncProfileToDB(forceLocal = false) {
                 if ((remote.coins || 0) > (stats.coins || 0)) stats.coins = remote.coins;
                 if ((remote.xp || 0) > (stats.xp || 0)) stats.xp = remote.xp;
                 saveStats(stats);
-            } else {
-                payload.coins = stats.coins; payload.xp = stats.xp;
-            }
+            } else { payload.coins = stats.coins; payload.xp = stats.xp; }
         }
         await supabaseClient.from('users').upsert(payload, { onConflict: 'id' });
     } catch (e) { console.warn('Sync error:', e); }
@@ -815,7 +879,6 @@ function shareMyId() {
 async function loadProfileData() {
     let stats = getStats();
     if (stats.active_banner_url) ACTIVE_BANNER_URL = stats.active_banner_url;
-
     if (MY_ID && supabaseClient) {
         try {
             const { data: dbUser } = await supabaseClient.from('users').select('*').eq('id', MY_ID).single();
@@ -823,10 +886,8 @@ async function loadProfileData() {
                 MY_PUBLIC_ID = dbUser.public_id;
                 stats.coins = Math.max(stats.coins || 0, dbUser.coins || 0);
                 stats.xp = Math.max(stats.xp || 0, dbUser.xp || 0);
-
                 setElText('my-tg-id', MY_PUBLIC_ID || '...');
                 setElText('tg-name', dbUser.name || MY_NAME);
-
                 const avEl = document.getElementById('tg-avatar');
                 if (avEl) {
                     const u = dbUser.avatar_url || MY_PHOTO_URL;
@@ -834,42 +895,35 @@ async function loadProfileData() {
                         ? `<img src="${safeUrl(u)}" style="width:100%;height:100%;object-fit:cover;">`
                         : `<span>${escapeHTML((dbUser.name || '?')[0].toUpperCase())}</span>`;
                 }
-
                 if (dbUser.active_banner) {
                     stats.active_banner = dbUser.active_banner;
                     const { data: b } = await supabaseClient.from('banners').select('image_url').eq('id', dbUser.active_banner).single();
                     if (b) { ACTIVE_BANNER_URL = safeUrl(b.image_url); stats.active_banner_url = ACTIVE_BANNER_URL; }
                 }
-
                 if (dbUser.active_title) {
                     const { data: t } = await supabaseClient.from('titles').select('*').eq('id', dbUser.active_title).single();
                     if (t) { ACTIVE_TITLE_DATA = t; stats.active_title = t.id; }
                 } else { ACTIVE_TITLE_DATA = null; stats.active_title = null; }
-
                 if (dbUser.active_effect) {
                     const { data: e } = await supabaseClient.from('effects').select('*').eq('id', dbUser.active_effect).single();
                     if (e) { ACTIVE_EFFECT_CSS = e.css_class; stats.active_effect = e.id; }
                 } else { ACTIVE_EFFECT_CSS = ''; stats.active_effect = null; }
-
                 const nameContainer = document.getElementById('tg-name');
                 const oldBadge = document.getElementById('user-badge-img');
-                
                 if (dbUser.active_badge) {
                     const { data: bd } = await supabaseClient.from('badges').select('image_url').eq('id', dbUser.active_badge).single();
                     const safeBadge = bd ? safeUrl(bd.image_url) : '';
-                    
                     if (safeBadge) {
                         ACTIVE_BADGE_URL = safeBadge;
                         stats.active_badge = dbUser.active_badge;
                         if (oldBadge) oldBadge.remove();
-                        
                         if (nameContainer) {
                             const newBadge = document.createElement('img');
                             newBadge.id = 'user-badge-img';
                             newBadge.className = 'user-badge-icon';
                             newBadge.src = safeBadge;
                             newBadge.style.cssText = 'width: 24px; height: 24px; object-fit: contain; display: inline-block; margin-left: 8px;';
-                            nameContainer.appendChild(newBadge); 
+                            nameContainer.appendChild(newBadge);
                         }
                     }
                 } else {
@@ -877,12 +931,10 @@ async function loadProfileData() {
                     stats.active_badge = null;
                     if (oldBadge) oldBadge.remove();
                 }
-
                 saveStats(stats);
             }
         } catch (e) { console.error(e); }
     }
-
     const today = new Date().toDateString();
     if (stats.lastVisit !== today) {
         stats.daysStreak += 1;
@@ -895,40 +947,30 @@ async function loadProfileData() {
     }
     checkAchievements(stats);
     saveStats(stats);
-
     const lvl = Math.min(Math.floor(stats.xp / 100) + 1, 999);
     const currentLevelXP = stats.xp - ((lvl - 1) * 100);
-
     setElText('user-level', lvl);
     setElText('user-xp-current', currentLevelXP);
     setElWidth('user-xp-bar', currentLevelXP + '%');
-
     setElText('stat-episodes', stats.episodesWatched || 0);
     setElText('stat-streak', stats.daysStreak || 1);
     setElText('stat-achievements', (stats.unlockedAchievements || []).length);
-
     const total = ACHIEVEMENTS.length;
     setElText('ach-points', stats.unlockedAchievements.length * 10);
     setElText('ach-earned', stats.unlockedAchievements.length);
     setElText('ach-total-count', total);
     setElWidth('ach-bar', (stats.unlockedAchievements.length / total) * 100 + '%');
-
     const next = ACHIEVEMENTS.find(a => !stats.unlockedAchievements.includes(a.id));
     if (next) { setElText('next-ach-name', next.name); setElText('next-ach-reward', next.coins); }
     else { setElText('next-ach-name', 'Все выполнено!'); setElText('next-ach-reward', '0'); }
-
     const bEl = document.getElementById('profile-banner');
     if (bEl) bEl.style.backgroundImage = ACTIVE_BANNER_URL ? `url('${ACTIVE_BANNER_URL}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)';
-
     renderEffectParticles(document.getElementById('particle-effect-container'), ACTIVE_EFFECT_CSS);
-
     const tCont = document.getElementById('user-title-container'), tEl = document.getElementById('user-active-title');
     if (ACTIVE_TITLE_DATA) { tCont.style.display = 'block'; applyTitleToElement(tEl, ACTIVE_TITLE_DATA); }
     else tCont.style.display = 'none';
-
     const friendIdEl = document.getElementById('my-friend-id');
     if (friendIdEl && MY_PUBLIC_ID) friendIdEl.textContent = MY_PUBLIC_ID;
-
     await syncProfileToDB();
     loadProfileStats(null, false);
     loadGenreChart(MY_ID, false);
@@ -938,46 +980,35 @@ async function loadProfileStats(userId = null, isFriend = false) {
     const targetId = userId || MY_ID;
     if (!supabaseClient || !targetId) return;
     const prefix = isFriend ? 'friend-' : '';
-
     try {
         const { data: lists, error } = await supabaseClient.from('user_lists').select('status').eq('user_id', targetId);
         if (error) throw error;
-
         const counts = { watching: 0, planned: 0, completed: 0, dropped: 0, favorite: 0 };
         (lists || []).forEach(item => { if (counts[item.status] !== undefined) counts[item.status]++; });
-
         const el = (id) => document.getElementById(prefix + id);
         if (el('stat-watching')) el('stat-watching').textContent = counts.watching;
         if (el('stat-planned')) el('stat-planned').textContent = counts.planned;
         if (el('stat-completed')) el('stat-completed').textContent = counts.completed;
         if (el('stat-favorite')) el('stat-favorite').textContent = counts.favorite;
         if (el('stat-dropped')) el('stat-dropped').textContent = counts.dropped;
-
         let minutes = 0;
         if (isFriend) {
             const { data: friendData } = await supabaseClient.from('users').select('minutes_watched').eq('id', targetId).single();
             if (friendData) minutes = friendData.minutes_watched || 0;
-        } else {
-            minutes = getStats().minutesWatched || 0;
-        }
-
+        } else minutes = getStats().minutesWatched || 0;
         const totalHours = Math.floor(minutes / 60);
         const days = Math.floor(totalHours / 24);
         const hours = totalHours % 24;
         if (el('stat-total-time')) el('stat-total-time').textContent = `~ ${days} дн. ${hours} ч.`;
-
         const total = counts.watching + counts.planned + counts.completed + counts.dropped + counts.favorite;
         const donut = el('donut-chart');
         if (!donut) return;
-
         if (total === 0) { donut.style.background = 'conic-gradient(#2a2a3e 0% 100%)'; return; }
-
         const pWatching = (counts.watching / total) * 100;
         const pPlanned = (counts.planned / total) * 100;
         const pCompleted = (counts.completed / total) * 100;
         const pDropped = (counts.dropped / total) * 100;
         const pFavorite = (counts.favorite / total) * 100;
-
         let acc = 0;
         const stops = [];
         if (counts.completed > 0) { stops.push(`#5b5bff ${acc}% ${acc + pCompleted}%`); acc += pCompleted; }
@@ -985,7 +1016,6 @@ async function loadProfileStats(userId = null, isFriend = false) {
         if (counts.planned > 0) { stops.push(`#a259ff ${acc}% ${acc + pPlanned}%`); acc += pPlanned; }
         if (counts.favorite > 0) { stops.push(`#ff69b4 ${acc}% ${acc + pFavorite}%`); acc += pFavorite; }
         if (counts.dropped > 0) { stops.push(`#e74c3c ${acc}% ${acc + pDropped}%`); acc += pDropped; }
-
         donut.style.background = `conic-gradient(${stops.join(', ')})`;
     } catch (e) { console.error('Ошибка загрузки статистики:', e); }
 }
@@ -994,28 +1024,22 @@ async function loadGenreChart(userId, isFriend) {
     const containerId = isFriend ? 'friend-genre-chart-container' : 'genre-chart-container';
     const container = document.getElementById(containerId);
     if (!container || !supabaseClient || !userId) return;
-
     container.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; width: 100%;">Загрузка данных...</div>';
-
     try {
         const { data: lists } = await supabaseClient.from('user_lists').select('anime_id').eq('user_id', userId);
         if (!lists || lists.length === 0) {
             container.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; width: 100%;">Нет данных для анализа (список пуст).</div>';
             return;
         }
-
         const animeIds = lists.map(l => String(l.anime_id).replace('anilist_', ''));
         const cacheMap = await getCachedAnimeBatch(animeIds);
-
         const missingIds = animeIds.filter(id => {
             const cached = cacheMap.get(id);
             return !cached || !cached.genres || cached.genres.length === 0;
         });
-
         if (missingIds.length > 0) {
             const toFetch = missingIds.slice(0, 50);
             const fetchedGenres = await API_AniList.getGenresBatch(toFetch);
-
             fetchedGenres.forEach(item => {
                 if (item.genres && item.genres.length > 0) {
                     const existing = cacheMap.get(String(item.id)) || {};
@@ -1024,66 +1048,41 @@ async function loadGenreChart(userId, isFriend) {
                 }
             });
         }
-
         const genreCounts = {};
         cacheMap.forEach(anime => {
             if (anime.genres && Array.isArray(anime.genres)) {
                 anime.genres.forEach(g => { genreCounts[g] = (genreCounts[g] || 0) + 1; });
             }
         });
-
         const sortedGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
-
         if (sortedGenres.length === 0) {
             container.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; width: 100%;">Жанры не найдены.</div>';
             return;
         }
-
         const maxCount = sortedGenres[0][1];
         const maxBarHeight = 90;
-
         container.innerHTML = sortedGenres.map(([genre, count], index) => {
             const heightPx = Math.max(28, (count / maxCount) * maxBarHeight);
             const isTop = index === 0;
             const bgColor = 'linear-gradient(180deg, #8A2BE2 0%, #5b5bff 100%)';
             const glow = 'box-shadow: 0 0 15px rgba(138,43,226,0.6);';
-
-            const ruMap = {
-                'Slice of Life': 'Повседневность', 'Sci-Fi': 'Фантастика', 'Action': 'Экшен',
-                'Romance': 'Романтика', 'Comedy': 'Комедия', 'Fantasy': 'Фэнтези',
-                'Drama': 'Драма', 'Adventure': 'Приключения', 'Mystery': 'Детектив',
-                'Thriller': 'Триллер', 'Horror': 'Ужасы'
-            };
+            const ruMap = { 'Slice of Life': 'Повседневность', 'Sci-Fi': 'Фантастика', 'Action': 'Экшен', 'Romance': 'Романтика', 'Comedy': 'Комедия', 'Fantasy': 'Фэнтези', 'Drama': 'Драма', 'Adventure': 'Приключения', 'Mystery': 'Детектив', 'Thriller': 'Триллер', 'Horror': 'Ужасы' };
             const displayGenre = ruMap[genre] || genre;
-
-            return `
-                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%;">
-                    <div style="width: 100%; max-width: 24px; height: ${heightPx}px; background: ${bgColor}; border-radius: 6px; ${glow} position: relative; transition: height 0.5s ease-out; display: flex; align-items: center; justify-content: center;">
-                        <div style="font-size: 9px; font-weight: bold; color: #fff; position: absolute; top: 3px; left: 50%; transform: translateX(-50%); z-index: 2; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">${count}</div>
-                        ${isTop ? `<div style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: rgba(91,91,255,0.2); border: 1px solid #5b5bff; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 8px; z-index: 10;">#1</div>` : ''}
-                    </div>
-                    <div style="font-size: 9px; color: #888; margin-top: 6px; text-align: center; word-break: break-word; line-height: 1.1; height: 22px; display: flex; align-items: center; justify-content: center;">${displayGenre}</div>
-                </div>
-            `;
+            return `<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%;"><div style="width: 100%; max-width: 24px; height: ${heightPx}px; background: ${bgColor}; border-radius: 6px; ${glow} position: relative; transition: height 0.5s ease-out; display: flex; align-items: center; justify-content: center;"><div style="font-size: 9px; font-weight: bold; color: #fff; position: absolute; top: 3px; left: 50%; transform: translateX(-50%); z-index: 2; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">${count}</div>${isTop ? `<div style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: rgba(91,91,255,0.2); border: 1px solid #5b5bff; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 8px; z-index: 10;">#1</div>` : ''}</div><div style="font-size: 9px; color: #888; margin-top: 6px; text-align: center; word-break: break-word; line-height: 1.1; height: 22px; display: flex; align-items: center; justify-content: center;">${displayGenre}</div></div>`;
         }).join('');
-
     } catch (e) {
         console.error('Ошибка графика жанров:', e);
         container.innerHTML = '<div style="color: #ff4444; font-size: 12px; text-align: center; width: 100%;">Ошибка загрузки</div>';
     }
 }
-
 async function uploadAvatar(event) {
     const file = event.target.files[0];
     if (!file) return;
-
     if (!supabaseClient) { showToast('Сервис недоступен'); return; }
     if (!MY_ID) { showToast('Сначала войдите в аккаунт'); return; }
     if (file.size > 5 * 1024 * 1024) { showToast('Файл слишком большой (макс. 5 МБ)'); event.target.value = ''; return; }
     if (!file.type.startsWith('image/')) { showToast('Пожалуйста, выберите изображение'); return; }
-
     showToast('Обработка фото...');
-
     try {
         const processedFile = await new Promise((resolve, reject) => {
             const img = new Image();
@@ -1094,18 +1093,12 @@ async function uploadAvatar(event) {
                 const MAX_SIZE = 500;
                 let width = img.width;
                 let height = img.height;
-
-                if (width > height) {
-                    if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
-                } else {
-                    if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
-                }
-
+                if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } }
+                else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-
                 canvas.toBlob((blob) => {
                     if (!blob) return reject(new Error('Ошибка сжатия'));
                     resolve(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
@@ -1114,32 +1107,22 @@ async function uploadAvatar(event) {
             img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Не удалось прочитать изображение')); };
             img.src = url;
         });
-
         showToast('Загрузка на сервер...');
-
         const fileName = `${MY_ID}_${Date.now()}.jpg`;
         const { error: uploadError } = await supabaseClient.storage
-            .from('avatars')
-            .upload(fileName, processedFile, { cacheControl: '3600', upsert: true, contentType: 'image/jpeg' });
-
+            .from('avatars').upload(fileName, processedFile, { cacheControl: '3600', upsert: true, contentType: 'image/jpeg' });
         if (uploadError) throw new Error(uploadError.message);
-
         const { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
         const { error: dbError } = await supabaseClient.from('users').update({ avatar_url: publicUrl }).eq('id', MY_ID);
         if (dbError) throw dbError;
-
         let s = getStats(); s.avatar_url = publicUrl; saveStats(s);
-
         const avatarEl = document.getElementById('tg-avatar');
         if (avatarEl) avatarEl.innerHTML = `<img src="${publicUrl}" style="width:100%; height:100%; object-fit:cover;">`;
-
         showToast('Аватарка обновлена!');
     } catch (error) {
         console.error('Avatar Upload Error:', error);
         showToast('Ошибка: ' + (error.message || 'неизвестная ошибка'));
-    } finally {
-        event.target.value = '';
-    }
+    } finally { event.target.value = ''; }
 }
 
 function renderEffectParticles(container, effectClass) {
@@ -1176,17 +1159,14 @@ function startPreview(type, item) {
     savedStats._active_title_data = ACTIVE_TITLE_DATA;
     savedStats._active_effect_css = ACTIVE_EFFECT_CSS;
     savedStats._active_badge_url = ACTIVE_BADGE_URL;
-
     if (type === 'banner') ACTIVE_BANNER_URL = safeUrl(item.image_url);
     else if (type === 'title') ACTIVE_TITLE_DATA = item;
     else if (type === 'effect') ACTIVE_EFFECT_CSS = item.css_class;
     else if (type === 'badge') ACTIVE_BADGE_URL = safeUrl(item.image_url);
-
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('screen-preview')?.classList.add('active');
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     renderPreviewCard();
-
     const bar = document.getElementById('previewBar');
     const btn = document.getElementById('preview-btn-buy');
     if (!bar || !btn) return;
@@ -1205,7 +1185,6 @@ function renderPreviewCard() {
     const stats = getStats();
     const bannerEl = document.getElementById('preview-banner');
     if (bannerEl) bannerEl.style.backgroundImage = ACTIVE_BANNER_URL ? `url('${ACTIVE_BANNER_URL}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)';
-
     const avatarEl = document.getElementById('preview-avatar');
     if (avatarEl) {
         const avUrl = safeUrl(stats.avatar_url || MY_PHOTO_URL);
@@ -1213,13 +1192,11 @@ function renderPreviewCard() {
         else avatarEl.innerHTML = `<span>${escapeHTML((MY_NAME || '?')[0].toUpperCase())}</span>`;
     }
     setElText('preview-name', MY_NAME || 'Гость');
-
     const badgeEl = document.getElementById('preview-badge-img');
     if (badgeEl) {
         if (ACTIVE_BADGE_URL) { badgeEl.src = ACTIVE_BADGE_URL; badgeEl.style.display = 'block'; }
         else badgeEl.style.display = 'none';
     }
-
     const titleContainer = document.getElementById('preview-title-container');
     const titleEl = document.getElementById('preview-active-title');
     if (titleContainer && titleEl) {
@@ -1297,11 +1274,9 @@ async function renderBannersInShop(container) {
         const { data: owned } = await supabaseClient.from('user_banners').select('banner_id').eq('user_id', MY_ID);
         const ownedIds = new Set((owned || []).map(o => o.banner_id));
         if (currentShopTab !== 'banners') return;
-
         let stats = getStats();
         let itemsToShow = banners || [];
         if (currentShopView === 'inventory') itemsToShow = itemsToShow.filter(b => ownedIds.has(b.id));
-
         let html = '';
         const rarities = [
             { key: 'common', name: 'Обычные', color: '#ccc', class: 'common' },
@@ -1340,11 +1315,9 @@ async function renderTitlesInShop(container) {
         const { data: owned } = await supabaseClient.from('user_inventory').select('item_id').eq('user_id', MY_ID).eq('item_type', 'title');
         const ownedIds = new Set((owned || []).map(o => String(o.item_id)));
         if (currentShopTab !== 'titles') return;
-
         let stats = getStats();
         let itemsToShow = items || [];
         if (currentShopView === 'inventory') itemsToShow = itemsToShow.filter(t => ownedIds.has(String(t.id)));
-
         let html = '';
         itemsToShow.forEach(t => {
             const isActive = String(stats.active_title) === String(t.id);
@@ -1375,11 +1348,9 @@ async function renderFramesInShop(container) {
         const { data: owned } = await supabaseClient.from('user_inventory').select('item_id').eq('user_id', MY_ID).eq('item_type', 'frame');
         const ownedIds = new Set((owned || []).map(o => String(o.item_id)));
         if (currentShopTab !== 'frames') return;
-
         let stats = getStats();
         let itemsToShow = items || [];
         if (currentShopView === 'inventory') itemsToShow = itemsToShow.filter(f => ownedIds.has(String(f.id)));
-
         let html = '';
         itemsToShow.forEach(f => {
             const isActive = String(stats.active_frame) === String(f.id);
@@ -1407,11 +1378,9 @@ async function renderEffectsInShop(container) {
         const { data: owned } = await supabaseClient.from('user_inventory').select('item_id').eq('user_id', MY_ID).eq('item_type', 'effect');
         const ownedIds = new Set((owned || []).map(o => String(o.item_id)));
         if (currentShopTab !== 'effects') return;
-
         let stats = getStats();
         let itemsToShow = items || [];
         if (currentShopView === 'inventory') itemsToShow = itemsToShow.filter(e => ownedIds.has(String(e.id)));
-
         let html = '';
         itemsToShow.forEach(e => {
             const isActive = String(stats.active_effect) === String(e.id);
@@ -1439,11 +1408,9 @@ async function renderBadgesInShop(container) {
         const { data: owned } = await supabaseClient.from('user_inventory').select('item_id').eq('user_id', MY_ID).eq('item_type', 'badge');
         const ownedIds = new Set((owned || []).map(o => String(o.item_id)));
         if (currentShopTab !== 'badges') return;
-
         let stats = getStats();
         let itemsToShow = items || [];
         if (currentShopView === 'inventory') itemsToShow = itemsToShow.filter(b => ownedIds.has(String(b.id)));
-
         let html = '';
         const rarities = [
             { key: 'common', name: 'Обычные', color: '#ccc', class: 'common' },
@@ -1481,7 +1448,6 @@ async function buyItem(type, itemId, price, btnEl = null) {
     let stats = getStats();
     if (stats.coins < price) { showToast('Недостаточно монет!'); if (btn) btn.disabled = false; return; }
     if (!supabaseClient) { if (btn) btn.disabled = false; return; }
-
     try {
         const { data: existing } = await supabaseClient.from('user_inventory')
             .select('id').eq('user_id', MY_ID).eq('item_type', type).eq('item_id', itemId).limit(1);
@@ -1494,7 +1460,6 @@ async function buyItem(type, itemId, price, btnEl = null) {
             return;
         }
     } catch (e) { console.error(e); }
-
     stats.coins -= price;
     saveStats(stats);
     try {
@@ -1546,7 +1511,6 @@ async function buyBanner(bannerId, price) {
             return;
         }
     } catch (e) { console.error(e); }
-
     stats.coins -= price;
     stats.hasPurchasedBanner = true;
     saveStats(stats);
@@ -1607,7 +1571,6 @@ async function loadFriends() {
     listContainer.innerHTML = Skeletons.friends(3);
     const friendIdEl = document.getElementById('my-friend-id');
     if (friendIdEl) friendIdEl.textContent = MY_PUBLIC_ID || '...';
-
     try {
         const { data: accepted } = await supabaseClient.from('friends').select('friend_id').eq('user_id', MY_ID).eq('status', 'accepted');
         if (!accepted || accepted.length === 0) {
@@ -1727,23 +1690,19 @@ async function sendFriendRequest(friendId) {
     if (!supabaseClient) { showToast('Нет соединения'); return; }
     if (!MY_ID) { showToast('Сначала войдите в аккаунт'); return; }
     if (String(friendId) === String(MY_ID)) { showToast('Нельзя добавить себя'); return; }
-
     try {
         const { data: existing, error: exErr } = await supabaseClient
             .from('friends').select('id, status')
             .eq('user_id', MY_ID).eq('friend_id', friendId).maybeSingle();
         if (exErr) console.warn('Ошибка проверки заявки:', exErr);
-
         if (existing) {
             if (existing.status === 'accepted') showToast('Вы уже друзья!');
             else showToast('Заявка уже отправлена');
             return;
         }
-
         const { data: reverse } = await supabaseClient
             .from('friends').select('id, status')
             .eq('user_id', friendId).eq('friend_id', MY_ID).maybeSingle();
-
         if (reverse) {
             if (reverse.status === 'accepted') { showToast('Вы уже друзья!'); return; }
             const { error: acceptErr } = await supabaseClient.from('friends')
@@ -1753,11 +1712,9 @@ async function sendFriendRequest(friendId) {
             showToast('Вы теперь друзья!');
             return;
         }
-
         const { error } = await supabaseClient.from('friends').insert({
             user_id: MY_ID, friend_id: friendId, status: 'pending'
         });
-
         if (error) {
             console.error('Ошибка отправки заявки:', error);
             if (error.code === '23505') showToast('Заявка уже отправлена');
@@ -1765,11 +1722,9 @@ async function sendFriendRequest(friendId) {
             else showToast('Ошибка: ' + (error.message || 'неизвестно'));
             return;
         }
-
         document.getElementById('search-result-container').innerHTML = '';
         document.getElementById('friend-search-input').value = '';
         showToast('Заявка отправлена!');
-
         const reqTab = document.querySelector('.my-list-tabs .my-list-tab:nth-child(2)');
         if (reqTab) switchFriendsTab('requests', reqTab);
     } catch (e) {
@@ -1785,12 +1740,10 @@ async function acceptFriend(userId) {
             .update({ status: 'accepted' })
             .eq('user_id', userId).eq('friend_id', MY_ID);
         if (upErr) { console.error(upErr); showToast('Ошибка: ' + upErr.message); return; }
-
         const { error: insErr } = await supabaseClient.from('friends').insert({
             user_id: MY_ID, friend_id: userId, status: 'accepted'
         });
         if (insErr && insErr.code !== '23505') console.error(insErr);
-
         showToast('Заявка принята!');
         loadFriendRequests();
         loadFriends();
@@ -1829,15 +1782,12 @@ async function openFriendProfile(id, name = '') {
     if (!supabaseClient) return;
     if (window._currentFriendLoadingId === id) return;
     window._currentFriendLoadingId = id;
-
     switchTab('friend-profile');
     const container = document.getElementById('friend-profile-content');
     container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
-
     try {
         const { data: friend, error } = await supabaseClient.from('users').select('*').eq('id', id).single();
         if (error || !friend) throw new Error('Не найден');
-
         let friendshipStatus = 'none';
         if (MY_ID && MY_ID !== id) {
             const { data: outReq } = await supabaseClient.from('friends')
@@ -1852,16 +1802,13 @@ async function openFriendProfile(id, name = '') {
                 }
             }
         }
-
         const lvl = Math.floor((friend.xp || 0) / 100) + 1;
         const currentLevelXP = (friend.xp || 0) % 100;
-
         let friendBannerUrl = '';
         if (friend.active_banner) {
             const { data: b } = await supabaseClient.from('banners').select('image_url').eq('id', friend.active_banner).single();
             if (b) friendBannerUrl = safeUrl(b.image_url);
         }
-
         let friendTitleHtml = '';
         if (friend.active_title) {
             const { data: t } = await supabaseClient.from('titles').select('*').eq('id', friend.active_title).single();
@@ -1870,25 +1817,20 @@ async function openFriendProfile(id, name = '') {
                 else friendTitleHtml = `<div class="user-title-display" style="color: ${escapeHTML(t.color)}; border-color: ${escapeHTML(t.color)}; margin-top: 10px;">${escapeHTML(t.name)}</div>`;
             }
         }
-
         let friendEffectClass = '';
         if (friend.active_effect) {
             const { data: e } = await supabaseClient.from('effects').select('css_class').eq('id', friend.active_effect).single();
             if (e) friendEffectClass = e.css_class;
         }
-
         let friendBadgeHtml = '';
         if (friend.active_badge) {
             const { data: bd } = await supabaseClient.from('badges').select('image_url').eq('id', friend.active_badge).single();
             const safeBadge = bd ? safeUrl(bd.image_url) : '';
             if (safeBadge) friendBadgeHtml = `<img src="${safeBadge}" class="user-badge-icon" alt="badge">`;
         }
-
         const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
         const nameChar = friend.name && friend.name[0] ? escapeHTML(friend.name[0].toUpperCase()) : '?';
         const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : nameChar;
-
-        // ✅ Аватарка теперь 110px, как и в основном профиле
         container.innerHTML = `
             <div style="padding-bottom: 40px;">
                 <div id="friend-profile-banner" style="position: relative; width: 100%; height: 280px; background: ${friendBannerUrl ? `url('${friendBannerUrl}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)'}; background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
@@ -1901,7 +1843,6 @@ async function openFriendProfile(id, name = '') {
                         </div>
                     </div>
                 </div>
-
                 <div style="padding: 70px 20px 20px 20px; text-align: center; position: relative; z-index: 5;">
                     <h1 style="font-size: 28px; font-weight: 900; color: #fff; margin-bottom: 8px; line-height: 1.1; display: flex; align-items: center; justify-content: center; gap: 8px;">
                         ${escapeHTML(friend.name)}
@@ -1913,7 +1854,6 @@ async function openFriendProfile(id, name = '') {
                         <span style="color: #fff; font-weight: 700; font-size: 16px; letter-spacing: 1px;">${escapeHTML(friend.public_id || '...')}</span>
                     </div>
                 </div>
-
                 <div style="padding: 0 20px;">
                     <div class="xp-capsule">
                         <div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${currentLevelXP}%; background: linear-gradient(90deg, rgba(123,104,238,0.85), rgba(100,149,237,0.85)); z-index: 1; border-radius: 12px;"></div>
@@ -1923,7 +1863,6 @@ async function openFriendProfile(id, name = '') {
                         </div>
                     </div>
                 </div>
-
                 <div style="padding: 15px 20px;">
                     <div style="display: flex; gap: 10px; justify-content: space-between;">
                         <div class="ripple-btn" style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0.5;">
@@ -1940,7 +1879,6 @@ async function openFriendProfile(id, name = '') {
                         </div>
                     </div>
                 </div>
-
                 <div style="padding: 15px 20px 0 20px;">
                     <div style="background: rgba(20, 20, 31, 0.6); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
                         <div style="margin-bottom: 20px;">
@@ -1972,7 +1910,6 @@ async function openFriendProfile(id, name = '') {
                         </div>
                     </div>
                 </div>
-
                 <div style="padding: 20px;">
                     <div style="background: rgba(20, 20, 31, 0.6); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
                         <h3 style="font-size: 18px; color: #fff; margin: 0 0 15px 0; display: flex; align-items: center; gap: 8px;">
@@ -1984,19 +1921,16 @@ async function openFriendProfile(id, name = '') {
                         </div>
                     </div>
                 </div>
-
                 <div style="padding: 0 20px 20px 20px;">
                     ${id !== MY_ID && friendshipStatus === 'accepted' ? `<button onclick="removeFriend('${escapeHTML(String(friend.id))}')" class="ripple-btn" style="width: 100%; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">Удалить из друзей</button>` : ''}
                 </div>
             </div>
         `;
-
         if (id !== MY_ID) {
             const avatarWrap = document.getElementById('friend-avatar-wrap');
             if (avatarWrap) {
-                if (friendshipStatus === 'accepted') {
-                    // ничего
-                } else if (friendshipStatus === 'pending_out') {
+                if (friendshipStatus === 'accepted') { /* ничего */ }
+                else if (friendshipStatus === 'pending_out') {
                     const btn = document.createElement('div');
                     btn.style.cssText = 'position: absolute; bottom: 0; right: 0; background: #2ecc71; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #14141f; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: default;';
                     btn.innerHTML = '<svg style="width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-check"></use></svg>';
@@ -2030,13 +1964,11 @@ async function openFriendProfile(id, name = '') {
                 }
             }
         }
-
         setTimeout(() => {
             renderEffectParticles(document.getElementById('friend-particle-container'), friendEffectClass);
             loadProfileStats(id, true);
             loadGenreChart(id, true);
         }, 100);
-
     } catch (e) {
         console.error(e);
         container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки профиля</div>';
@@ -2044,7 +1976,6 @@ async function openFriendProfile(id, name = '') {
         window._currentFriendLoadingId = null;
     }
 }
-
 // ==========================================
 // 9. ПЛЕЕР
 // ==========================================
@@ -2183,13 +2114,11 @@ async function loadCatalog(reset = false) {
     const grid = document.getElementById('catalog-grid');
     const lm = document.getElementById('load-more-btn');
     if (!grid) { isCatalogLoading = false; return; }
-
     if (reset) {
         grid.innerHTML = Skeletons.cards(6);
         hasMoreCatalog = true;
         catalogPage = 1;
     }
-
     try {
         const items = await API.getCatalog(catalogPage, 30, currentFilters, ctrl.signal);
         if (myVersion !== catalogRequestVersion) return;
@@ -2200,7 +2129,9 @@ async function loadCatalog(reset = false) {
             if (lm) lm.style.display = 'none';
             return;
         }
-        items.forEach(anime => renderCatalogCard(anime, grid));
+        // ✅ Батч-загрузка Onika-рейтингов (1 запрос на все карточки)
+        const ratingsMap = await getOnikaRatingsBatch(items.map(a => a.id));
+        items.forEach(anime => renderCatalogCardSync(anime, grid, ratingsMap[String(anime.id)]));
         hasMoreCatalog = items.length >= 30;
         if (lm) lm.style.display = hasMoreCatalog ? 'inline-block' : 'none';
     } catch (e) {
@@ -2215,12 +2146,15 @@ async function loadCatalog(reset = false) {
     }
 }
 
-function renderCatalogCard(anime, grid) {
+function renderCatalogCardSync(anime, grid, onika) {
     const title = escapeHTML(anime.title_ru);
     let img = safeUrl(anime.images.jpg.image_url);
     if (!img) img = PLACEHOLDER_POSTER;
     const score = anime.score && Number(anime.score) > 0 ? Number(anime.score).toFixed(1) : '?';
-    grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy" decoding="async" fetchpriority="low" onerror="this.src='${PLACEHOLDER_POSTER}'"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;display:flex;align-items:center;gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${score}</div><div class="catalog-card-title">${title}</div></div>`);
+    const onikaChip = onika && onika.avg != null
+        ? `<div class="score-chip onika">◆ ${onika.avg.toFixed(1)}</div>`
+        : '';
+    grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'catalog')"><img class="catalog-card-img" src="${img}" loading="lazy" decoding="async" fetchpriority="low" onerror="this.src='${PLACEHOLDER_POSTER}'"><div class="card-onika-score"><div class="score-chip anilist">★ ${score}</div>${onikaChip}</div><div class="catalog-card-title">${title}</div></div>`);
 }
 
 function loadMoreCatalog() {
@@ -2288,11 +2222,10 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
     switchTab('detail');
     const container = document.getElementById('detail-content');
     container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
-    let userRating = 0, comments = [], franchiseItems = [], shikiScreenshots = [], similarItems = [];
+    let comments = [], franchiseItems = [], shikiScreenshots = [], similarItems = [];
     try {
         const anime = await API.getDetails(id);
         if (!anime) throw new Error('Anime not found');
-
         const [franchiseRes, shikiRes, similarRes] = await Promise.allSettled([
             searchFranchiseByTitle(anime),
             getShikimoriScreenshots(anime.idMal),
@@ -2323,20 +2256,20 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 return [];
             })()
         ]);
-
         if (franchiseRes.status === 'fulfilled') franchiseItems = franchiseRes.value;
         if (shikiRes.status === 'fulfilled') shikiScreenshots = shikiRes.value;
         if (similarRes.status === 'fulfilled') similarItems = similarRes.value || [];
-
+        // ✅ Загружаем Onika-рейтинг и мою оценку
+        const [onikaRating, myOnikaRating] = await Promise.all([
+            getOnikaRating(anime.id),
+            getMyRating(anime.id)
+        ]);
         if (supabaseClient && MY_ID) {
             try {
-                const { data: listItem } = await supabaseClient.from('user_lists').select('rating').eq('user_id', MY_ID).eq('anime_id', id).single();
-                if (listItem && listItem.rating) userRating = listItem.rating;
                 const { data: cmts } = await supabaseClient.from('anime_comments').select('*').eq('anime_id', id).order('created_at', { ascending: false });
                 comments = cmts || [];
             } catch (e) { console.error(e); }
         }
-
         const title = escapeHTML(anime.title_ru);
         const titleRaw = escapeHTML(anime.title_raw || anime.title_ru);
         const desc = escapeHTML(anime.description);
@@ -2345,15 +2278,12 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         const stats = getStats();
         const favEntry = (stats.favedAnime || []).find(a => a.id === anime.id);
         const isFaved = !!favEntry;
-
         window._animeCache = window._animeCache || {};
         window._animeCache[anime.id] = anime;
-
         let relationsHtml = '';
         if (franchiseItems && franchiseItems.length > 0) {
             relationsHtml = `<div style="margin-bottom: 30px;"><h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">Все сезоны</h3><div style="display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">${franchiseItems.map(r => `<div class="card" style="min-width: 130px; width: 130px; height: 195px;" onclick="openAnimeDetail('${escapeHTML(r.id)}', 'detail')"><img class="card-img" src="${safeUrl(r.image) || PLACEHOLDER_POSTER}" loading="lazy" decoding="async" onerror="this.src='${PLACEHOLDER_POSTER}'"><div style="position:absolute;top:8px;left:8px;background:rgba(91,91,255,0.8);padding:2px 6px;border-radius:6px;font-size:9px;color:#fff;font-weight:bold;">${r.year || r.format}</div><div class="card-title">${escapeHTML(r.title)}</div></div>`).join('')}</div></div>`;
         }
-
         let nextEpisodeHtml = '';
         if (anime.nextAiringEpisode && anime.nextAiringEpisode.airingAt) {
             const airingAt = anime.nextAiringEpisode.airingAt * 1000;
@@ -2372,32 +2302,21 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
             const timeStr = airDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
             nextEpisodeHtml = `<div style="background: linear-gradient(135deg, rgba(91,91,255,0.15), rgba(180,74,255,0.15)); border: 1px solid rgba(91,91,255,0.4); border-radius: 16px; padding: 15px 20px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;"><div><div style="font-size: 12px; color: #a29bfe; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 4px;">Следующая серия</div><div style="font-size: 18px; font-weight: 800; color: #fff;">Серия ${anime.nextAiringEpisode.episode}</div><div style="font-size: 13px; color: #ccc; margin-top: 2px;">${dateStr} в ${timeStr}</div></div><div style="background: rgba(91,91,255,0.3); color: #fff; padding: 8px 14px; border-radius: 12px; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px;"><svg style="width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#oa-clock"></use></svg>${timeText}</div></div>`;
         }
-
         let screenshotsHtml = '';
         let hasScreenshots = false;
         if (shikiScreenshots && shikiScreenshots.length > 0) {
             hasScreenshots = true;
             screenshotsHtml = shikiScreenshots.map(url => `<div style="scroll-snap-align: start; flex: 0 0 75%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; background: #222; border: 1px solid rgba(255,255,255,0.1); position: relative;"><img src="${safeUrl(url)}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none'"></div>`).join('');
         }
-
         let similarHtml = '';
         if (similarItems && similarItems.length > 0) {
             similarHtml = `<div style="margin-bottom: 30px;"><h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">Похожие по жанру (${anime.genres[0]})</h3><div style="display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">${similarItems.map(s => `<div class="card" style="min-width: 130px; width: 130px; height: 195px;" onclick="openAnimeDetail('${escapeHTML(s.id)}', 'detail')"><img class="card-img" src="${safeUrl(s.image) || PLACEHOLDER_POSTER}" loading="lazy" decoding="async" onerror="this.src='${PLACEHOLDER_POSTER}'"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;display:flex;align-items:center;gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${s.score}</div><div class="card-title">${escapeHTML(s.title)}</div></div>`).join('')}</div></div>`;
         }
-
         const trailerBtnHtml = anime.trailerId ? `<button onclick="window.open('https://youtube.com/watch?v=${anime.trailerId}', '_blank')" class="ripple-btn" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #fff; width: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg style="width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-tv-retro"></use></svg></button>` : '';
-
         const isUpcoming = anime.status === 'Анонс';
         const watchBtnHtml = isUpcoming
             ? `<button class="btn-primary" style="background: #2a2a3e; color: #888; box-shadow: none; cursor: not-allowed; width: auto; padding: 16px 24px;" disabled><svg class="icon-inline" style="stroke:#888;fill:#888;width:20px;height:20px;margin-right:8px;"><use href="#oa-clock"></use></svg> Скоро</button>`
             : `<button class="btn-primary ripple-btn" onclick="startWatching(window._animeCache['${escapeHTML(anime.id)}'])" style="width: auto; padding: 16px 24px; font-size: 16px; display:flex;align-items:center;gap:8px; border-radius: 14px;"><svg class="icon-inline" style="stroke:#fff;fill:#fff;width:20px;height:20px;"><use href="#oa-play"></use></svg> Смотреть</button>`;
-
-        let starsHtml = '';
-        for (let i = 1; i <= 5; i++) {
-            const active = i <= userRating ? 'color: #ffd700;' : 'color: #444;';
-            starsHtml += `<span onclick="rateAnime('${escapeHTML(anime.id)}', ${i})" style="font-size: 32px; cursor: pointer; ${active} display:inline-block; transition: transform 0.1s;">★</span>`;
-        }
-
         let commentsHtml = '';
         if (comments && comments.length > 0) {
             commentsHtml = comments.map(c => {
@@ -2409,7 +2328,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 return `<div style="display: flex; gap: 10px; margin-bottom: 15px; ${c.user_id ? 'cursor: pointer;' : ''}" ${clickAttr}><div class="friend-avatar" style="width: 36px; height: 36px; flex-shrink: 0; font-size: 14px;">${av}</div><div style="flex: 1; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px;"><div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-size: 13px; font-weight: bold; color: #fff;">${escapeHTML(c.user_name)}</span><span style="font-size: 11px; color: #888;">${date}</span></div><p style="font-size: 13px; color: #ccc;">${escapeHTML(c.text)}</p></div></div>`;
             }).join('');
         } else commentsHtml = '<div style="font-size: 13px; color: #888; text-align: center; padding: 10px;">Пока нет комментариев</div>';
-
         container.innerHTML = `
         <div class="fade-in" style="position: relative;">
             <div style="position: absolute; top: 0; left: -20px; width: calc(100% + 40px); height: 400px; z-index: -1; overflow: hidden;">
@@ -2432,12 +2350,11 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
                 ${relationsHtml}
                 ${nextEpisodeHtml}
                 ${hasScreenshots ? `<div style="margin-bottom: 30px;"><h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">Кадры</h3><div style="display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">${screenshotsHtml}</div></div>` : ''}
-                <div style="background: #14141f; border-radius: 16px; padding: 20px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(255,255,255,0.05);"><h3 style="font-size: 16px; color: #fff; margin-bottom: 12px;">Ваша оценка:</h3><div style="display: flex; justify-content: center; gap: 8px;">${starsHtml}</div></div>
+                ${renderRatingBlock(anime, onikaRating, myOnikaRating)}
                 ${similarHtml}
                 <div style="margin-bottom: 40px;"><h3 style="font-size: 18px; margin-bottom: 15px; color: #fff;">Комментарии</h3><div style="display: flex; gap: 10px; margin-bottom: 20px;"><input type="text" id="comment-input" placeholder="Написать отзыв..." style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 16px; color: #fff; font-size: 15px; outline: none;"><button onclick="sendComment('${escapeHTML(anime.id)}')" class="ripple-btn" style="background: #5b5bff; border: none; border-radius: 12px; padding: 0 20px; color: #fff; font-weight: bold; cursor: pointer;">→</button></div><div>${commentsHtml}</div></div>
             </div>
         </div>`;
-
         setTimeout(() => {
             const d = document.getElementById('desc-text');
             const b = document.getElementById('desc-btn');
@@ -2447,16 +2364,6 @@ async function openAnimeDetail(id, fromScreen = 'catalog') {
         console.error('CRITICAL DETAIL ERROR:', e);
         container.innerHTML = `<div style="text-align: center; padding: 40px; color: #ff4444;"><h3>Ошибка загрузки</h3><p style="font-size: 12px; color: #888; margin-top: 10px;">${e.message || 'Неизвестная ошибка'}</p><button onclick="goBackFromDetail()" style="margin-top: 20px; background: #5b5bff; color: #fff; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer;">← Вернуться назад</button></div>`;
     }
-}
-
-async function rateAnime(animeId, rating) {
-    if (!supabaseClient || !MY_ID) return;
-    try {
-        const { data: ex } = await supabaseClient.from('user_lists').select('id').eq('user_id', MY_ID).eq('anime_id', animeId).single();
-        if (ex) await supabaseClient.from('user_lists').update({ rating }).eq('user_id', MY_ID).eq('anime_id', animeId);
-        else await supabaseClient.from('user_lists').insert({ user_id: MY_ID, anime_id: animeId, status: 'planned', rating });
-        showToast(`Оценка ${rating}`);
-    } catch { showToast('Ошибка'); }
 }
 
 async function sendComment(animeId) {
@@ -2492,13 +2399,11 @@ async function setAnimeStatus(status) {
     let animeData = (window._animeCache && window._animeCache[id]) || null;
     stats.favedAnime = stats.favedAnime || [];
     const idx = stats.favedAnime.findIndex(a => a.id === id);
-
     if (status === 'favorite') {
         if (idx < 0 && animeData) { stats.favedAnime.push({ ...animeData }); saveStats(stats); }
     } else {
         if (idx >= 0) { stats.favedAnime.splice(idx, 1); saveStats(stats); }
     }
-
     if (status === 'completed' && animeData) {
         stats.countedCompletions = stats.countedCompletions || [];
         if (!stats.countedCompletions.includes(id)) {
@@ -2511,7 +2416,6 @@ async function setAnimeStatus(status) {
             saveStats(stats);
         }
     }
-
     closeModal('statusModal');
     if (!supabaseClient || !MY_ID) { showToast('Ошибка'); return; }
     try {
@@ -2575,13 +2479,10 @@ async function renderMyList() {
         const { data: list, error } = await q;
         if (error) throw error;
         if (!list || list.length === 0) { grid.innerHTML = '<div class="loading-text">Тут пусто</div>'; return; }
-
         const animeIds = list.map(l => String(l.anime_id));
         const cacheMap = await getCachedAnimeBatch(animeIds.map(id => id.replace('anilist_', '')));
-
         const ordered = [];
         const stillMissing = [];
-
         list.forEach(f => {
             const rawId = String(f.anime_id).replace('anilist_', '');
             const c = cacheMap.get(rawId);
@@ -2594,23 +2495,16 @@ async function renderMyList() {
                     description: c.description, genres: c.genres || [],
                     score: c.score, status: c.status, kind: c.kind
                 });
-            } else {
-                stillMissing.push(f.anime_id);
-            }
+            } else stillMissing.push(f.anime_id);
         });
-
         if (stillMissing.length) {
             const fetched = await processWithLimit(stillMissing, 4, async (id) => {
                 try { return await API.getDetails(id); } catch { return null; }
             });
             fetched.filter(Boolean).forEach(d => ordered.push(d));
         }
-
         grid.innerHTML = '';
-        if (ordered.length === 0) {
-            grid.innerHTML = '<div class="loading-text">Не удалось загрузить</div>';
-            return;
-        }
+        if (ordered.length === 0) { grid.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; return; }
         ordered.forEach(anime => renderMyListCard(anime, grid));
     } catch (e) {
         console.error(e);
@@ -2622,9 +2516,7 @@ function renderMyListCard(anime, grid) {
     const title = escapeHTML(anime.title_ru);
     let img = safeUrl(anime.images?.jpg?.image_url);
     if (!img) img = PLACEHOLDER_POSTER;
-
     const score = anime.score && Number(anime.score) > 0 ? Number(anime.score).toFixed(1) : '?';
-
     let nextEpHtml = '';
     if (anime.nextAiringEpisode && anime.nextAiringEpisode.airingAt) {
         const airingAt = anime.nextAiringEpisode.airingAt * 1000;
@@ -2636,7 +2528,6 @@ function renderMyListCard(anime, grid) {
             nextEpHtml = `<div style="position:absolute; top: 8px; left: 8px; background: rgba(91,91,255,0.9); padding: 3px 6px; border-radius: 6px; font-size: 9px; color: #fff; font-weight: bold;">${timeText}</div>`;
         }
     }
-
     grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'my')" oncontextmenu="event.preventDefault(); openStatusModal('${escapeHTML(anime.id)}'); return false;"><img class="catalog-card-img" src="${img}" loading="lazy" decoding="async" onerror="this.src='${PLACEHOLDER_POSTER}'">${nextEpHtml}<div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold; display:flex; align-items:center; gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${score}</div><div class="catalog-card-title">${title}</div></div>`);
 }
 
@@ -2653,17 +2544,11 @@ async function renderWatchHistory() {
             .select('*').eq('user_id', MY_ID).eq('status', 'completed')
             .order('created_at', { ascending: false });
         if (error) throw error;
-        if (!list || list.length === 0) {
-            grid.innerHTML = '<div class="loading-text">Вы еще ничего не посмотрели</div>';
-            return;
-        }
-
+        if (!list || list.length === 0) { grid.innerHTML = '<div class="loading-text">Вы еще ничего не посмотрели</div>'; return; }
         const animeIds = list.map(l => String(l.anime_id));
         const cacheMap = await getCachedAnimeBatch(animeIds.map(id => id.replace('anilist_', '')));
-
         const ordered = [];
         const stillMissing = [];
-
         list.forEach(f => {
             const rawId = String(f.anime_id).replace('anilist_', '');
             const c = cacheMap.get(rawId);
@@ -2676,23 +2561,16 @@ async function renderWatchHistory() {
                     description: c.description, genres: c.genres || [],
                     score: c.score, status: c.status, kind: c.kind
                 });
-            } else {
-                stillMissing.push(f.anime_id);
-            }
+            } else stillMissing.push(f.anime_id);
         });
-
         if (stillMissing.length) {
             const fetched = await processWithLimit(stillMissing, 4, async (id) => {
                 try { return await API.getDetails(id); } catch { return null; }
             });
             fetched.filter(Boolean).forEach(d => ordered.push(d));
         }
-
         grid.innerHTML = '';
-        if (!ordered.length) {
-            grid.innerHTML = '<div class="loading-text">Не удалось загрузить</div>';
-            return;
-        }
+        if (!ordered.length) { grid.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; return; }
         ordered.forEach(anime => renderMyListCard(anime, grid));
     } catch (e) {
         console.error(e);
@@ -2722,23 +2600,19 @@ async function loadTopUsers() {
         const { data: users, error } = await supabaseClient.from('users').select('*').order('xp', { ascending: false }).limit(20);
         if (error) throw error;
         if (!users || users.length === 0) return;
-
         const sortedUsers = users.sort((a, b) => {
             const scoreA = (a.xp || 0) + ((a.unlocked_achievements || []).length * 1000) + ((a.minutes_watched || 0) / 60);
             const scoreB = (b.xp || 0) + ((b.unlocked_achievements || []).length * 1000) + ((b.minutes_watched || 0) / 60);
             return scoreB - scoreA;
         }).slice(0, 5);
-
         const titleIds = sortedUsers.map(u => u.active_title).filter(Boolean);
         const badgeIds = sortedUsers.map(u => u.active_badge).filter(Boolean);
-
         const [titlesRes, badgesRes] = await Promise.all([
             titleIds.length ? supabaseClient.from('titles').select('*').in('id', titleIds) : Promise.resolve({ data: [] }),
             badgeIds.length ? supabaseClient.from('badges').select('*').in('id', badgeIds) : Promise.resolve({ data: [] })
         ]);
         const titlesMap = new Map((titlesRes.data || []).map(t => [String(t.id), t]));
         const badgesMap = new Map((badgesRes.data || []).map(b => [String(b.id), b]));
-
         const topUsersHtml = sortedUsers.map((user, index) => {
             let titleHtml = '', badgeHtml = '';
             if (user.active_title) {
@@ -2757,13 +2631,11 @@ async function loadTopUsers() {
             const avatarUrl = user.avatar_url ? safeUrl(user.avatar_url) : '';
             const nameChar = user.name && user.name[0] ? escapeHTML(user.name[0].toUpperCase()) : '?';
             const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:100%; height:100%; object-fit:cover;">` : nameChar;
-
             let rankIndicator = '', nameColor = 'var(--text)';
             if (index === 0) { rankIndicator = `<svg style="width:14px; height:14px; margin-right: 8px;"><use href="#oa-dot-gold"></use></svg>`; nameColor = '#FFD700'; }
             else if (index === 1) { rankIndicator = `<svg style="width:14px; height:14px; margin-right: 8px;"><use href="#oa-dot-blue"></use></svg>`; nameColor = '#87CEEB'; }
             else if (index === 2) { rankIndicator = `<svg style="width:14px; height:14px; margin-right: 8px;"><use href="#oa-dot-green"></use></svg>`; nameColor = '#2ecc71'; }
             else rankIndicator = `<div style="width: 18px; height: 18px; margin-right: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); border-radius: 50%; font-size: 11px; font-weight: bold; color: #aaa; flex-shrink: 0;">${index + 1}</div>`;
-
             return `<div onclick="openUserFromTop('${escapeHTML(String(user.id))}')" style="display: flex; align-items: flex-start; background: #14141f; border-radius: 12px; padding: 12px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;"><div style="display: flex; align-items: center; margin-right: 12px; margin-top: 2px;">${rankIndicator}<div class="friend-avatar" style="width: 46px; height: 46px; font-size: 18px;">${avatarHtml}</div></div><div style="flex: 1; min-width: 0;"><div style="display: flex; align-items: center; gap: 4px;"><h3 style="color: ${nameColor}; font-size: 15px; margin: 0; font-weight: 700;">${escapeHTML(user.name)}</h3>${badgeHtml}</div>${titleHtml}</div></div>`;
         });
         container.innerHTML = topUsersHtml.join('');
@@ -2823,20 +2695,17 @@ async function loadHomePage() {
     const upcomingList = document.getElementById('upcoming-list');
     const heroSlider = document.getElementById('heroSlider');
     const heroProgressBar = document.getElementById('heroProgressBar');
-
     if (seasonalList) seasonalList.innerHTML = Skeletons.cards(4);
     if (popularList) popularList.innerHTML = Skeletons.cards(4);
     if (upcomingList) upcomingList.innerHTML = Skeletons.cards(4);
     if (heroSlider) heroSlider.innerHTML = `<div class="hero-slide active"><div style="position:absolute;inset:0;background:linear-gradient(135deg,#1a1a24,#12121a);"></div></div>`;
     if (heroProgressBar) heroProgressBar.innerHTML = '';
-
     const [heroItems, seasonalItems, popularItems, upcomingItems] = await Promise.allSettled([
         API.getRandom(5),
         API.getSeasonal(6),
         API.getTopRated(6),
         API.getUpcoming(6)
     ]);
-
     if (heroItems.status === 'fulfilled' && heroItems.value?.length) {
         heroData = heroItems.value.map(a => ({
             id: a.id,
@@ -2848,21 +2717,16 @@ async function loadHomePage() {
         }));
     } else heroData = [];
     initHeroSlider();
-
     const fill = (list, settled, emptyMsg) => {
         if (!list) return;
         if (settled.status === 'fulfilled' && settled.value?.length) {
             renderSectionCards(list, settled.value, 'home');
-        } else {
-            list.innerHTML = `<div class="loading-text">${emptyMsg}</div>`;
-        }
+        } else list.innerHTML = `<div class="loading-text">${emptyMsg}</div>`;
     };
     fill(seasonalList, seasonalItems, 'Не удалось загрузить');
     fill(popularList, popularItems, 'Не удалось загрузить');
     fill(upcomingList, upcomingItems, 'Пока нет анонсов');
-
     loadTopUsers();
-
     const obs = getSectionObserver();
     document.querySelectorAll('.content-section').forEach(sec => {
         sec.classList.remove('fade-in-section');
@@ -2979,10 +2843,7 @@ function trimCachedAnime(s) {
 
 function getStats() {
     let s;
-    try {
-        s = JSON.parse(localStorage.getItem('onika_stats'));
-    } catch { s = null; }
-
+    try { s = JSON.parse(localStorage.getItem('onika_stats')); } catch { s = null; }
     if (!s || typeof s !== 'object') {
         s = {
             episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0,
@@ -2995,7 +2856,6 @@ function getStats() {
         };
         localStorage.setItem('onika_stats', JSON.stringify(s));
     }
-
     if (!Array.isArray(s.unlockedAchievements)) s.unlockedAchievements = [];
     if (!Array.isArray(s.favedAnime)) s.favedAnime = [];
     if (!Array.isArray(s.watchedToday)) s.watchedToday = [];
@@ -3007,7 +2867,6 @@ function getStats() {
     if (s._lastAwardedHours === undefined) s._lastAwardedHours = 0;
     if (s.custom_banner_url === undefined) s.custom_banner_url = '';
     if (s.active_frame === undefined) s.active_frame = null;
-
     return s;
 }
 
@@ -3064,9 +2923,7 @@ function addXPForTime(min) {
         s._lastAwardedHours = hoursEarned;
         addXP(delta * 2);
         showToast(`+${delta * 2} XP за ${delta} ч`);
-    } else {
-        saveStats(s);
-    }
+    } else saveStats(s);
 }
 
 function showLevelUpPopup(l, r, c) {
@@ -3105,7 +2962,6 @@ function renderAchievementsPage() {
     if (!c) return;
     setElText('page-ach-earned', s.unlockedAchievements.length);
     setElText('page-ach-total', ACHIEVEMENTS.length);
-
     const rarities = [
         { key: 'common', name: 'Обычные', color: '#ccc', class: 'common' },
         { key: 'rare', name: 'Редкие', color: '#00d2ff', class: 'rare' },
@@ -3147,13 +3003,9 @@ document.addEventListener('visibilitychange', () => {
 document.addEventListener('DOMContentLoaded', async () => {
     try { await initAuth(); } catch (e) { console.error(e); }
     try { await loadProfileData(); } catch (e) { console.error(e); }
-
     const homeLoad = loadHomePage();
-
     Promise.race([
         homeLoad,
         new Promise(r => setTimeout(r, 2500))
-    ]).finally(() => {
-        hidePreloader();
-    });
+    ]).finally(() => { hidePreloader(); });
 });
