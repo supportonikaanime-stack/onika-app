@@ -13,8 +13,10 @@
     <link rel="preconnect" href="https://aniliberty.top" crossorigin>
     <link rel="dns-prefetch" href="https://s4.anilist.co">
     
+    <!-- Подключаем внешние стили -->
     <link rel="stylesheet" href="style.css">
     
+    <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -33,6 +35,7 @@
 
     <canvas id="bg-canvas"></canvas>
 
+    <!-- SVG ИКОНКИ -->
     <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
       <symbol id="oa-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
       <symbol id="oa-catalog" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></symbol>
@@ -78,6 +81,7 @@
       <symbol id="oa-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
     </svg>
 
+    <!-- ЭКРАН АВТОРИЗАЦИИ -->
     <div class="auth-screen" id="authScreen">
         <div class="auth-box">
             <div class="auth-logo">OnikaAnime</div>
@@ -111,6 +115,7 @@
         </div>
     </div>
 
+    <!-- ПОПАП УРОВНЯ -->
     <div class="level-up-popup" id="levelUpPopup">
         <div class="icon"><svg><use href="#oa-level"></use></svg></div>
         <div class="text">
@@ -120,6 +125,7 @@
         <div class="coins">+<span id="popup-coins">100</span> <svg><use href="#oa-coin"></use></svg></div>
     </div>
     
+    <!-- ГЛАВНАЯ -->
     <div id="screen-home" class="screen active">
         <section class="hero-section" id="heroSection">
             <div class="hero-progress-bar" id="heroProgressBar"></div>
@@ -169,6 +175,7 @@
         </section>
     </div>
 
+    <!-- КАТАЛОГ -->
     <div id="screen-catalog" class="screen">
         <div style="padding: 20px 20px 10px 20px; position: relative;">
             <div style="display: flex; align-items: center; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 0 15px; margin-bottom: 15px;">
@@ -211,6 +218,7 @@
         </div>
     </div>
 
+    <!-- МОЁ -->
     <div id="screen-my" class="screen">
         <header class="profile-header" style="padding-bottom: 10px;"><h1>Моё</h1></header>
         <div class="my-list-tabs" id="my-list-tabs">
@@ -224,12 +232,14 @@
         <div class="grid-catalog" id="my-grid" style="margin-top: 10px;"></div>
     </div>
 
+    <!-- ИСТОРИЯ -->
     <div id="screen-history" class="screen">
         <button onclick="switchTab('profile')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; padding: 20px; cursor: pointer;">← Назад в профиль</button>
         <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 20px; padding: 0 20px;">История просмотров</h1>
         <div class="grid-catalog" id="history-grid" style="margin-top: 10px;"></div>
     </div>
 
+    <!-- ДРУЗЬЯ -->
     <div id="screen-friends" class="screen">
         <header class="profile-header" style="padding-bottom: 10px;"><h1>Друзья</h1></header>
         
@@ -261,26 +271,31 @@
         <div id="requests-list-container" style="display: none;"></div>
     </div>
 
+    <!-- ПРОФИЛЬ ДРУГА -->
     <div id="screen-friend-profile" class="screen">
         <div id="friend-profile-content"></div>
     </div>
 
+    <!-- ДЕТАЛЬНАЯ СТРАНИЦА АНИМЕ -->
     <div id="screen-detail" class="screen" style="padding: 0 20px 20px 20px;">
         <div id="detail-content"></div>
     </div>
 
+    <!-- ВЫБОР ОЗВУЧКИ -->
     <div id="screen-voice" class="screen" style="padding: 20px;">
         <button onclick="switchTab('detail')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <h1 id="voice-title" style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор озвучки</h1>
         <div style="display: flex; flex-direction: column; gap: 12px;" id="voice-list"></div>
     </div>
 
+    <!-- ВЫБОР ПЛЕЕРА -->
     <div id="screen-player" class="screen" style="padding: 20px;">
         <button onclick="switchTab('voice')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <h1 id="player-title" style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Выбор плеера</h1>
         <div style="display: flex; flex-direction: column; gap: 12px;" id="player-list"></div>
     </div>
 
+    <!-- ВЫБОР СЕРИИ -->
     <div id="screen-episodes" class="screen" style="padding: 20px;">
         <button onclick="switchTab('player')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <h1 id="eps-title" style="font-size: 24px; font-weight: 800; margin-bottom: 10px;">Выбор серии</h1>
@@ -288,6 +303,7 @@
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;" id="episodes-list"></div>
     </div>
 
+    <!-- ДОСТИЖЕНИЯ -->
     <div id="screen-achievements" class="screen" style="padding: 20px;">
         <button onclick="switchTab('profile')" style="background: none; border: none; color: #5b5bff; font-size: 16px; font-weight: bold; margin-bottom: 20px; cursor: pointer;">← Назад</button>
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
@@ -302,6 +318,7 @@
         <div id="achievements-list-container" style="margin-top: 15px;"></div>
     </div>
 
+    <!-- ПРОФИЛЬ -->
     <div id="screen-profile" class="screen" style="background: var(--bg);">
         <div id="profile-banner" style="position: relative; width: 100%; height: 280px; background: linear-gradient(180deg, #2a2a3e 0%, #14141f 100%); background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
             <div style="position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 20;">
@@ -445,6 +462,7 @@
         </div>
     </div>
 
+    <!-- МАГАЗИН -->
     <div id="screen-shop" class="screen" style="background: var(--bg);">
         <header class="profile-header" style="padding-bottom: 10px; padding-top: 20px;">
             <h1 style="font-size: 24px;">Магазин косметики</h1>
@@ -477,6 +495,7 @@
         </div>
     </div>
 
+    <!-- НАСТРОЙКИ -->
     <div id="screen-settings" class="screen" style="background: var(--bg);">
         <header class="profile-header" style="padding-bottom: 10px; padding-top: 20px;">
             <h1 style="font-size: 24px;">Настройки</h1>
@@ -494,6 +513,7 @@
         </div>
     </div>
 
+    <!-- ПРЕДПРОСМОТР -->
     <div id="screen-preview" class="screen" style="background: var(--bg);">
         <header class="profile-header" style="padding-bottom: 10px;">
             <h1>Примерка</h1>
@@ -527,6 +547,7 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА УРОВНЯ -->
     <div class="modal-overlay" id="levelModal" onclick="closeModal('levelModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('levelModal')"><svg><use href="#oa-close"></use></svg></button>
@@ -548,6 +569,7 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА ФИЛЬТРОВ -->
     <div class="modal-overlay" id="filterModal" onclick="closeModal('filterModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('filterModal')"><svg><use href="#oa-close"></use></svg></button>
@@ -556,6 +578,7 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА СТАТУСА -->
     <div class="modal-overlay" id="statusModal" onclick="closeModal('statusModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeModal('statusModal')"><svg><use href="#oa-close"></use></svg></button>
@@ -572,12 +595,14 @@
         </div>
     </div>
 
+    <!-- ПАНЕЛЬ ПРЕДПРОСМОТРА -->
     <div class="preview-bar" id="previewBar">
         <button class="preview-btn-buy" id="preview-btn-buy" onclick="executePreview()">Купить</button>
         <button class="preview-btn-cancel" onclick="cancelPreview()"><svg><use href="#oa-close"></use></svg></button>
     </div>
     <div class="preview-hint" id="previewHint">Тапни вещь — примерь её вживую до покупки</div>
 
+    <!-- НИЖНЕЕ МЕНЮ -->
     <nav class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('home', this)"><span class="nav-icon"><svg><use href="#oa-home"></use></svg></span><span class="nav-text">Главная</span></div>
         <div class="nav-item" onclick="switchTab('catalog', this)"><span class="nav-icon"><svg><use href="#oa-catalog"></use></svg></span><span class="nav-text">Каталог</span></div>
@@ -586,6 +611,7 @@
         <div class="nav-item" onclick="switchTab('profile', this)"><span class="nav-icon"><svg><use href="#oa-profile"></use></svg></span><span class="nav-text">Профиль</span></div>
     </nav>
 
+    <!-- ФОНОВАЯ АНИМАЦИЯ -->
     <script>
         (function initNeuralBackground() {
             const canvas = document.getElementById('bg-canvas');
@@ -621,6 +647,7 @@
         })();
     </script>
 
+    <!-- ПОДКЛЮЧЕНИЕ ЛОГИКИ -->
     <script src="app.js?v=4643" defer></script>
 </body>
 </html>
