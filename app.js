@@ -921,3 +921,1450 @@ async function resetBanner() {
     const bannerEl = document.getElementById('profile-banner'); if (bannerEl) { bannerEl.style.backgroundImage = 'none'; applyBannerEffect(bannerEl, ''); }
     showToast('Баннер снят'); await loadProfileData(); switchShopView('inventory');
 }
+// ==========================================
+// 7. ДРУЗЬЯ
+// ==========================================
+function switchFriendsTab(tab, element) {
+    currentFriendsTab = tab;
+    document.querySelectorAll('.my-list-tabs .my-list-tab').forEach(el => el.classList.remove('active'));
+    if (element) element.classList.add('active');
+    document.getElementById('friends-list-container').style.display = tab === 'friends' ? 'block' : 'none';
+    document.getElementById('requests-list-container').style.display = tab === 'requests' ? 'block' : 'none';
+    if (tab === 'friends') loadFriends();
+    else loadFriendRequests();
+}
+
+async function loadFriends() {
+    const listContainer = document.getElementById('friends-list-container');
+    if (!listContainer || !supabaseClient || !MY_ID) return;
+    listContainer.innerHTML = Skeletons.friends(3);
+    const friendIdEl = document.getElementById('my-friend-id');
+    if (friendIdEl) friendIdEl.textContent = MY_PUBLIC_ID || '...';
+    try {
+        const { data: accepted } = await supabaseClient.from('friends').select('friend_id').eq('user_id', MY_ID).eq('status', 'accepted');
+        if (!accepted || accepted.length === 0) {
+            listContainer.innerHTML = `
+            <div style="padding: 40px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div style="width: 80px; height: 80px; background: rgba(91,91,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                    <svg style="width: 40px; height: 40px; fill: none; stroke: #5b5bff; stroke-width: 1.5;"><use href="#oa-friends"></use></svg>
+                </div>
+                <h3 style="color: #fff; font-size: 18px; margin-bottom: 8px;">Пока никого нет</h3>
+                <p style="color: #888; font-size: 14px; line-height: 1.5; margin-bottom: 20px;">Здесь будут твои друзья. Попроси друга зайти в профиль, скопировать свой ID и отправь его сюда!</p>
+                <button onclick="shareMyId()" class="ripple-btn" style="background: linear-gradient(90deg, #5b5bff, #7d7dff); color: #fff; border: none; padding: 14px 24px; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 25px rgba(91,91,255,0.4); display: flex; align-items: center; gap: 8px;">
+                    <svg style="width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#oa-send"></use></svg> Пригласить друга
+                </button>
+            </div>`;
+            return;
+        }
+        const accIds = accepted.map(f => f.friend_id);
+        const { data: accUsers } = await supabaseClient.from('users').select('*').in('id', accIds);
+        if (!accUsers || accUsers.length === 0) {
+            listContainer.innerHTML = '<div style="padding: 20px; color: #888; text-align: center;">Ошибка загрузки друзей</div>'; return;
+        }
+        let html = '';
+        accUsers.forEach(friend => {
+            const nameChar = friend.name && friend.name[0] ? escapeHTML(friend.name[0].toUpperCase()) : '?';
+            const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
+            html += `<div class="friend-card" data-id="${escapeHTML(String(friend.id))}" onclick="openFriendProfileFromCard(this)"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${nameChar}';">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(friend.name)}</h3><p>ID: ${escapeHTML(friend.public_id || '...')} • Ур. ${Math.floor((friend.xp || 0) / 100) + 1}</p></div><div style="margin-left: auto; color: #5b5bff; font-size: 20px;">›</div></div>`;
+        });
+        listContainer.innerHTML = html;
+    } catch (e) { console.error(e); listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка</div>'; }
+}
+
+function openFriendProfileFromCard(el) { const id = el.dataset.id; if (id) openFriendProfile(id); }
+
+async function loadFriendRequests() {
+    const container = document.getElementById('requests-list-container');
+    if (!container || !supabaseClient || !MY_ID) return;
+    container.innerHTML = Skeletons.friends(2);
+    try {
+        const { data: incoming } = await supabaseClient.from('friends').select('user_id').eq('friend_id', MY_ID).eq('status', 'pending');
+        const { data: outgoing } = await supabaseClient.from('friends').select('friend_id').eq('user_id', MY_ID).eq('status', 'pending');
+        let html = '';
+        if (incoming && incoming.length > 0) {
+            html += '<h3 style="padding: 0 20px 10px; font-size: 16px; color: #ffd700;">Входящие заявки</h3>';
+            const inIds = incoming.map(f => f.user_id);
+            const { data: inUsers } = await supabaseClient.from('users').select('*').in('id', inIds);
+            if (inUsers && inUsers.length > 0) {
+                inUsers.forEach(u => {
+                    const nameChar = u.name && u.name[0] ? escapeHTML(u.name[0].toUpperCase()) : '?';
+                    const avatarUrl = u.avatar_url ? safeUrl(u.avatar_url) : '';
+                    html += `<div class="friend-card" style="background: rgba(255,215,0,0.05); border-color: rgba(255,215,0,0.2);"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${nameChar}';">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(u.name)}</h3><p>ID: ${escapeHTML(u.public_id || '...')}</p></div><div style="display: flex; gap: 8px; margin-left: auto;"><button data-action="accept-friend" data-id="${escapeHTML(String(u.id))}" class="ripple-btn" style="background: #2ecc71; color: #fff; border: none; padding: 8px 12px; border-radius: 10px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;"><svg style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;"><use href="#oa-check"></use></svg></button><button data-action="reject-friend" data-id="${escapeHTML(String(u.id))}" class="ripple-btn" style="background: rgba(255,45,120,0.15); color: #ff2d78; border: 1px solid rgba(255,45,120,0.3); padding: 8px 12px; border-radius: 10px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;"><svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;"><use href="#oa-close"></use></svg></button></div></div>`;
+                });
+            }
+        }
+        if (outgoing && outgoing.length > 0) {
+            html += '<h3 style="padding: 20px 20px 10px; font-size: 16px; color: #00d2ff;">Исходящие заявки</h3>';
+            const outIds = outgoing.map(f => f.friend_id);
+            const { data: outUsers } = await supabaseClient.from('users').select('*').in('id', outIds);
+            if (outUsers && outUsers.length > 0) {
+                outUsers.forEach(u => {
+                    const nameChar = u.name && u.name[0] ? escapeHTML(u.name[0].toUpperCase()) : '?';
+                    const avatarUrl = u.avatar_url ? safeUrl(u.avatar_url) : '';
+                    html += `<div class="friend-card" style="opacity: 0.8;"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}" onerror="this.style.display='none'; this.parentElement.innerHTML='${nameChar}';">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(u.name)}</h3><p>ID: ${escapeHTML(u.public_id || '...')}</p></div><div style="margin-left: auto; display: flex; align-items: center; gap: 10px;"><span style="font-size: 12px; color: #888;">Ожидает...</span><button data-action="cancel-request" data-id="${escapeHTML(String(u.id))}" class="ripple-btn" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #ccc; padding: 8px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer;">Отменить</button></div></div>`;
+                });
+            }
+        }
+        if (!html) {
+            html = `<div style="padding: 40px 20px; text-align: center;"><div style="width: 60px; height: 60px; background: rgba(91,91,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;"><svg style="width: 30px; height: 30px; fill: none; stroke: #5b5bff; stroke-width: 1.5;"><use href="#oa-message"></use></svg></div><h3 style="color: #fff; font-size: 16px; margin-bottom: 5px;">Заявок нет</h3><p style="color: #888; font-size: 13px;">Входящие и исходящие заявки будут здесь</p></div>`;
+        }
+        container.innerHTML = html;
+    } catch (e) { console.error(e); container.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4444;">Ошибка загрузки</div>'; }
+}
+
+document.addEventListener('click', (e) => {
+    const acceptBtn = e.target.closest('[data-action="accept-friend"]');
+    if (acceptBtn) { e.stopPropagation(); acceptFriend(acceptBtn.dataset.id); return; }
+    const rejectBtn = e.target.closest('[data-action="reject-friend"]');
+    if (rejectBtn) { e.stopPropagation(); rejectFriend(rejectBtn.dataset.id); return; }
+    const cancelBtn = e.target.closest('[data-action="cancel-request"]');
+    if (cancelBtn) { e.stopPropagation(); cancelFriendRequest(cancelBtn.dataset.id); return; }
+});
+
+async function searchFriend() {
+    const searchId = document.getElementById('friend-search-input').value.trim();
+    const resultContainer = document.getElementById('search-result-container');
+    if (!searchId) return;
+    if (!supabaseClient) return;
+    if (String(searchId) === String(MY_PUBLIC_ID)) { resultContainer.innerHTML = '<div style="color: #ffd700; text-align: center; font-size: 14px; padding: 10px;">Это ваш ID</div>'; return; }
+    resultContainer.innerHTML = '<div style="color: #888; text-align: center; font-size: 14px; padding: 10px;">Поиск...</div>';
+    try {
+        const { data: userData } = await supabaseClient.from('users').select('*').eq('public_id', searchId).single();
+        if (!userData) { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px; padding: 10px;">Игрок с таким ID не найден</div>'; return; }
+        const nameChar = userData.name && userData.name[0] ? escapeHTML(userData.name[0].toUpperCase()) : '?';
+        const avatarUrl = userData.avatar_url ? safeUrl(userData.avatar_url) : '';
+        resultContainer.innerHTML = `<div class="friend-card" style="margin: 0; background: rgba(91,91,255,0.1); border-color: #5b5bff;"><div class="friend-avatar">${avatarUrl ? `<img src="${avatarUrl}">` : nameChar}</div><div class="friend-info"><h3>${escapeHTML(userData.name)}</h3><p>ID: ${escapeHTML(userData.public_id || '...')}</p></div><button onclick="sendFriendRequest('${escapeHTML(String(userData.id))}')" style="background: #5b5bff; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-left: auto; cursor: pointer;">Заявка</button></div>`;
+    } catch { resultContainer.innerHTML = '<div style="color: #ff4444; text-align: center; font-size: 14px; padding: 10px;">Ошибка поиска</div>'; }
+}
+
+async function sendFriendRequest(friendId) {
+    if (!supabaseClient) { showToast('Нет соединения'); return; }
+    if (!MY_ID) { showToast('Сначала войдите в аккаунт'); return; }
+    if (String(friendId) === String(MY_ID)) { showToast('Нельзя добавить себя'); return; }
+    try {
+        const { data: existing, error: exErr } = await supabaseClient.from('friends').select('id, status').eq('user_id', MY_ID).eq('friend_id', friendId).maybeSingle();
+        if (exErr) console.warn('Ошибка проверки заявки:', exErr);
+        if (existing) { if (existing.status === 'accepted') showToast('Вы уже друзья!'); else showToast('Заявка уже отправлена'); return; }
+        const { data: reverse } = await supabaseClient.from('friends').select('id, status').eq('user_id', friendId).eq('friend_id', MY_ID).maybeSingle();
+        if (reverse) {
+            if (reverse.status === 'accepted') { showToast('Вы уже друзья!'); return; }
+            const { error: acceptErr } = await supabaseClient.from('friends').update({ status: 'accepted' }).eq('id', reverse.id);
+            if (acceptErr) { console.error(acceptErr); showToast('Ошибка: ' + acceptErr.message); return; }
+            await supabaseClient.from('friends').insert({ user_id: MY_ID, friend_id: friendId, status: 'accepted' });
+            showToast('Вы теперь друзья!'); return;
+        }
+        const { error } = await supabaseClient.from('friends').insert({ user_id: MY_ID, friend_id: friendId, status: 'pending' });
+        if (error) {
+            console.error('Ошибка отправки заявки:', error);
+            if (error.code === '23505') showToast('Заявка уже отправлена');
+            else if (error.code === '42501') showToast('Ошибка прав доступа к БД');
+            else showToast('Ошибка: ' + (error.message || 'неизвестно'));
+            return;
+        }
+        document.getElementById('search-result-container').innerHTML = ''; document.getElementById('friend-search-input').value = '';
+        showToast('Заявка отправлена!');
+        const reqTab = document.querySelector('.my-list-tabs .my-list-tab:nth-child(2)'); if (reqTab) switchFriendsTab('requests', reqTab);
+    } catch (e) { console.error('Критическая ошибка:', e); showToast('Ошибка соединения'); }
+}
+
+async function acceptFriend(userId) {
+    if (!supabaseClient) return;
+    try {
+        const { error: upErr } = await supabaseClient.from('friends').update({ status: 'accepted' }).eq('user_id', userId).eq('friend_id', MY_ID);
+        if (upErr) { console.error(upErr); showToast('Ошибка: ' + upErr.message); return; }
+        const { error: insErr } = await supabaseClient.from('friends').insert({ user_id: MY_ID, friend_id: userId, status: 'accepted' });
+        if (insErr && insErr.code !== '23505') console.error(insErr);
+        showToast('Заявка принята!'); loadFriendRequests(); loadFriends();
+    } catch (e) { console.error(e); showToast('Ошибка'); }
+}
+
+async function rejectFriend(userId) { if (!supabaseClient) return; try { await supabaseClient.from('friends').delete().eq('user_id', userId).eq('friend_id', MY_ID); showToast('Заявка отклонена'); loadFriendRequests(); } catch (e) { console.error(e); } }
+async function cancelFriendRequest(friendId) { if (!supabaseClient) return; try { await supabaseClient.from('friends').delete().eq('user_id', MY_ID).eq('friend_id', friendId).eq('status', 'pending'); showToast('Заявка отменена'); loadFriendRequests(); } catch (e) { console.error(e); showToast('Ошибка'); } }
+async function removeFriend(friendId) { if (!supabaseClient) return; try { const { error } = await supabaseClient.from('friends').delete().or(`and(user_id.eq.${MY_ID},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${MY_ID})`); if (error) throw error; showToast('Удален из друзей'); switchTab('friends'); } catch (e) { console.error(e); showToast('Ошибка удаления'); } }
+
+async function openFriendProfile(id, name = '') {
+    if (!supabaseClient) return;
+    if (window._currentFriendLoadingId === id) return;
+    window._currentFriendLoadingId = id;
+    switchTab('friend-profile');
+    const container = document.getElementById('friend-profile-content');
+    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
+    try {
+        const { data: friend, error } = await supabaseClient.from('users').select('*').eq('id', id).single();
+        if (error || !friend) throw new Error('Не найден');
+        let friendshipStatus = 'none';
+        if (MY_ID && MY_ID !== id) {
+            const { data: outReq } = await supabaseClient.from('friends').select('status').eq('user_id', MY_ID).eq('friend_id', id).limit(1);
+            if (outReq && outReq.length > 0) friendshipStatus = outReq[0].status === 'accepted' ? 'accepted' : 'pending_out';
+            else { const { data: inReq } = await supabaseClient.from('friends').select('status').eq('user_id', id).eq('friend_id', MY_ID).limit(1); if (inReq && inReq.length > 0) friendshipStatus = inReq[0].status === 'accepted' ? 'accepted' : 'pending_in'; }
+        }
+        const lvl = Math.floor((friend.xp || 0) / 100) + 1;
+        const currentLevelXP = (friend.xp || 0) % 100;
+        let friendBannerUrl = ''; let friendBannerEffect = '';
+        if (friend.active_banner) { const { data: b } = await supabaseClient.from('banners').select('image_url, css_class').eq('id', friend.active_banner).single(); if (b) { friendBannerUrl = safeUrl(b.image_url); friendBannerEffect = b.css_class || ''; } }
+        let friendTitleHtml = '';
+        if (friend.active_title) {
+            const { data: t } = await supabaseClient.from('title_styles').select('*').eq('title_key', friend.active_title).single();
+            if (t) {
+                const tmpDiv = document.createElement('div');
+                applyTitleToElement(tmpDiv, t);
+                friendTitleHtml = `<div style="margin-top: 10px;">${tmpDiv.outerHTML}</div>`;
+            } else {
+                const { data: oldT } = await supabaseClient.from('titles').select('*').eq('id', friend.active_title).single();
+                if (oldT) {
+                    const tmpDiv = document.createElement('div');
+                    applyTitleToElement(tmpDiv, oldT);
+                    friendTitleHtml = `<div style="margin-top: 10px;">${tmpDiv.outerHTML}</div>`;
+                }
+            }
+        }
+        let friendEffectClass = '';
+        if (friend.active_effect) { const { data: e } = await supabaseClient.from('effects').select('css_class').eq('id', friend.active_effect).single(); if (e) friendEffectClass = e.css_class; }
+        let friendBadgeHtml = '';
+        if (friend.active_badge) {
+            const { data: bd } = await supabaseClient.from('badges').select('image_url').eq('id', friend.active_badge).single(); const safeBadge = bd ? safeUrl(bd.image_url) : '';
+            if (safeBadge) friendBadgeHtml = `<img src="${safeBadge}" class="user-badge-icon" alt="badge">`;
+        }
+        const avatarUrl = friend.avatar_url ? safeUrl(friend.avatar_url) : '';
+        const nameChar = friend.name && friend.name[0] ? escapeHTML(friend.name[0].toUpperCase()) : '?';
+        const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : nameChar;
+        container.innerHTML = `
+            <div style="padding-bottom: 40px;">
+                <div id="friend-profile-banner" class="profile-banner ${friendBannerEffect}" style="position: relative; width: 100%; height: 280px; background: ${friendBannerUrl ? `url('${friendBannerUrl}')` : 'linear-gradient(180deg, #2a2a3e 0%, #14141f 100%)'}; background-size: cover; background-position: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
+                    <div class="effect-container" id="friend-particle-container" style="border-radius: 0 0 24px 24px;"></div>
+                    <div style="position: absolute; bottom: -55px; left: 50%; transform: translateX(-50%); z-index: 10;">
+                        <div class="avatar-container" id="friend-avatar-wrap" style="position: relative; width: 110px; height: 110px; margin: 0;">
+                            <div class="avatar" style="width: 100%; height: 100%; border-radius: 50%; background: #222; border: 4px solid #14141f; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; overflow: hidden; position: relative; z-index: 2;">
+                                ${avatarHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 70px 20px 20px 20px; text-align: center; position: relative; z-index: 5;">
+                    <h1 style="font-size: 28px; font-weight: 900; color: #fff; margin-bottom: 8px; line-height: 1.1; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        ${escapeHTML(friend.name)}
+                        ${friendBadgeHtml}
+                    </h1>
+                    ${friendTitleHtml ? `<div style="margin-bottom: 15px;">${friendTitleHtml}</div>` : ''}
+                    <div class="id-container" style="background: transparent; border: 1px solid rgba(255,255,255,0.15); padding: 10px 20px; border-radius: 16px; display: inline-flex; align-items: center; gap: 10px; margin: 0 auto;">
+                        <span style="color: #888; font-size: 13px; font-weight: 500;">ID:</span>
+                        <span style="color: #fff; font-weight: 700; font-size: 16px; letter-spacing: 1px;">${escapeHTML(friend.public_id || '...')}</span>
+                    </div>
+                </div>
+                <div style="padding: 0 20px;">
+                    <div class="xp-capsule">
+                        <div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${currentLevelXP}%; background: linear-gradient(90deg, rgba(123,104,238,0.85), rgba(100,149,237,0.85)); z-index: 1; border-radius: 12px;"></div>
+                        <div style="position: relative; z-index: 4; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <div style="font-size: 12px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">LVL: ${lvl}</div>
+                            <div style="font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">${currentLevelXP} / 100 XP</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 15px 20px;">
+                    <div style="display: flex; gap: 10px; justify-content: space-between;">
+                        <div class="ripple-btn" style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0.5;">
+                            <svg style="width: 24px; height: 24px; fill: none; stroke: #5b5bff; stroke-width: 2; margin-bottom: 4px;"><use href="#oa-clock"></use></svg>
+                            <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">История</div>
+                        </div>
+                        <div style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: 900; color: #ff4500; margin-bottom: 2px;">${friend.days_streak || 1}</div>
+                            <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Дней</div>
+                        </div>
+                        <div class="ripple-btn" style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 10px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0.5;">
+                            <div style="font-size: 20px; font-weight: 900; color: #ffd700; margin-bottom: 2px;">${(friend.unlocked_achievements || []).length}</div>
+                            <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 600;">Ачивок</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 15px 20px 0 20px;">
+                    <div style="background: rgba(20, 20, 31, 0.6); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
+                        <div style="margin-bottom: 20px;">
+                            <h3 style="font-size: 18px; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">Статистика</h3>
+                        </div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+                            <div style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
+                                <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500;"><div style="width: 16px; height: 16px; border-radius: 4px; background: #6b8e23; box-shadow: 0 0 8px rgba(107,142,35,0.6);"></div><span style="color: #aaa; flex: 1;">Смотрю</span><span style="color: #fff; font-weight: 700;" id="friend-stat-watching">0</span></div>
+                                <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500;"><div style="width: 16px; height: 16px; border-radius: 4px; background: #a259ff; box-shadow: 0 0 8px rgba(162,89,255,0.6);"></div><span style="color: #aaa; flex: 1;">В планах</span><span style="color: #fff; font-weight: 700;" id="friend-stat-planned">0</span></div>
+                                <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500;"><div style="width: 16px; height: 16px; border-radius: 4px; background: #5b5bff; box-shadow: 0 0 8px rgba(91,91,255,0.6);"></div><span style="color: #aaa; flex: 1;">Просмотрено</span><span style="color: #fff; font-weight: 700;" id="friend-stat-completed">0</span></div>
+                                <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500;"><div style="width: 16px; height: 16px; border-radius: 4px; background: #ff69b4; box-shadow: 0 0 8px rgba(255,105,180,0.6);"></div><span style="color: #aaa; flex: 1;">Любимое</span><span style="color: #fff; font-weight: 700;" id="friend-stat-favorite">0</span></div>
+                                <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500;"><div style="width: 16px; height: 16px; border-radius: 4px; background: #e74c3c; box-shadow: 0 0 8px rgba(231,76,60,0.6);"></div><span style="color: #aaa; flex: 1;">Заброшено</span><span style="color: #fff; font-weight: 700;" id="friend-stat-dropped">0</span></div>
+                            </div>
+                            <div style="position: relative; width: 120px; height: 120px; flex-shrink: 0; display: flex; justify-content: center; align-items: center;">
+                                <div id="friend-donut-chart" style="width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(#2a2a3e 0% 100%); position: relative; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 10px rgba(255,255,255,0.1));">
+                                    <div style="width: 70%; height: 70%; background: #14141f; border-radius: 50%; position: absolute; box-shadow: inset 0 0 15px rgba(0,0,0,0.5);"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 15px; color: #ccc;">
+                                <span>Время просмотра:</span>
+                                <span style="font-weight: 700; color: #fff;" id="friend-stat-total-time">~ 0 дней 0 часов</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 15px; color: #ccc;">
+                                <span>Всего серий:</span>
+                                <span style="font-weight: 700; color: #fff;">${friend.episodes_watched || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 20px;">
+                    <div style="background: rgba(20, 20, 31, 0.6); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
+                        <h3 style="font-size: 18px; color: #fff; margin: 0 0 15px 0; display: flex; align-items: center; gap: 8px;">Любимые жанры</h3>
+                        <div id="friend-genre-chart-container" style="display: flex; align-items: flex-end; justify-content: space-between; height: 140px; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;"></div>
+                        <div style="font-size: 12px; color: #888; line-height: 1.5;">На основе списка аниме этого пользователя.</div>
+                    </div>
+                </div>
+                <div style="padding: 0 20px 20px 20px;">
+                    ${id !== MY_ID && friendshipStatus === 'accepted' ? `<button onclick="removeFriend('${escapeHTML(String(friend.id))}')" class="ripple-btn" style="width: 100%; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,45,120,0.3); background: rgba(255,45,120,0.1); color: #ff2d78; font-weight: bold; font-size: 15px; cursor: pointer;">Удалить из друзей</button>` : ''}
+                </div>
+            </div>`;
+        if (id !== MY_ID) {
+            const avatarWrap = document.getElementById('friend-avatar-wrap');
+            if (avatarWrap) {
+                if (friendshipStatus === 'accepted') { /* ничего */ }
+                else if (friendshipStatus === 'pending_out') {
+                    const btn = document.createElement('div');
+                    btn.style.cssText = 'position: absolute; bottom: 0; right: 0; background: #2ecc71; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #14141f; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: default;';
+                    btn.innerHTML = '<svg style="width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-check"></use></svg>';
+                    avatarWrap.appendChild(btn);
+                } else if (friendshipStatus === 'pending_in') {
+                    const btn = document.createElement('button');
+                    btn.className = 'ripple-btn';
+                    btn.style.cssText = 'position: absolute; bottom: 0; right: 0; background: #ffd700; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #14141f; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer;';
+                    btn.innerHTML = '<svg style="width: 16px; height: 16px; fill: none; stroke: #14141f; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-check"></use></svg>';
+                    btn.onclick = async (e) => { e.stopPropagation(); btn.style.pointerEvents = 'none'; btn.style.background = '#2ecc71'; btn.innerHTML = '<svg style="width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-check"></use></svg>'; await acceptFriend(friend.id); };
+                    avatarWrap.appendChild(btn);
+                } else {
+                    const btn = document.createElement('button');
+                    btn.className = 'ripple-btn';
+                    btn.style.cssText = 'position: absolute; bottom: 0; right: 0; background: #5b5bff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #14141f; z-index: 10; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);';
+                    btn.innerHTML = '<svg style="width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-plus"></use></svg>';
+                    btn.onclick = async (e) => { e.stopPropagation(); btn.style.pointerEvents = 'none'; btn.style.background = '#2ecc71'; btn.innerHTML = '<svg style="width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-check"></use></svg>'; await sendFriendRequest(friend.id); };
+                    avatarWrap.appendChild(btn);
+                }
+            }
+        }
+        setTimeout(() => { renderEffectParticles(document.getElementById('friend-particle-container'), friendEffectClass); loadProfileStats(id, true); loadGenreChart(id, true); }, 100);
+    } catch (e) { console.error(e); container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4444;">Ошибка загрузки профиля</div>'; } finally { window._currentFriendLoadingId = null; }
+}
+
+// ==========================================
+// 8. ПЛЕЕР
+// ==========================================
+function startWatching(anime) {
+    if (!anime || !anime.id) { showToast('Ошибка: аниме не найдено'); return; }
+    if (!anime.episodes || anime.episodes === '?' || isNaN(parseInt(anime.episodes, 10))) {
+        anime = { ...anime, episodes: 12 };
+    }
+    currentAnimeForPlayer = anime;
+    switchTab('voice');
+}
+
+function renderVoiceSelection() {
+    const c = document.getElementById('voice-list');
+    let h = '';
+    VOICES.forEach(v => {
+        h += `<div class="ripple-btn" data-voice-id="${escapeHTML(v.id)}" data-voice-name="${escapeHTML(v.name)}" onclick="selectVoiceEl(this)" style="background: #14141f; border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 14px; display: flex; align-items: center; gap: 15px; cursor: pointer;"><div style="font-size: 24px;">${v.icon}</div><div style="font-size: 16px; font-weight: 600; color: #fff;">${escapeHTML(v.name)}</div></div>`;
+    });
+    if (c) c.innerHTML = h;
+}
+function selectVoiceEl(el) { selectedVoice = el.dataset.voiceName; switchTab('player'); }
+
+function renderPlayerSelection() {
+    const c = document.getElementById('player-list');
+    let h = '';
+    PLAYERS.forEach(p => {
+        h += `<div class="ripple-btn" data-player-id="${escapeHTML(p.id)}" data-player-name="${escapeHTML(p.name)}" onclick="selectPlayerEl(this)" style="background: #14141f; border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 14px; display: flex; align-items: center; gap: 15px; cursor: pointer;"><div style="font-size: 24px;">${p.icon}</div><div style="font-size: 16px; font-weight: 600; color: #fff;">${escapeHTML(p.name)}</div></div>`;
+    });
+    if (c) c.innerHTML = h;
+}
+function selectPlayerEl(el) { selectedPlayer = el.dataset.playerName; switchTab('episodes'); }
+
+function renderEpisodesSelection() {
+    const vt = document.getElementById('selected-voice-text'); if (vt) vt.textContent = selectedVoice;
+    const pt = document.getElementById('selected-player-text'); if (pt) pt.textContent = selectedPlayer;
+    const c = document.getElementById('episodes-list');
+    if (!c || !currentAnimeForPlayer) return;
+    let total = currentAnimeForPlayer.episodes || 12;
+    if (typeof total === 'string') total = parseInt(total, 10) || 12;
+    if (total > 50) total = 50;
+    let h = '';
+    for (let i = 1; i <= total; i++) h += `<div class="ripple-btn" onclick="playEpisode(${i})" style="background: #1a1a20; border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; text-align: center; font-size: 16px; font-weight: bold; color: #fff; cursor: pointer;">${i}</div>`;
+    c.innerHTML = h;
+}
+
+function playEpisode(epNum) {
+    let stats = getStats();
+    stats.episodesWatched += 1;
+    stats.minutesWatched += 24;
+    saveStats(stats);
+    checkAchievements(stats);
+    addXP(5);
+    syncProfileToDB(true);
+    showToast(`Просмотр: Серия ${epNum}`);
+    currentAnimeForPlayer = null;
+    switchTab('home');
+}
+
+// ==========================================
+// 9. КАТАЛОГ
+// ==========================================
+function initCatalogFilters() {
+    const gc = document.getElementById('genre-filters');
+    if (!gc) return;
+    let h = `<div class="genre-pill ripple-btn active" onclick="setGenreFilter('', this)"><div class="dot"></div>Все</div>`;
+    GENRES.forEach(g => {
+        h += `<div class="genre-pill ripple-btn" onclick="setGenreFilter('${escapeHTML(g.name)}', this)">${escapeHTML(g.ru)}</div>`;
+    });
+    gc.innerHTML = h;
+}
+
+function setGenreFilter(genreName, btn) {
+    currentFilters.genre = genreName;
+    document.querySelectorAll('#genre-filters .genre-pill').forEach(el => el.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    if (genreName === '' && btn) btn.innerHTML = '<div class="dot"></div>Все';
+    loadCatalog(true);
+}
+
+let isSearching = false;
+function searchAnime() {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(async () => {
+        const query = document.getElementById('search-input').value.trim();
+        if (query && /[а-яА-ЯёЁ]/.test(query) && !isSearching) {
+            isSearching = true;
+            try {
+                const anilibria = await API_AniLibria.searchRussian(query);
+                currentFilters.search = anilibria || query;
+            } catch {
+                currentFilters.search = query;
+            }
+            isSearching = false;
+        } else {
+            currentFilters.search = query;
+        }
+        loadCatalog(true);
+    }, 500);
+}
+
+function openFilterModal(type) {
+    const modal = document.getElementById('filterModal');
+    const title = document.getElementById('filter-modal-title');
+    const container = document.getElementById('filter-options-container');
+    let options = [], currentVal = currentFilters[type];
+    if (type === 'year') { options = YEARS; title.textContent = 'Год выхода'; }
+    if (type === 'status') { options = STATUSES; title.textContent = 'Статус'; }
+    if (type === 'sort') { options = SORTS; title.textContent = 'Сортировка'; }
+    let h = `<button class="filter-option-btn ${currentVal === '' ? 'active' : ''}" onclick="applyFilter('${type}', '')">Любой</button>`;
+    options.forEach(o => {
+        h += `<button class="filter-option-btn ${currentVal === o.id ? 'active' : ''}" onclick="applyFilter('${type}', '${o.id}')">${escapeHTML(o.name)}</button>`;
+    });
+    container.innerHTML = h;
+    modal.classList.add('active');
+}
+
+function applyFilter(type, value) {
+    currentFilters[type] = value;
+    closeModal('filterModal');
+    const btnId = type === 'year' ? 'filter-btn-year' : type === 'status' ? 'filter-btn-status' : 'filter-btn-sort';
+    const btn = document.getElementById(btnId);
+    let name = 'Любой';
+    if (value) {
+        const list = type === 'year' ? YEARS : type === 'status' ? STATUSES : SORTS;
+        name = list.find(o => o.id === value)?.name || 'Любой';
+    } else name = type === 'year' ? 'Год' : type === 'status' ? 'Статус' : 'Сортировка';
+    if (btn) btn.innerHTML = `${name} ⌄`;
+    loadCatalog(true);
+}
+
+async function loadCatalog(reset = false) {
+    if (isCatalogLoading && !reset) return;
+    isCatalogLoading = true;
+    const myVersion = ++catalogRequestVersion;
+    const ctrl = makeAbort('catalog');
+    const grid = document.getElementById('catalog-grid');
+    const lm = document.getElementById('load-more-btn');
+    if (!grid) { isCatalogLoading = false; return; }
+    
+    if (reset) {
+        grid.innerHTML = Skeletons.cards(6);
+        hasMoreCatalog = true;
+        catalogPage = 1;
+    }
+    
+    try {
+        const items = await API.getCatalog(catalogPage, 30, currentFilters, ctrl.signal);
+        if (myVersion !== catalogRequestVersion) return;
+        if (reset) grid.innerHTML = '';
+        
+        if (!items || items.length === 0) {
+            if (reset) grid.innerHTML = '<div class="loading-text">Ничего не найдено</div>';
+            hasMoreCatalog = false;
+            if (lm) lm.style.display = 'none';
+            return;
+        }
+        
+        const ratingsMap = await getOnikaRatingsBatch(items.map(a => a.id));
+        items.forEach(anime => renderCatalogCardSync(anime, grid, ratingsMap[String(anime.id)]));
+        
+        hasMoreCatalog = items.length >= 30;
+        if (lm) lm.style.display = hasMoreCatalog ? 'inline-block' : 'none';
+    } catch (e) {
+        if (e.name === 'AbortError') return;
+        console.error(e);
+        if (myVersion === catalogRequestVersion && reset) {
+            grid.innerHTML = '<div class="loading-text" style="color:#ff4444;">Ошибка загрузки</div>';
+        }
+        if (lm) lm.style.display = 'none';
+    } finally {
+        isCatalogLoading = false;
+    }
+}
+
+function renderCatalogCardSync(anime, grid, onika) {
+    const title = escapeHTML(anime.title_ru);
+    let img = safeUrl(anime.images.jpg.image_url);
+    if (!img) img = PLACEHOLDER_POSTER;
+    const score = anime.score && Number(anime.score) > 0 ? Number(anime.score).toFixed(1) : '?';
+    
+    const onikaChipLeft = onika && onika.avg != null
+        ? `<div style="position: absolute; top: 8px; left: 8px; background: rgba(20, 20, 31, 0.85); backdrop-filter: blur(4px); padding: 3px 6px; border-radius: 6px; font-size: 10px; font-weight: 900; display: flex; align-items: center; gap: 3px; border: 1px solid rgba(162, 155, 254, 0.3); z-index: 3;">
+             <span style="color: #a29bfe; font-size: 11px; letter-spacing: -0.5px;">ON</span> <span style="color: #fff;">${onika.avg.toFixed(1)}</span>
+           </div>`
+        : '';
+        
+    const anilistChipRight = `<div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); padding: 3px 6px; border-radius: 6px; font-size: 11px; color: #ffd700; font-weight: bold; display: flex; align-items: center; gap: 3px; border: 1px solid rgba(255, 215, 0, 0.2); z-index: 3;">
+        <svg style="width:10px;height:10px;fill:#ffd700;stroke:none;"><use href="#oa-star"></use></svg> ${score}
+    </div>`;
+
+    grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'catalog')">
+        <img class="catalog-card-img" src="${img}" loading="lazy" decoding="async" fetchpriority="low" onerror="this.src='${PLACEHOLDER_POSTER}'">
+        ${onikaChipLeft}
+        ${anilistChipRight}
+        <div class="catalog-card-title">${title}</div>
+    </div>`);
+}
+
+function loadMoreCatalog() {
+    if (!hasMoreCatalog || isCatalogLoading) return;
+    catalogPage++;
+    loadCatalog(false);
+}
+
+async function searchFranchiseByTitle(anime) {
+    const cleanTitle = (title) => {
+        if (!title) return '';
+        return title.replace(/[0-9]+/g, '').replace(/(сезон|часть|season|part|cour|фильм|movie|ova|ona|спешл|special|the final|final)/gi, '').replace(/\s+/g, ' ').trim();
+    };
+    const query = cleanTitle(anime.title_ru) || cleanTitle(anime.title_raw);
+    if (!query) return [];
+    let foundItems = [];
+    try {
+        const searchQuery = `query($search: String) { Page(page: 1, perPage: 20) { media(search: $search, type: ANIME, sort: START_DATE, genre_not_in:["Hentai","Ecchi","Erotica"]) { id idMal title{romaji english native} coverImage{large} seasonYear format } } }`;
+        const data = await API_AniList.fetch(searchQuery, { search: query }).catch(() => null);
+        if (data?.Page?.media) foundItems = data.Page.media.filter(m => ['TV', 'TV_SHORT', 'MOVIE', 'OVA', 'ONA', 'SPECIAL'].includes(m.format));
+    } catch (e) { console.error(e); }
+    if (foundItems.length < 2 && anime.relations?.edges) {
+        const relations = anime.relations.edges.map(e => e.node).filter(n => ['TV', 'TV_SHORT', 'MOVIE', 'OVA', 'ONA', 'SPECIAL'].includes(n.format));
+        const existingIds = new Set(foundItems.map(i => i.id));
+        relations.forEach(r => {
+            if (!existingIds.has(r.id)) foundItems.push({ id: r.id, idMal: r.idMal, title: r.title, coverImage: r.coverImage, seasonYear: r.seasonYear, format: r.format });
+        });
+    }
+    const filtered = foundItems.filter(m => String(m.id) !== String(anime.rawId));
+    const translatedItems = await processWithLimit(filtered, 3, async (item) => {
+        const rawTitle = item.title?.romaji || item.title?.english || item.title?.native || '';
+        if (/[а-яА-ЯёЁ]/.test(rawTitle)) return { id: 'anilist_' + item.id, title: rawTitle, image: item.coverImage.large, year: item.seasonYear, format: item.format };
+        let ruTitle = rawTitle;
+        try {
+            const cached = await getCachedAnimeBatch([item.id]);
+            const c = cached.get(String(item.id));
+            if (c && c.title_ru) ruTitle = c.title_ru;
+            else {
+                const anilibria = await API_AniLibria.searchRussian(rawTitle);
+                if (anilibria) ruTitle = anilibria;
+                else { const shiki = await API_Shikimori.getRussianData(rawTitle); if (shiki.russian) ruTitle = shiki.russian; }
+            }
+        } catch {}
+        return { id: 'anilist_' + item.id, title: ruTitle, image: item.coverImage.large, year: item.seasonYear, format: item.format };
+    });
+    return translatedItems.sort((a, b) => (a.year || 0) - (b.year || 0));
+}
+
+async function getShikimoriScreenshots(idMal) {
+    if (!idMal) return [];
+    try {
+        const url = `https://shikimori.io/api/animes/${idMal}/screenshots`;
+        const res = await fetch(PROXY_URL + encodeURIComponent(url));
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data || [])
+            .map(s => s?.preview)
+            .filter(Boolean)
+            .map(p => p.startsWith('http') ? p : `https://shikimori.io${p}`);
+    } catch (e) { console.error(e); return []; }
+}
+
+async function openAnimeDetail(id, fromScreen = 'catalog') {
+    previousScreen = fromScreen;
+    switchTab('detail');
+    const container = document.getElementById('detail-content');
+    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;">Загрузка...</div>';
+    let comments = [], franchiseItems = [], shikiScreenshots = [], similarItems = [];
+    try {
+        const anime = await API.getDetails(id);
+        if (!anime) throw new Error('Anime not found');
+        const [franchiseRes, shikiRes, similarRes] = await Promise.allSettled([
+            searchFranchiseByTitle(anime),
+            getShikimoriScreenshots(anime.idMal),
+            (async () => {
+                if (anime.genres && anime.genres.length > 0) {
+                    const genreQuery = `query($genre: String) { Page(page: 1, perPage: 10) { media(type: ANIME, genre: $genre, sort: POPULARITY_DESC, genre_not_in:["Hentai","Ecchi","Erotica"]) { id title{romaji english native} coverImage{large} averageScore seasonYear format } } }`;
+                    const genreData = await API_AniList.fetch(genreQuery, { genre: anime.genres[0] });
+                    if (genreData?.Page?.media) {
+                        return await processWithLimit(genreData.Page.media.filter(m => String(m.id) !== String(anime.rawId)).slice(0, 6), 3, async (m) => {
+                            const rawTitle = m.title?.romaji || m.title?.english || m.title?.native || '';
+                            let ruTitle = rawTitle;
+                            if (!/[а-яА-ЯёЁ]/.test(rawTitle)) {
+                                try {
+                                    const cached = await getCachedAnimeBatch([m.id]);
+                                    const c = cached.get(String(m.id));
+                                    if (c && c.title_ru) ruTitle = c.title_ru;
+                                    else {
+                                        const anilibria = await API_AniLibria.searchRussian(rawTitle);
+                                        if (anilibria) ruTitle = anilibria;
+                                        else { const shiki = await API_Shikimori.getRussianData(rawTitle); if (shiki.russian) ruTitle = shiki.russian; }
+                                    }
+                                } catch {}
+                            }
+                            return { id: 'anilist_' + m.id, title: ruTitle, image: m.coverImage.large, score: m.averageScore ? (m.averageScore / 10).toFixed(1) : '?' };
+                        });
+                    }
+                }
+                return [];
+            })()
+        ]);
+        if (franchiseRes.status === 'fulfilled') franchiseItems = franchiseRes.value;
+        if (shikiRes.status === 'fulfilled') shikiScreenshots = shikiRes.value;
+        if (similarRes.status === 'fulfilled') similarItems = similarRes.value || [];
+        
+        const [onikaRating, myOnikaRatingData] = await Promise.all([
+            getOnikaRating(anime.id),
+            getMyRating(anime.id)
+        ]);
+        const myOnikaRating = myOnikaRatingData ? Number(myOnikaRatingData) : 0;
+        
+        if (supabaseClient && MY_ID) {
+            try {
+                const { data: cmts } = await supabaseClient.from('anime_comments').select('*').eq('anime_id', id).order('created_at', { ascending: false });
+                comments = cmts || [];
+            } catch (e) { console.error(e); }
+        }
+        
+        const title = escapeHTML(anime.title_ru);
+        const titleRaw = escapeHTML(anime.title_raw || anime.title_ru);
+        const desc = escapeHTML(anime.description);
+        const score = anime.score && Number(anime.score) > 0 ? Number(anime.score).toFixed(1) : '?';
+        const poster = safeUrl(anime.images.jpg.image_url) || PLACEHOLDER_POSTER;
+        const stats = getStats();
+        const favEntry = (stats.favedAnime || []).find(a => a.id === anime.id);
+        const isFaved = !!favEntry;
+        window._animeCache = window._animeCache || {};
+        window._animeCache[anime.id] = anime;
+        
+        let relationsHtml = '';
+        if (franchiseItems && franchiseItems.length > 0) {
+            relationsHtml = `<div style="margin-bottom: 30px;"><h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">Все сезоны</h3><div style="display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">${franchiseItems.map(r => `<div class="card" style="min-width: 130px; width: 130px; height: 195px;" onclick="openAnimeDetail('${escapeHTML(r.id)}', 'detail')"><img class="card-img" src="${safeUrl(r.image) || PLACEHOLDER_POSTER}" loading="lazy" decoding="async" onerror="this.src='${PLACEHOLDER_POSTER}'"><div style="position:absolute;top:8px;left:8px;background:rgba(91,91,255,0.8);padding:2px 6px;border-radius:6px;font-size:9px;color:#fff;font-weight:bold;">${r.year || r.format}</div><div class="card-title">${escapeHTML(r.title)}</div></div>`).join('')}</div></div>`;
+        }
+        
+        let nextEpisodeHtml = '';
+        if (anime.nextAiringEpisode && anime.nextAiringEpisode.airingAt) {
+            const airingAt = anime.nextAiringEpisode.airingAt * 1000;
+            const diffMs = airingAt - Date.now();
+            let timeText = '';
+            if (diffMs > 0) {
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                const diffDays = Math.floor(diffHours / 24);
+                const remainingHours = diffHours % 24;
+                if (diffDays > 0) timeText = `через ${diffDays} д. ${remainingHours} ч.`;
+                else if (diffHours > 0) timeText = `через ${diffHours} ч.`;
+                else timeText = `через ${Math.floor(diffMs / (1000 * 60))} мин.`;
+            } else timeText = 'уже вышла!';
+            const airDate = new Date(airingAt);
+            const dateStr = airDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+            const timeStr = airDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            nextEpisodeHtml = `<div style="background: linear-gradient(135deg, rgba(91,91,255,0.15), rgba(180,74,255,0.15)); border: 1px solid rgba(91,91,255,0.4); border-radius: 16px; padding: 15px 20px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;"><div><div style="font-size: 12px; color: #a29bfe; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 4px;">Следующая серия</div><div style="font-size: 18px; font-weight: 800; color: #fff;">Серия ${anime.nextAiringEpisode.episode}</div><div style="font-size: 13px; color: #ccc; margin-top: 2px;">${dateStr} в ${timeStr}</div></div><div style="background: rgba(91,91,255,0.3); color: #fff; padding: 8px 14px; border-radius: 12px; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px;"><svg style="width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2;"><use href="#oa-clock"></use></svg>${timeText}</div></div>`;
+        }
+        
+        let screenshotsHtml = '';
+        let hasScreenshots = false;
+        if (shikiScreenshots && shikiScreenshots.length > 0) {
+            hasScreenshots = true;
+            screenshotsHtml = shikiScreenshots.map(url => `<div style="scroll-snap-align: start; flex: 0 0 75%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; background: #222; border: 1px solid rgba(255,255,255,0.1); position: relative;"><img src="${safeUrl(url)}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none'"></div>`).join('');
+        }
+        
+        let similarHtml = '';
+        if (similarItems && similarItems.length > 0) {
+            similarHtml = `<div style="margin-bottom: 30px;"><h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">Похожие по жанру (${anime.genres[0]})</h3><div style="display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">${similarItems.map(s => `<div class="card" style="min-width: 130px; width: 130px; height: 195px;" onclick="openAnimeDetail('${escapeHTML(s.id)}', 'detail')"><img class="card-img" src="${safeUrl(s.image) || PLACEHOLDER_POSTER}" loading="lazy" decoding="async" onerror="this.src='${PLACEHOLDER_POSTER}'"><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:6px;font-size:10px;color:#ffd700;font-weight:bold;display:flex;align-items:center;gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${s.score}</div><div class="card-title">${escapeHTML(s.title)}</div></div>`).join('')}</div></div>`;
+        }
+        
+        const trailerBtnHtml = anime.trailerId ? `<button onclick="window.open('https://youtube.com/watch?v=${anime.trailerId}', '_blank')" class="ripple-btn" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #fff; width: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg style="width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-tv-retro"></use></svg></button>` : '';
+        
+        const isUpcoming = anime.status === 'Анонс';
+        const watchBtnHtml = isUpcoming
+            ? `<button class="btn-primary" style="background: #2a2a3e; color: #888; box-shadow: none; cursor: not-allowed; width: auto; padding: 16px 24px;" disabled><svg class="icon-inline" style="stroke:#888;fill:#888;width:20px;height:20px;margin-right:8px;"><use href="#oa-clock"></use></svg> Скоро</button>`
+            : `<button class="btn-primary ripple-btn" onclick="startWatching(window._animeCache['${escapeHTML(anime.id)}'])" style="width: auto; padding: 16px 24px; font-size: 16px; display:flex;align-items:center;gap:8px; border-radius: 14px;"><svg class="icon-inline" style="stroke:#fff;fill:#fff;width:20px;height:20px;"><use href="#oa-play"></use></svg> Смотреть</button>`;
+
+        let commentsHtml = '';
+        if (comments && comments.length > 0) {
+            commentsHtml = comments.map(c => {
+                const aUrl = c.user_avatar ? safeUrl(c.user_avatar) : '';
+                const nameChar = c.user_name && c.user_name[0] ? escapeHTML(c.user_name[0].toUpperCase()) : '?';
+                const av = aUrl ? `<img src="${aUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : nameChar;
+                const date = new Date(c.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+                const clickAttr = c.user_id ? `onclick="openUserFromComments('${escapeHTML(String(c.user_id))}')"` : '';
+                return `<div style="display: flex; gap: 10px; margin-bottom: 15px; ${c.user_id ? 'cursor: pointer;' : ''}" ${clickAttr}><div class="friend-avatar" style="width: 36px; height: 36px; flex-shrink: 0; font-size: 14px;">${av}</div><div style="flex: 1; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px;"><div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-size: 13px; font-weight: bold; color: #fff;">${escapeHTML(c.user_name)}</span><span style="font-size: 11px; color: #888;">${date}</span></div><p style="font-size: 13px; color: #ccc;">${escapeHTML(c.text)}</p></div></div>`;
+            }).join('');
+        } else commentsHtml = '<div style="font-size: 13px; color: #888; text-align: center; padding: 10px;">Пока нет комментариев</div>';
+
+        container.innerHTML = `
+        <div class="fade-in" style="position: relative;">
+            <div style="position: absolute; top: 0; left: -20px; width: calc(100% + 40px); height: 400px; z-index: -1; overflow: hidden;">
+                <img src="${poster}" style="width: 100%; height: 100%; object-fit: cover; object-position: center top; opacity: 0.6; mask-image: linear-gradient(to bottom, black 30%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 30%, transparent 100%);" fetchpriority="high">
+                <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(10,10,15,0.3) 0%, transparent 20%, var(--bg) 100%);"></div>
+            </div>
+            <div style="position: relative; z-index: 10; padding-top: 20px; margin-bottom: 20px;"><button onclick="goBackFromDetail()" style="background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 14px; font-weight: bold; padding: 8px 16px; border-radius: 20px; cursor: pointer;">← Назад</button></div>
+            <div style="padding-top: 100px;">
+                <div style="display: flex; gap: 16px; margin-bottom: 25px; align-items: flex-end;">
+                    <img class="detail-poster" src="${poster}" style="width: 110px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); object-fit: cover; aspect-ratio: 2/3; flex-shrink: 0;" fetchpriority="high">
+                    <div style="flex: 1; min-width: 0; padding-bottom: 2px;">
+                        <h1 style="font-size: 20px; font-weight: 800; line-height: 1.15; margin-bottom: 6px; color: #fff; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${title}</h1>
+                        <p style="font-size: 12px; color: #ddd; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${titleRaw} (${anime.year})</p>
+                        
+                        <div style="display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 700; color: #fff; margin-top: 4px;">
+                            <div style="display: flex; align-items: center; gap: 4px; color: #ffd700;">
+                                <svg style="width:14px;height:14px;fill:currentColor;stroke:none;"><use href="#oa-star"></use></svg>
+                                ${score}
+                            </div>
+                            ${onikaRating?.avg != null ? `
+                            <div style="display: flex; align-items: center; gap: 4px; color: #a29bfe;">
+                                <span style="font-weight: 900; font-size: 12px; letter-spacing: -0.5px;">ON</span>
+                                <span id="onika-avg-value">${onikaRating.avg.toFixed(1)}</span>
+                            </div>` : ''}
+                        </div>
+                        
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; margin-bottom: 25px; align-items: stretch; justify-content: flex-start;">
+                    ${watchBtnHtml}
+                    <button onclick="openStatusModal('${escapeHTML(anime.id)}')" style="background: ${isFaved ? 'rgba(91,91,255,0.2)' : 'rgba(255,255,255,0.08)'}; border: 1px solid ${isFaved ? '#5b5bff' : 'rgba(255,255,255,0.1)'}; color: ${isFaved ? '#5b5bff' : '#fff'}; width: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg style="width: 24px; height: 24px; fill: ${isFaved ? '#5b5bff' : 'none'}; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;"><use href="#oa-bookmark"></use></svg></button>
+                    ${trailerBtnHtml}
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;">${(anime.genres || []).map(g => `<span style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #ccc; padding: 8px 16px; border-radius: 20px; font-size: 14px;">${escapeHTML(g)}</span>`).join('')}<span style="background: ${isUpcoming ? 'rgba(255,193,7,0.15)' : 'rgba(46,204,113,0.15)'}; border: 1px solid ${isUpcoming ? 'rgba(255,193,7,0.4)' : 'rgba(46,204,113,0.4)'}; color: ${isUpcoming ? '#ffc107' : '#2ecc71'}; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;">${escapeHTML(anime.status)}</span></div>
+                <div style="margin-bottom: 25px;"><p id="desc-text" style="color: #ccc; font-size: 15px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p><button id="desc-btn" onclick="toggleDescription()" style="display: none; background: none; border: none; color: #5b5bff; font-weight: 700; font-size: 15px; margin-top: 8px; cursor: pointer;">Читать дальше</button></div>
+                ${relationsHtml}
+                ${nextEpisodeHtml}
+                ${hasScreenshots ? `<div style="margin-bottom: 30px;"><h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">Кадры</h3><div style="display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 5px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;">${screenshotsHtml}</div></div>` : ''}
+                
+                <div style="background: #14141f; border-radius: 16px; padding: 20px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
+                    <h3 style="font-size: 18px; color: #fff; margin-bottom: 25px;">Ваша оценка</h3>
+                    <div style="position: relative; padding: 0 10px;">
+                        <div id="rating-bubble" style="position: absolute; top: -30px; left: ${myOnikaRating > 0 ? ((myOnikaRating - 1) / 9) * 100 : 0}%; transform: translateX(-50%); background: #5b5bff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 14px; font-weight: bold; transition: left 0.1s; opacity: ${myOnikaRating > 0 ? 1 : 0}; pointer-events: none;">
+                            ${myOnikaRating > 0 ? myOnikaRating.toFixed(1) : ''}
+                        </div>
+                        
+                        <input type="range" id="rating-range" min="1" max="10" step="0.1" value="${myOnikaRating || 5}" 
+                               oninput="updateRatingSlider(this.value)"
+                               onchange="saveMyRating('${escapeHTML(String(anime.id))}', this.value)"
+                               style="width: 100%; -webkit-appearance: none; outline: none; margin: 10px 0; z-index: 2; position: relative;">
+                        
+                        <div style="display: flex; justify-content: space-between; padding: 0 5px; margin-top: 5px; font-size: 12px; color: #666; font-weight: 600;">
+                            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+                        </div>
+                    </div>
+                    <div style="font-size: 11px; color: #666; margin-top: 15px;">Перетащите ползунок, чтобы поставить оценку</div>
+                </div>
+
+                ${similarHtml}
+                <div style="margin-bottom: 40px;"><h3 style="font-size: 18px; margin-bottom: 15px; color: #fff;">Комментарии</h3><div style="display: flex; gap: 10px; margin-bottom: 20px;"><input type="text" id="comment-input" placeholder="Написать отзыв..." style="flex: 1; background: #14141f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 16px; color: #fff; font-size: 15px; outline: none;"><button onclick="sendComment('${escapeHTML(anime.id)}')" class="ripple-btn" style="background: #5b5bff; border: none; border-radius: 12px; padding: 0 20px; color: #fff; font-weight: bold; cursor: pointer;">→</button></div><div>${commentsHtml}</div></div>
+            </div>
+        </div>`;
+        
+        setTimeout(() => {
+            const d = document.getElementById('desc-text');
+            const b = document.getElementById('desc-btn');
+            if (d && b && d.scrollHeight > d.clientHeight) b.style.display = 'block';
+            
+            const slider = document.getElementById('rating-range');
+            if (slider) {
+                const initialVal = myOnikaRating > 0 ? myOnikaRating : 5;
+                slider.value = initialVal;
+                updateRatingSlider(initialVal);
+            }
+        }, 50);
+    } catch (e) {
+        console.error('CRITICAL DETAIL ERROR:', e);
+        container.innerHTML = `<div style="text-align: center; padding: 40px; color: #ff4444;"><h3>Ошибка загрузки</h3><p style="font-size: 12px; color: #888; margin-top: 10px;">${e.message || 'Неизвестная ошибка'}</p><button onclick="goBackFromDetail()" style="margin-top: 20px; background: #5b5bff; color: #fff; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer;">← Вернуться назад</button></div>`;
+    }
+}
+
+function updateRatingSlider(val) {
+    const numVal = parseFloat(val);
+    const bubble = document.getElementById('rating-bubble');
+    if (bubble) {
+        const percent = ((numVal - 1) / 9) * 100;
+        bubble.style.left = `${percent}%`;
+        bubble.textContent = numVal.toFixed(1);
+        bubble.style.opacity = 1;
+    }
+    const input = document.getElementById('rating-range');
+    if (input) {
+        const percent = ((numVal - 1) / 9) * 100;
+        input.style.background = `linear-gradient(to right, #5b5bff 0%, #b44aff ${percent}%, #333 ${percent}%, #333 100%)`;
+    }
+}
+
+async function sendComment(animeId) {
+    const input = document.getElementById('comment-input');
+    const text = input.value.trim();
+    if (!text) { showToast('Напишите текст!'); return; }
+    if (text.length > 500) { showToast('Слишком длинный текст (макс. 500)'); return; }
+    if (!supabaseClient || !MY_ID) return;
+    try {
+        const { error } = await supabaseClient.from('anime_comments').insert({
+            anime_id: animeId, user_id: MY_ID, user_name: MY_NAME,
+            user_avatar: getStats().avatar_url || MY_PHOTO_URL, text
+        });
+        if (error) throw error;
+        input.value = '';
+        showToast('Отправлено!');
+        openAnimeDetail(animeId, previousScreen);
+    } catch (e) { console.error(e); showToast('Ошибка'); }
+}
+
+function openStatusModal(id) {
+    const cached = window._animeCache && window._animeCache[id];
+    const t = cached ? (cached.title_ru || cached.title || 'Аниме') : 'Аниме';
+    document.getElementById('status-anime-title').textContent = t;
+    document.getElementById('statusModal').classList.add('active');
+    document.getElementById('statusModal').dataset.animeId = id;
+}
+
+async function setAnimeStatus(status) {
+    const id = document.getElementById('statusModal').dataset.animeId;
+    if (!id) return;
+    let stats = getStats();
+    let animeData = (window._animeCache && window._animeCache[id]) || null;
+    stats.favedAnime = stats.favedAnime || [];
+    const idx = stats.favedAnime.findIndex(a => a.id === id);
+    if (status === 'favorite') {
+        if (idx < 0 && animeData) { stats.favedAnime.push({ ...animeData }); saveStats(stats); }
+    } else {
+        if (idx >= 0) { stats.favedAnime.splice(idx, 1); saveStats(stats); }
+    }
+    if (status === 'completed' && animeData) {
+        stats.countedCompletions = stats.countedCompletions || [];
+        if (!stats.countedCompletions.includes(id)) {
+            const eps = parseInt(animeData.episodes, 10);
+            if (!isNaN(eps) && eps > 0) {
+                stats.episodesWatched += eps;
+                stats.minutesWatched += eps * 24;
+            }
+            stats.countedCompletions.push(id);
+            saveStats(stats);
+        }
+    }
+    closeModal('statusModal');
+    if (!supabaseClient || !MY_ID) { showToast('Ошибка'); return; }
+    try {
+        await supabaseClient.from('user_lists').delete().eq('user_id', MY_ID).eq('anime_id', id);
+        if (status !== '') {
+            await supabaseClient.from('user_lists').insert({ user_id: MY_ID, anime_id: id, status });
+            showToast('Статус обновлен!');
+        } else showToast('Удалено из списка');
+        checkAchievements(stats);
+        await syncProfileToDB(true);
+        if (document.getElementById('screen-my').classList.contains('active')) renderMyList();
+        if (document.getElementById('screen-profile').classList.contains('active')) {
+            loadProfileStats();
+            loadGenreChart(MY_ID, false);
+        }
+    } catch (e) { console.error(e); showToast('Ошибка'); }
+}
+
+function toggleDescription() {
+    const d = document.getElementById('desc-text');
+    const b = document.getElementById('desc-btn');
+    if (d.style.webkitLineClamp === '4' || d.style.webkitLineClamp === '') {
+        d.style.webkitLineClamp = 'unset';
+        b.innerHTML = 'Свернуть ▲';
+    } else {
+        d.style.webkitLineClamp = '4';
+        b.innerHTML = 'Читать дальше ▼';
+    }
+}
+
+async function openRandomAnime() {
+    showToast('Ищем...');
+    try {
+        API._cache.delete('r_1');
+        const items = await API.getRandom(1);
+        if (items && items.length > 0) openAnimeDetail(items[0].id, 'catalog');
+    } catch (e) { console.error(e); }
+}
+
+// ==========================================
+// 10. МОЁ
+// ==========================================
+function filterMyList(type, btn) {
+    currentMyListFilter = type;
+    document.querySelectorAll('.my-list-tab').forEach(el => el.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderMyList();
+}
+
+async function renderMyList() {
+    const grid = document.getElementById('my-grid');
+    if (!grid) return;
+    grid.innerHTML = Skeletons.cards(4);
+    if (!supabaseClient || !MY_ID) {
+        grid.innerHTML = '<div class="loading-text">Войдите, чтобы увидеть список</div>';
+        return;
+    }
+    try {
+        let q = supabaseClient.from('user_lists').select('*').eq('user_id', MY_ID);
+        if (currentMyListFilter !== 'all') q = q.eq('status', currentMyListFilter);
+        const { data: list, error } = await q;
+        if (error) throw error;
+        if (!list || list.length === 0) { grid.innerHTML = '<div class="loading-text">Тут пусто</div>'; return; }
+        const animeIds = list.map(l => String(l.anime_id));
+        const cacheMap = await getCachedAnimeBatch(animeIds.map(id => id.replace('anilist_', '')));
+        const ordered = [];
+        const stillMissing = [];
+        list.forEach(f => {
+            const rawId = String(f.anime_id).replace('anilist_', '');
+            const c = cacheMap.get(rawId);
+            if (c && c.title_ru && c.image_url) {
+                ordered.push({
+                    id: f.anime_id, rawId: Number(rawId),
+                    title_ru: c.title_ru, title_raw: c.title_raw, title: c.title_ru,
+                    year: c.year, episodes: c.episodes,
+                    images: { jpg: { image_url: c.image_url } },
+                    description: c.description, genres: c.genres || [],
+                    score: c.score, status: c.status, kind: c.kind
+                });
+            } else stillMissing.push(f.anime_id);
+        });
+        if (stillMissing.length) {
+            const fetched = await processWithLimit(stillMissing, 4, async (id) => {
+                try { return await API.getDetails(id); } catch { return null; }
+            });
+            fetched.filter(Boolean).forEach(d => ordered.push(d));
+        }
+        grid.innerHTML = '';
+        if (ordered.length === 0) { grid.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; return; }
+        ordered.forEach(anime => renderMyListCard(anime, grid));
+    } catch (e) {
+        console.error(e);
+        grid.innerHTML = '<div class="loading-text" style="color:#ff4444;">Ошибка</div>';
+    }
+}
+
+function renderMyListCard(anime, grid) {
+    const title = escapeHTML(anime.title_ru);
+    let img = safeUrl(anime.images?.jpg?.image_url);
+    if (!img) img = PLACEHOLDER_POSTER;
+    const score = anime.score && Number(anime.score) > 0 ? Number(anime.score).toFixed(1) : '?';
+    let nextEpHtml = '';
+    if (anime.nextAiringEpisode && anime.nextAiringEpisode.airingAt) {
+        const airingAt = anime.nextAiringEpisode.airingAt * 1000;
+        const diffMs = airingAt - Date.now();
+        if (diffMs > 0) {
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const diffHours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
+            const timeText = diffDays > 0 ? `через ${diffDays} д.` : `через ${diffHours} ч.`;
+            nextEpHtml = `<div style="position:absolute; top: 8px; left: 8px; background: rgba(91,91,255,0.9); padding: 3px 6px; border-radius: 6px; font-size: 9px; color: #fff; font-weight: bold;">${timeText}</div>`;
+        }
+    }
+    grid.insertAdjacentHTML('beforeend', `<div class="catalog-card fade-in" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'my')" oncontextmenu="event.preventDefault(); openStatusModal('${escapeHTML(anime.id)}'); return false;"><img class="catalog-card-img" src="${img}" loading="lazy" decoding="async" onerror="this.src='${PLACEHOLDER_POSTER}'">${nextEpHtml}<div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 6px; font-size: 10px; color: #ffd700; font-weight: bold; display:flex; align-items:center; gap:2px;"><svg class="icon-star" style="width:10px;height:10px;"><use href="#oa-star"></use></svg> ${score}</div><div class="catalog-card-title">${title}</div></div>`);
+}
+
+async function renderWatchHistory() {
+    const grid = document.getElementById('history-grid');
+    if (!grid) return;
+    grid.innerHTML = Skeletons.cards(4);
+    if (!supabaseClient || !MY_ID) {
+        grid.innerHTML = '<div class="loading-text">Войдите, чтобы увидеть историю</div>';
+        return;
+    }
+    try {
+        const { data: list, error } = await supabaseClient.from('user_lists')
+            .select('*').eq('user_id', MY_ID).eq('status', 'completed')
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        if (!list || list.length === 0) { grid.innerHTML = '<div class="loading-text">Вы еще ничего не посмотрели</div>'; return; }
+        const animeIds = list.map(l => String(l.anime_id));
+        const cacheMap = await getCachedAnimeBatch(animeIds.map(id => id.replace('anilist_', '')));
+        const ordered = [];
+        const stillMissing = [];
+        list.forEach(f => {
+            const rawId = String(f.anime_id).replace('anilist_', '');
+            const c = cacheMap.get(rawId);
+            if (c && c.title_ru && c.image_url) {
+                ordered.push({
+                    id: f.anime_id, rawId: Number(rawId),
+                    title_ru: c.title_ru, title_raw: c.title_raw, title: c.title_ru,
+                    year: c.year, episodes: c.episodes,
+                    images: { jpg: { image_url: c.image_url } },
+                    description: c.description, genres: c.genres || [],
+                    score: c.score, status: c.status, kind: c.kind
+                });
+            } else stillMissing.push(f.anime_id);
+        });
+        if (stillMissing.length) {
+            const fetched = await processWithLimit(stillMissing, 4, async (id) => {
+                try { return await API.getDetails(id); } catch { return null; }
+            });
+            fetched.filter(Boolean).forEach(d => ordered.push(d));
+        }
+        grid.innerHTML = '';
+        if (!ordered.length) { grid.innerHTML = '<div class="loading-text">Не удалось загрузить</div>'; return; }
+        ordered.forEach(anime => renderMyListCard(anime, grid));
+    } catch (e) {
+        console.error(e);
+        grid.innerHTML = '<div class="loading-text" style="color:#ff4444;">Ошибка</div>';
+    }
+}
+
+// ==========================================
+// 11. ГЛАВНАЯ
+// ==========================================
+async function loadUpcomingAnime(limit = 6) {
+    const list = document.getElementById('upcoming-list');
+    if (!list) return;
+    list.innerHTML = Skeletons.cards(4);
+    try {
+        const items = await API.getUpcoming(limit);
+        if (items && items.length > 0) renderSectionCards(list, items, 'home');
+        else list.innerHTML = '<div class="loading-text">Пока нет анонсов</div>';
+    } catch { list.innerHTML = '<div class="loading-text" style="color:#ff4444;">Ошибка</div>'; }
+}
+
+async function loadTopUsers() {
+    const container = document.getElementById('top-users-list');
+    const section = document.getElementById('section-top-users');
+    if (!container || !section || !supabaseClient) return;
+    try {
+        const { data: users, error } = await supabaseClient.from('users').select('*').order('xp', { ascending: false }).limit(20);
+        if (error) throw error;
+        if (!users || users.length === 0) return;
+        const sortedUsers = users.sort((a, b) => {
+            const scoreA = (a.xp || 0) + ((a.unlocked_achievements || []).length * 1000) + ((a.minutes_watched || 0) / 60);
+            const scoreB = (b.xp || 0) + ((b.unlocked_achievements || []).length * 1000) + ((b.minutes_watched || 0) / 60);
+            return scoreB - scoreA;
+        }).slice(0, 5);
+        const titleIds = sortedUsers.map(u => u.active_title).filter(Boolean);
+        const badgeIds = sortedUsers.map(u => u.active_badge).filter(Boolean);
+        const [titlesRes, badgesRes] = await Promise.all([
+            titleIds.length ? supabaseClient.from('title_styles').select('*').in('title_key', titleIds) : Promise.resolve({ data: [] }),
+            badgeIds.length ? supabaseClient.from('badges').select('*').in('id', badgeIds) : Promise.resolve({ data: [] })
+        ]);
+        const titlesMap = new Map((titlesRes.data || []).map(t => [String(t.title_key), t]));
+        const badgesMap = new Map((badgesRes.data || []).map(b => [String(b.id), b]));
+        const topUsersHtml = sortedUsers.map((user, index) => {
+            let titleHtml = '', badgeHtml = '';
+            if (user.active_title) {
+                const titleData = titlesMap.get(String(user.active_title));
+                if (titleData) {
+                    const tmpDiv = document.createElement('div');
+                    applyTitleToElement(tmpDiv, titleData);
+                    titleHtml = `<div style="margin-top: 3px; transform: scale(0.85); transform-origin: left;">${tmpDiv.outerHTML}</div>`;
+                }
+            }
+            if (user.active_badge) {
+                const badgeData = badgesMap.get(String(user.active_badge));
+                const safeBadge = badgeData ? safeUrl(badgeData.image_url) : '';
+                if (safeBadge) badgeHtml = `<img src="${safeBadge}" style="width:16px; height:16px; object-fit:contain; margin-left: 4px;" alt="badge">`;
+            }
+            const avatarUrl = user.avatar_url ? safeUrl(user.avatar_url) : '';
+            const nameChar = user.name && user.name[0] ? escapeHTML(user.name[0].toUpperCase()) : '?';
+            const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:100%; height:100%; object-fit:cover;">` : nameChar;
+            let rankIndicator = '', nameColor = 'var(--text)';
+            if (index === 0) { rankIndicator = `<svg style="width:14px; height:14px; margin-right: 8px;"><use href="#oa-dot-gold"></use></svg>`; nameColor = '#FFD700'; }
+            else if (index === 1) { rankIndicator = `<svg style="width:14px; height:14px; margin-right: 8px;"><use href="#oa-dot-blue"></use></svg>`; nameColor = '#87CEEB'; }
+            else if (index === 2) { rankIndicator = `<svg style="width:14px; height:14px; margin-right: 8px;"><use href="#oa-dot-green"></use></svg>`; nameColor = '#2ecc71'; }
+            else rankIndicator = `<div style="width: 18px; height: 18px; margin-right: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); border-radius: 50%; font-size: 11px; font-weight: bold; color: #aaa; flex-shrink: 0;">${index + 1}</div>`;
+            return `<div onclick="openUserFromTop('${escapeHTML(String(user.id))}')" style="display: flex; align-items: flex-start; background: #14141f; border-radius: 12px; padding: 12px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;"><div style="display: flex; align-items: center; margin-right: 12px; margin-top: 2px;">${rankIndicator}<div class="friend-avatar" style="width: 46px; height: 46px; font-size: 18px;">${avatarHtml}</div></div><div style="flex: 1; min-width: 0;"><div style="display: flex; align-items: center; gap: 4px;"><h3 style="color: ${nameColor}; font-size: 15px; margin: 0; font-weight: 700;">${escapeHTML(user.name)}</h3>${badgeHtml}</div>${titleHtml}</div></div>`;
+        });
+        container.innerHTML = topUsersHtml.join('');
+        section.style.display = 'block';
+    } catch (e) {
+        console.error(e);
+        section.style.display = 'none';
+    }
+}
+
+function renderSectionCards(container, items, fromScreen = 'home') {
+    if (!container) return;
+    if (!items || items.length === 0) {
+        container.innerHTML = '<div class="loading-text">Не удалось загрузить</div>';
+        return;
+    }
+    container.innerHTML = items.map((anime, i) => {
+        const title = escapeHTML(anime.title_ru);
+        let img = safeUrl(anime.images.jpg.image_url);
+        if (!img) img = PLACEHOLDER_POSTER;
+        const eager = i < 4;
+        return `<div class="card" onclick="openAnimeDetail('${escapeHTML(anime.id)}', '${fromScreen}')">
+            <img class="card-img" src="${img}"
+                 loading="${eager ? 'eager' : 'lazy'}"
+                 decoding="async"
+                 fetchpriority="${eager ? 'high' : 'low'}"
+                 onerror="this.src='${PLACEHOLDER_POSTER}'">
+            <div class="card-title">${title}</div>
+        </div>`;
+    }).join('');
+}
+
+// ==========================================
+// 12. ГЛАВНАЯ — СЛАЙДЕР
+// ==========================================
+let heroData = [], currentSlide = 0, slideInterval, sectionObserverInstance = null;
+
+function getSectionObserver() {
+    if (!sectionObserverInstance) {
+        sectionObserverInstance = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in-section');
+                    sectionObserverInstance.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+    }
+    return sectionObserverInstance;
+}
+
+let heroParallaxAttached = false;
+
+async function loadHomePage() {
+    const seasonalList = document.getElementById('seasonal-list');
+    const popularList = document.getElementById('popular-list');
+    const upcomingList = document.getElementById('upcoming-list');
+    const heroSlider = document.getElementById('heroSlider');
+    const heroProgressBar = document.getElementById('heroProgressBar');
+    if (seasonalList) seasonalList.innerHTML = Skeletons.cards(4);
+    if (popularList) popularList.innerHTML = Skeletons.cards(4);
+    if (upcomingList) upcomingList.innerHTML = Skeletons.cards(4);
+    if (heroSlider) heroSlider.innerHTML = `<div class="hero-slide active"><div style="position:absolute;inset:0;background:linear-gradient(135deg,#1a1a24,#12121a);"></div></div>`;
+    if (heroProgressBar) heroProgressBar.innerHTML = '';
+    const [heroItems, seasonalItems, popularItems, upcomingItems] = await Promise.allSettled([
+        API.getRandom(5),
+        API.getSeasonal(6),
+        API.getTopRated(6),
+        API.getUpcoming(6)
+    ]);
+    if (heroItems.status === 'fulfilled' && heroItems.value?.length) {
+        heroData = heroItems.value.map(a => ({
+            id: a.id,
+            title: a.title_ru,
+            poster: a.images.jpg.image_url,
+            score: a.score ? Number(a.score).toFixed(1) : '?',
+            type: a.kind || 'TV',
+            year: a.year
+        }));
+    } else heroData = [];
+    initHeroSlider();
+    const fill = (list, settled, emptyMsg) => {
+        if (!list) return;
+        if (settled.status === 'fulfilled' && settled.value?.length) {
+            renderSectionCards(list, settled.value, 'home');
+        } else list.innerHTML = `<div class="loading-text">${emptyMsg}</div>`;
+    };
+    fill(seasonalList, seasonalItems, 'Не удалось загрузить');
+    fill(popularList, popularItems, 'Не удалось загрузить');
+    fill(upcomingList, upcomingItems, 'Пока нет анонсов');
+    loadTopUsers();
+    const obs = getSectionObserver();
+    document.querySelectorAll('.content-section').forEach(sec => {
+        sec.classList.remove('fade-in-section');
+        obs.observe(sec);
+    });
+}
+
+function initHeroSlider() {
+    const slider = document.getElementById('heroSlider');
+    const progressBar = document.getElementById('heroProgressBar');
+    if (!slider || !heroData || heroData.length === 0) return;
+    let sliderHTML = '', progressHTML = '';
+    heroData.forEach((anime, index) => {
+        sliderHTML += `<div class="hero-slide ${index === 0 ? 'active' : ''}" data-index="${index}"><div class="hero-bg-poster" id="hero-bg-poster-${index}" style="background-image: url('${safeUrl(anime.poster) || PLACEHOLDER_POSTER}'); background-position: center top;"></div><div class="hero-gradient"></div><div class="hero-content"><div class="hero-badges"><span class="badge star"><svg class="icon-star"><use href="#oa-star"></use></svg> ${escapeHTML(anime.score)}</span><span class="badge">${escapeHTML(anime.type)}</span><span class="badge">${escapeHTML(anime.year)}</span></div><h1 class="hero-title">${escapeHTML(anime.title)}</h1><div class="hero-actions"><button class="btn-primary" onclick="openAnimeDetail('${escapeHTML(anime.id)}', 'home')">Смотреть</button><button class="btn-icon-heart" onclick="openStatusModal('${escapeHTML(anime.id)}')"><svg><use href="#oa-bookmark"></use></svg></button></div></div></div>`;
+        progressHTML += `<div class="hero-progress-seg ${index === 0 ? 'active' : ''}" id="hero-prog-${index}"><div class="fill"></div></div>`;
+    });
+    slider.innerHTML = sliderHTML;
+    if (progressBar) progressBar.innerHTML = progressHTML;
+    startSlideShow();
+    addSwipeSupport(slider);
+    if (!heroParallaxAttached) { addHeroParallax(); heroParallaxAttached = true; }
+}
+
+function addHeroParallax() {
+    const hero = document.getElementById('heroSection');
+    if (!hero) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    hero.addEventListener('mousemove', (e) => {
+        const rect = hero.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        const activeBg = document.querySelector('.hero-slide.active .hero-bg-poster');
+        if (activeBg) activeBg.style.transform = `translate(${x * 15}px, ${y * 15}px)`;
+    });
+    hero.addEventListener('mouseleave', () => {
+        const activeBg = document.querySelector('.hero-slide.active .hero-bg-poster');
+        if (activeBg) activeBg.style.transform = '';
+    });
+}
+
+function goToSlide(index) {
+    const slides = document.querySelectorAll('.hero-slide');
+    const progs = document.querySelectorAll('.hero-progress-seg');
+    slides.forEach(s => s.classList.remove('active'));
+    progs.forEach(p => { p.classList.remove('active'); p.classList.remove('done'); });
+    if (slides[index]) slides[index].classList.add('active');
+    for (let i = 0; i < index; i++) if (progs[i]) progs[i].classList.add('done');
+    if (progs[index]) progs[index].classList.add('active');
+    currentSlide = index;
+}
+function nextSlide() {
+    if (heroData.length === 0) return;
+    currentSlide = (currentSlide + 1) % heroData.length;
+    goToSlide(currentSlide);
+}
+function startSlideShow() {
+    if (slideInterval) clearInterval(slideInterval);
+    slideInterval = setInterval(nextSlide, 5000);
+}
+function stopSlideShow() {
+    if (slideInterval) { clearInterval(slideInterval); slideInterval = null; }
+}
+function addSwipeSupport(element) {
+    let touchStartX = 0;
+    element.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; stopSlideShow(); }, { passive: true });
+    element.addEventListener('touchend', e => {
+        const diff = touchStartX - e.changedTouches[0].screenX;
+        if (diff > 50) nextSlide();
+        else if (diff < -50) {
+            currentSlide = (currentSlide - 1 + heroData.length) % heroData.length;
+            goToSlide(currentSlide);
+        }
+        startSlideShow();
+    }, { passive: true });
+}
+
+// ==========================================
+// 13. ДОСТИЖЕНИЯ И XP
+// ==========================================
+const RARITY_STYLES = {
+    common: { color: '#ccc', class: 'common' },
+    rare: { color: '#00d2ff', class: 'rare' },
+    epic: { color: '#b44aff', class: 'epic' },
+    legendary: { color: '#ffd700', class: 'legendary' }
+};
+
+const ACHIEVEMENTS = [
+    { id: 'c1', name: "Киносеанс", desc: "Посмотреть любое аниме", rarity: 'common', xp: 10, coins: 100, check: s => s.episodesWatched >= 1, progress: s => Math.min(s.episodesWatched, 1), max: 1, imgUrl: "cinema.png" },
+    { id: 'c2', name: "Марафонец", desc: "3 часа на сайте", rarity: 'common', xp: 20, coins: 100, check: s => s.totalMinutesOnSite >= 180, progress: s => Math.min(s.totalMinutesOnSite, 180), max: 180, imgUrl: "marathon.png" },
+    { id: 'c3', name: "Постоянный гость", desc: "7 дней подряд", rarity: 'common', xp: 30, coins: 200, check: s => s.daysStreak >= 7, progress: s => Math.min(s.daysStreak, 7), max: 7, imgUrl: "guest.png" },
+    { id: 'c4', name: "Новичок", desc: "Достичь 10 уровня", rarity: 'common', xp: 50, coins: 500, check: s => Math.floor(s.xp / 100) + 1 >= 10, progress: s => Math.min(Math.floor(s.xp / 100) + 1, 10), max: 10, imgUrl: "newbie.png" },
+    { id: 'r1', name: "Коллекционер", desc: "10 аниме", rarity: 'rare', xp: 50, coins: 300, check: s => s.episodesWatched >= 10, progress: s => Math.min(s.episodesWatched, 10), max: 10, imgUrl: "collector.png" },
+    { id: 'r2', name: "Опытный зритель", desc: "20 уровень", rarity: 'rare', xp: 100, coins: 600, check: s => Math.floor(s.xp / 100) + 1 >= 20, progress: s => Math.min(Math.floor(s.xp / 100) + 1, 20), max: 20, imgUrl: "experienced.png" },
+    { id: 'r3', name: "Знаток", desc: "40 уровень", rarity: 'rare', xp: 100, coins: 750, check: s => Math.floor(s.xp / 100) + 1 >= 40, progress: s => Math.min(Math.floor(s.xp / 100) + 1, 40), max: 40, imgUrl: "expert.png" },
+    { id: 'r4', name: "Перфекционист", desc: "Все обычные", rarity: 'rare', xp: 110, coins: 800, check: s => ACHIEVEMENTS.filter(a => a.rarity === 'common').every(a => s.unlockedAchievements.includes(a.id)), progress: s => ACHIEVEMENTS.filter(a => a.rarity === 'common' && s.unlockedAchievements.includes(a.id)).length, max: 4 },
+    { id: 'e1', name: "Заядлый анимешник", desc: "20 аниме", rarity: 'epic', xp: 200, coins: 600, check: s => s.episodesWatched >= 20, progress: s => Math.min(s.episodesWatched, 20), max: 20, imgUrl: "hardcore.png" },
+    { id: 'e2', name: "Верный фанат", desc: "30 дней подряд", rarity: 'epic', xp: 500, coins: 1000, check: s => s.daysStreak >= 30, progress: s => Math.min(s.daysStreak, 30), max: 30, imgUrl: "fan.png" },
+    { id: 'e3', name: "Модник", desc: "Купить аксессуар", rarity: 'epic', xp: 500, coins: 1000, check: s => s.hasPurchasedBanner, progress: s => s.hasPurchasedBanner ? 1 : 0, max: 1, imgUrl: "fashionista.png" },
+    { id: 'e4', name: "Фанат", desc: "50 аниме в избранном", rarity: 'epic', xp: 500, coins: 1000, check: s => s.favedAnime.length >= 50, progress: s => Math.min(s.favedAnime.length, 50), max: 50, imgUrl: "fan_fav.png" }
+];
+
+const LEVEL_TITLES = ["Первый эпизод", "Любопытный зритель", "Случайный странник", "Ученик манги", "Читатель субтитров", "Собиратель тайтлов", "Ночной марафонец", "Ценитель опенингов", "Знаток сейю", "Ловец спойлеров", "Страж таймлайна", "Искатель шедевров", "Коллекционер жанров", "Следопыт сезона", "Архивариус эпизодов", "Пилот меха", "Ученик додзё", "Начинающий маг", "Дух сакуры", "Странник измерений", "Хранитель клинка", "Проводник сюжета", "Алхимик эмоций", "Писец рецензий", "Охотник за онгоингами", "Мастер бинджвотча", "Сэнпай сайта", "Хранитель лора", "Ткач теорий", "Лунный самурай", "Небесный курьер", "Хранитель опенингов", "Повелитель плейлистов", "Критик с катаной", "Мудрец субтитров", "Дубляжный маг", "Страж спойлеров", "Картограф арок", "Коллекционер аватарок", "Ловец редких тайтлов", "Хроникёр сезонов", "Мастер клиффхэнгеров", "Дуэлянт мнений", "Хранитель уютного уголка", "Рыцарь романтики", "Тень сёнэна", "Адепт исэкая", "Архимаг тайтлов", "Небесный отаку", "Странник по мирам", "Хранитель легенд", "Мастер сюжетных поворотов", "Голос фандома", "Судья сезона", "Хранитель аниме-реликвий", "Пилот звёздного поезда", "Лунный библиотекарь", "Самурай субботы", "Повелитель финальных титров", "Искатель скрытых жемчужин", "Маг рекомендаций", "Страж уютных вечеров", "Рыцарь онгоинга", "Дух обсуждений", "Хранитель мемов", "Мастер аниме-детектива", "Небесный критик", "Повелитель сезонных марафонов", "Хранитель канона", "Ткач фанфиков", "Оракул спойлеров", "Лунный сэнпай", "Самурай рейтингов", "Архивариус легенд", "Маг жанров", "Страж ночных просмотров", "Повелитель опенингов", "Хранитель тропов", "Рыцарь вечернего просмотра", "Дух фестиваля", "Мастер эмоциональных качелей", "Следопыт забытых тайтлов", "Хранитель аниме-хроник", "Небесный администратор", "Самурай финального эпизода", "Оракул сезонов", "Повелитель легендарных арок", "Хранитель аниме-вселенной", "Маг идеального топа", "Дух великого марафона", "Рыцарь вечного онгоинга", "Архимаг фандома", "Страж золотой коллекции", "Легенда аниме-сайта", "Небесный хранитель тайтлов", "Великий отаку-владыка", "Хранитель последнего эпизода", "Мастер пересмотров", "Дух аниме-сообщества", "Верховный хранитель сезонов"];
+
+const CACHED_ANIME_LIMIT = 80;
+
+function trimCachedAnime(s) {
+    if (!s.cachedAnime) return;
+    const keys = Object.keys(s.cachedAnime);
+    if (keys.length > CACHED_ANIME_LIMIT) {
+        const toRemove = keys.length - CACHED_ANIME_LIMIT;
+        for (let i = 0; i < toRemove; i++) delete s.cachedAnime[keys[i]];
+    }
+}
+
+function getStats() {
+    let s;
+    try { s = JSON.parse(localStorage.getItem('onika_stats')); } catch { s = null; }
+    if (!s || typeof s !== 'object') {
+        s = {
+            episodesWatched: 0, minutesWatched: 0, daysStreak: 1, xp: 0, coins: 0,
+            active_banner: null, active_banner_url: '', custom_banner_url: '',
+            active_title: null, active_effect: null, active_badge: null, active_frame: null,
+            lastVisit: new Date().toDateString(), unlockedAchievements: [], favedAnime: [],
+            watchedToday: [], cachedAnime: {}, totalMinutesOnSite: 0,
+            hasPurchasedBanner: false, _lastAwardedHours: 0, avatar_url: '',
+            countedCompletions: []
+        };
+        localStorage.setItem('onika_stats', JSON.stringify(s));
+    }
+    if (!Array.isArray(s.unlockedAchievements)) s.unlockedAchievements = [];
+    if (!Array.isArray(s.favedAnime)) s.favedAnime = [];
+    if (!Array.isArray(s.watchedToday)) s.watchedToday = [];
+    if (!Array.isArray(s.countedCompletions)) s.countedCompletions = [];
+    if (s.coins === undefined) s.coins = 0;
+    if (!s.cachedAnime) s.cachedAnime = {};
+    if (s.totalMinutesOnSite === undefined) s.totalMinutesOnSite = 0;
+    if (s.hasPurchasedBanner === undefined) s.hasPurchasedBanner = false;
+    if (s._lastAwardedHours === undefined) s._lastAwardedHours = 0;
+    if (s.custom_banner_url === undefined) s.custom_banner_url = '';
+    if (s.active_frame === undefined) s.active_frame = null;
+    return s;
+}
+
+function saveStats(s) { trimCachedAnime(s); localStorage.setItem('onika_stats', JSON.stringify(s)); }
+
+function checkAchievements(s) {
+    let totalChanged = false, iterations = 0;
+    while (iterations < 5) {
+        let changed = false;
+        ACHIEVEMENTS.forEach(a => {
+            if (!s.unlockedAchievements.includes(a.id) && a.check(s)) {
+                s.unlockedAchievements.push(a.id);
+                s.coins += a.coins;
+                s.xp += a.xp;
+                changed = true;
+                totalChanged = true;
+                showToast(`${a.name}! +${a.xp} XP, +${a.coins}`);
+            }
+        });
+        if (!changed) break;
+        iterations++;
+    }
+    if (iterations >= 5) console.warn('Achievement loop guard triggered — проверь зависимости ачивок');
+    if (totalChanged) {
+        saveStats(s);
+        syncProfileToDB(true).catch(() => {});
+    }
+    return totalChanged;
+}
+
+function addXP(amount) {
+    let s = getStats();
+    const oldL = Math.floor(s.xp / 100) + 1;
+    s.xp += amount;
+    const newL = Math.min(Math.floor(s.xp / 100) + 1, 999);
+    if (newL > oldL) {
+        const rc = Math.floor(100 + Math.pow(newL, 2.5) * 2);
+        s.coins += rc;
+        showLevelUpPopup(newL, LEVEL_TITLES[Math.min(newL - 1, LEVEL_TITLES.length - 1)] || 'Легенда', rc);
+    } else showToast(`+${amount} XP`);
+    saveStats(s);
+    checkAchievements(s);
+    const shopCoins = document.getElementById('shop-coins');
+    if (shopCoins) shopCoins.textContent = s.coins;
+}
+
+function addXPForTime(min) {
+    let s = getStats();
+    s.totalMinutesOnSite = (s.totalMinutesOnSite || 0) + min;
+    const hoursEarned = Math.floor(s.totalMinutesOnSite / 60);
+    const lastAwarded = s._lastAwardedHours || 0;
+    if (hoursEarned > lastAwarded) {
+        const delta = hoursEarned - lastAwarded;
+        s._lastAwardedHours = hoursEarned;
+        addXP(delta * 2);
+        showToast(`+${delta * 2} XP за ${delta} ч`);
+    } else saveStats(s);
+}
+
+function showLevelUpPopup(l, r, c) {
+    const p = document.getElementById('levelUpPopup');
+    if (!p) return;
+    document.getElementById('popup-level').textContent = l;
+    document.getElementById('popup-rank').textContent = r;
+    document.getElementById('popup-coins').textContent = c;
+    p.classList.add('show');
+    setTimeout(() => p.classList.remove('show'), 4000);
+}
+
+function setElText(id, t) { const el = document.getElementById(id); if (el) el.textContent = t; }
+function setElWidth(id, w) { const el = document.getElementById(id); if (el) el.style.width = w; }
+
+function openLevelModal() {
+    const stats = getStats();
+    const lvl = Math.min(Math.floor(stats.xp / 100) + 1, 999);
+    const currentLevelXP = stats.xp - ((lvl - 1) * 100);
+    const rank = LEVEL_TITLES[Math.min(lvl - 1, LEVEL_TITLES.length - 1)] || 'Легенда';
+    setElText('modal-level-num', lvl);
+    setElText('modal-rank', rank);
+    setElWidth('modal-xp-bar', currentLevelXP + '%');
+    setElText('modal-xp-cur', currentLevelXP);
+    setElText('modal-xp-next', 100);
+    setElText('modal-icon-level', lvl);
+    document.getElementById('levelModal').classList.add('active');
+}
+
+function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('active'); }
+function openAchievementsPage() { switchTab('achievements'); }
+
+function renderAchievementsPage() {
+    const s = getStats();
+    const c = document.getElementById('achievements-list-container');
+    if (!c) return;
+    setElText('page-ach-earned', s.unlockedAchievements.length);
+    setElText('page-ach-total', ACHIEVEMENTS.length);
+    const rarities = [
+        { key: 'common', name: 'Обычные', color: '#ccc', class: 'common' },
+        { key: 'rare', name: 'Редкие', color: '#00d2ff', class: 'rare' },
+        { key: 'epic', name: 'Эпические', color: '#b44aff', class: 'epic' },
+        { key: 'legendary', name: 'Легендарные', color: '#ffd700', class: 'legendary' }
+    ];
+    let html = '';
+    rarities.forEach(r => {
+        const list = ACHIEVEMENTS.filter(a => a.rarity === r.key);
+        if (list.length === 0) return;
+        const done = list.filter(a => s.unlockedAchievements.includes(a.id)).length;
+        html += `<div class="ach-category-header ${r.class}"><span style="color: ${r.color};">●</span> ${r.name}<span class="count">${done} / ${list.length}</span></div>`;
+        list.forEach(a => {
+            const isDone = s.unlockedAchievements.includes(a.id);
+            const rs = RARITY_STYLES[a.rarity];
+            const pc = a.progress(s);
+            const pp = (pc / a.max) * 100;
+            const ic = a.imgUrl
+                ? `<img src="${safeUrl(a.imgUrl)}" alt="${escapeHTML(a.name)}" onerror="this.style.display='none'">`
+                : '<svg class="icon-inline" style="color:#ffd700;"><use href="#oa-achievement"></use></svg>';
+            html += `<div class="ach-list-item ${rs.class} ${isDone ? 'completed' : ''}"><div class="ach-list-icon" style="color: ${rs.color}">${ic}</div><div class="ach-list-info"><h4>${escapeHTML(a.name)}</h4><p>${escapeHTML(a.desc)}</p>${!isDone ? `<div class="ach-progress-mini"><div style="width: ${pp}%; background: ${rs.color}"></div></div><div style="font-size: 10px; color: #888; margin-top: 2px;">${pc} / ${a.max}</div>` : ''}</div><div class="ach-reward-badge">+${a.xp} XP, +${a.coins}</div>${isDone ? '<div class="ach-status-icon" style="color: #ffd700;"><svg class="icon-inline" style="width:20px;height:20px;"><use href="#oa-check"></use></svg></div>' : ''}</div>`;
+        });
+    });
+    c.innerHTML = html;
+}
+
+// ==========================================
+// 14. ИНИЦИАЛИЗАЦИЯ
+// ==========================================
+setInterval(() => {
+    if (document.visibilityState === 'visible') addXPForTime(1);
+}, 60000);
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopSlideShow();
+    else if (document.getElementById('screen-home')?.classList.contains('active')) startSlideShow();
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try { await initAuth(); } catch (e) { console.error(e); }
+    try { await loadProfileData(); } catch (e) { console.error(e); }
+    const homeLoad = loadHomePage();
+    Promise.race([
+        homeLoad,
+        new Promise(r => setTimeout(r, 2500))
+    ]).finally(() => { hidePreloader(); });
+});
